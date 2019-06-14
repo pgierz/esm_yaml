@@ -216,8 +216,10 @@ def find_value_for_nested_key(config, key):
 
     Note
     ----
-    Behaviour of what happens when a key appears twice anywhere in the nested
-    dict is unclear.
+    Behaviour of what happens when a key appears twice anywhere on different
+    levels of the nested dict is unclear. The uppermost one is taken, but if
+    they key appears in more than one item, I'd guess something ambigous
+    occus...
     """
     if key in config:
         return config[key]
@@ -229,7 +231,13 @@ def find_value_for_nested_key(config, key):
 
 def make_choice_in_config(config, key):
     """
-    Given a specific config, pulls out the corresponding choices for key.
+    Given a specific ``config``, pulls out the corresponding choices for ``key``.
+
+    If a ``config`` dictionary has (key, value) pairs in the form of
+    ``key=choose_<key>, value=<dict of choices>``, this function mutates the
+    ``config`` dictionary so that the values fitting to ``choose_<key>[key]``
+    are placed in ``config``. The entire ``choose_<key>`` entry is then
+    deleted.
 
     Parameters
     ----------
@@ -237,18 +245,20 @@ def make_choice_in_config(config, key):
         The dictionary to replace choices in.
     key : str
         The key to choose. Note here to use just the short part of the key,
-        e.g. ``'resolution'`` and not ``'choose_resplution'``.
-
+        e.g. ``'resolution'`` and not ``'choose_resolution'``.
     """
-    print(f"Trying to make choice for {key}")
+    logging.debug("Trying to make choice for %s", key)
     choice = find_value_for_nested_key(config, key)
     if not isinstance(choice, collections.Hashable):
         choice = freeze(choice)
     del_value_for_nested_key(config, key)
     if "choose_"+key in config:
         try:
-            #print(f"config[{key}] = dict({choice}=config['choose_'+{key}][{choice}])")
+            # FIXME: Why are strs different than any other thing that could be
+            # in choice? I had a reason, but I can't remember right now...
             if not isinstance(choice, str):
+                logging.debug("config[%s] = dict(%s=config['choose_'+%s][%s])",
+                              key, choice, key, choice)
                 config[key] = {choice: config['choose_'+key][choice]}
             else:
                 config[key] = choice
@@ -258,6 +268,27 @@ def make_choice_in_config(config, key):
 
 
 def promote_value_to_key(config, promotable_key):
+    """
+    Moves values for ``promotable_key`` to the top of the ``config``
+    dictionary.
+
+    Parameters
+    ----------
+    config : dict
+        The dictionary to promote things in
+    promotable_key : str
+        The key in the outermost dictionary which should be replaced with
+        interiour information.
+
+    Returns
+    -------
+    str :
+        The key which was promoted.
+
+    Warns
+    -----
+    Throws a warning if the promotable key couldn't be found in this config.
+    """
     for key in list(config):
         value = config[key]
         if key == "promote_"+promotable_key and isinstance(value, dict):
@@ -270,6 +301,19 @@ def promote_value_to_key(config, promotable_key):
 
 
 def promote_all(config):
+    """
+    Promotes everything in a specific config
+
+    Since the promotions inside a config might rely on each other, this
+    function keeps trying to promote things until everything makes sense. This
+    is checked by flattening the dictionary first to ensure that if all of the
+    innermost values were in the topmost level, everything would be resolved.
+
+    Parameters
+    ----------
+    config : dict
+        The config to search in
+    """
     all_keys = list(config)
     needed_promotions = [
         key.replace("promote_", "")
@@ -299,11 +343,21 @@ def freeze(unhasable):
 
 
 def attach_to_config_and_reduce_keyword(config, full_keyword, reduced_keyword):
+    """
+    Attaches a new dictionary to the config, and registers it as the value of
+    ``reduced_keyword``.
+
+    The purpose behind this is to have a chapter in config "include_submodels"
+    = ["echam", "fesom"], which would then find the "echam.yaml" and
+    "fesom.yaml" configs, and attach them to "config" under config[submodels],
+    and the entire config for e.g. echam would show up in config[echam]
+    """
     if full_keyword in config:
         config[reduced_keyword] = config[full_keyword]
         # FIXME: Does this only need to work for lists?
         if isinstance(config[full_keyword], list):
             for item in config[full_keyword]:
+                # Suffix fix, this could be smarter:
                 loadable_item = item if item.endswith('.yaml') else item+".yaml"
                 config[item] = yaml_file_to_dict(loadable_item)
                 for attachment in CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE:
@@ -312,6 +366,7 @@ def attach_to_config_and_reduce_keyword(config, full_keyword, reduced_keyword):
 
 
 def recursive_make_choices(config):
+    """Recursively calls make choices for any dict in config"""
     all_config_keys = list(config)
     for k in all_config_keys:
         v = config[k]
@@ -322,6 +377,7 @@ def recursive_make_choices(config):
 
 
 def recursive_promote_all(config):
+    """Recursively calls promote for any dict in config"""
     promote_all(config)
     for key in list(config):
         value = config[key]
@@ -330,16 +386,24 @@ def recursive_promote_all(config):
 
 
 def pass_down(config, key):
+    """
+    Passes attributes downwards.
+    """
     for thing_below in config[key]:
         this_thing = config[thing_below]
         this_thing.setdefault('inherited_attrs', {})
+        this_thing.setdefault('progenitor_attrs', {})
         popped_thing_below = config.pop(thing_below)
         for k, v in config.items():
+            # This next part is still a bit confusing, but it looks like it
+            # works...?
             if k not in config[key] and k not in this_thing and k != key:
                 logging.debug("Passing %s=%s down to %s", k, v, thing_below)
                 this_thing['inherited_attrs'][k] = v #if k not in config[key]
+                this_thing[k] = v  # PG: I'm not 100% sure here, but it seems to work?
             else:
                 logging.debug("%s already has an attribute %s", thing_below, k)
+                this_thing['progenitor_attrs'][k] = [v]
         config[thing_below] = popped_thing_below
 
 
@@ -363,6 +427,7 @@ def determine_computer_from_hostname():
         )
 
 class GeneralConfig(dict):
+    """ All configs do this! """
     def __init__(self, path):
         super().__init__()
         self.config = yaml_file_to_dict(path)
@@ -377,6 +442,7 @@ class GeneralConfig(dict):
         raise NotImplementedError("Subclasses of GeneralConfig must define a _config_init!")
 
 class ConfigSetup(GeneralConfig):
+    """ Config Class for Setups """
     def _config_init(self):
         setup_relevant_configs = {
             'computer': yaml_file_to_dict(determine_computer_from_hostname()),
@@ -403,6 +469,7 @@ class ConfigSetup(GeneralConfig):
 
 
 class ConfigComponent(GeneralConfig):
+    """ Config class for components """
     def _config_init(self):
         attach_to_config_and_reduce_keyword(self.config, 'include_submodels', 'submodels')
         pass_down(self.config, 'submodels')

@@ -1,0 +1,6 @@
+ollie:
+        login_nodes: 'dhcp*'
+        other_nodes: 'vpn*'
+        compute_nodes: 'prod-*'
+mistral:
+        login_nodes: 'mlogin-*.dkrz.de'

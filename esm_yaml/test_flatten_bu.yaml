@@ -1,0 +1,19 @@
+top_level:
+    sounds:
+        dog: bark
+        bear: growl
+        cat: meow
+        lion: roar
+    actions:
+        fish: swim
+        bird: fly
+        a:
+            dog: whine
+            fish: bubbles
+            cat: purr
+    places:
+        animals:
+            bird: sky
+            fish: ocean
+            cat: indoors
+            lion: Africa, probably. Or a zoo.

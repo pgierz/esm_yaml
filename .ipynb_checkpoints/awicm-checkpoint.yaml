@@ -1,0 +1,137 @@
+#
+# AWICM
+#
+#
+
+model_dir:
+        $esm_master_dir/awicm-$version
+
+submodules:
+        - fesom
+        - echam
+
+coupler: oasis3mct
+
+oasis3mct:
+        model_dir:
+                $awicm.model_dir/oasis
+        
+
+version: "1.1"
+scenario: "PI-CTRL"
+time_step: 450
+resolution: echam.resolution+"_"+fesom.resolution
+resume: TRUE
+
+
+choose_versions:
+        1.1:
+                tag: CMIP6
+                echam: 
+                        version: "6.304p1"
+                jsbach:
+                        version: "3.20"
+                fesom: 
+                        version: "1.4"
+        2.0:
+                echam:
+                        version: "6.304p1"
+                jsbach:
+                        version: "3.20"
+                fesom: 
+                        version: "2.0"
+                
+choose_resolution:
+        T63_CORE:
+                nproca_echam: 24
+                nprocb_echam: 18
+                nproca_fesom: 288
+                nprocb_fesom: 1
+                compute_time: "02:00:00"
+
+choose_resume:
+        TRUE:
+                output_exchanged_vars: FALSE
+                a2o_lag: "@TIME_STEP_echam@"
+                o2a_lag: "@TIME_STEP_fesom@"
+                a2o_seq: 1
+        FALSE:
+                a2o_lag: 0
+                o2a_lag: 0
+                a2o_seq: 2
+
+required:
+        - resolution
+
+choose_coupling_direction:
+        o2a:
+                lag: o2a_lag
+                restart_file: o2a_flux
+                seq: 1
+                from_grid: feom
+                to_grid: atmo
+                transformation: distwgt
+         a2o:
+                lag: $a2o_lag
+                restart_file: a2o_flux
+                seq: $a2o_seq
+                from_grid: atmo
+                to_grid: feom
+                transformation: distwgt
+
+coupled_fields:
+        id:
+                1:      
+                        snd: "sst_feom:sit_feom:sie_feom"
+                        rcv: "sst_atmo:sit_atmo:sie_atmo"
+                        coupling_direction: o2a
+                4:
+                        snd: "snt_feom" 
+                        rcv: "snt_atmo"
+                        coupling_direction: o2a
+                5:
+                        snd: "taux_atm:tauy_atm:taux_ica:tauy_ica"
+                        rcv: "taux_oce:tauy_oce:taux_ico:tauy_ico"
+                        transformation: bicubic
+                        coupling_direction: a2o
+                9:
+                        snd: "prec_atm" 
+                        rcv: "prec_oce"
+                        coupling_direction: a2o
+                10:     
+                        snd: "snow_atm"
+                        rcv: "snow_oce"
+                        coupling_direction: a2o
+                11:
+                        snd: "evap_atm"
+                        rcv: "evap_oce" 
+                        coupling_direction: a2o
+                12:
+                        snd: "subl_atm" 
+                        rcv: "subl_oce" 
+                        coupling_direction: a2o
+                13:
+                        snd: "heat_atm" 
+                        rcv: "heat_oce"
+                        coupling_direction: a2o
+                14:
+                        snd: "heat_ica" 
+                        rcv: "heat_ico"
+                        coupling_direction: a2o
+                15:
+                        snd: "heat_swa" 
+                        rcv: "heat_swo" 
+                        coupling_direction: a2o
+                16:
+                        snd: "hydr_atm" 
+                        rcv: "hydr_oce" 
+                        coupling_direction: a2o
+
+grids:
+        feom:
+                nx: $fesom.nx
+                ny: $fesom.ny
+        atmo:
+                nx: $echam.nx
+                ny: $echam.ny
+

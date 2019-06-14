@@ -1,0 +1,22 @@
+datasets:
+        r0010:
+                "jsbach": 
+                       "@ADJ_INPUT_DIR@/jsbach_@RES@@OCERES@_11tiles_5layers_1850@DYNVEG@.nc" 
+                "cover_fract":
+                       "@ADJ_INPUT_DIR@/jsbach_@RES@@OCERES@_11tiles_1850.nc":
+                                to: 1850
+                       "@ADJ_INPUT_DIR@/jsbach_@RES@@OCERES@_11tiles_@YEAR@.nc":
+                                from: 1851
+                "a_nd_file": 
+                       "@INPUT_DIR@/@RES@/spitfire/a_nd_@resolution@.nc"
+                "lightning":
+                       "@INPUT_DIR@/@RES@/spitfire/LISOTD_HRMC_V2.2_@RES@.nc"
+                "popdens":         
+                       "@INPUT_DIR@/@RES@/spitfire/population_density_HYDE_@RES@.nc"
+                "LU_1850":
+                        "@INPUT_DIR@/@RES@/New_Hampshire_LCC/hist_harvest/LUH_harvest_@RES@_1850.nc"
+                "Ndepo_1850": 
+                        "@INPUT_DIR@/@RES@/@RES@_ndepo_CMIP_NCAR_CCMI-1-0_gr_185001-185012-clim.nc"
+                "LU_trans":
+                        "@INPUT_DIR@/@RES@/New_Hampshire_LCC/no_LUH_transitions_@RES@.nc"
+

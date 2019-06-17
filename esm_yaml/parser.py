@@ -12,7 +12,8 @@ import warnings
 # Third-Party Imports
 import yaml
 
-CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE = ['further_reading']
+CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE = ["further_reading"]
+YAML_AUTO_EXTENSIONS = ["", ".yml", ".yaml", ".YML", ".YAML"]
 
 
 def yaml_file_to_dict(filepath):
@@ -31,15 +32,18 @@ def yaml_file_to_dict(filepath):
     dict
         A dictionary representation of the yaml file.
     """
-    for extension in ['', '.yml', '.yaml', '.YML', '.YAML']:
+    for extension in YAML_AUTO_EXTENSIONS:
         try:
-            with open(filepath+extension) as yaml_file:
+            with open(filepath + extension) as yaml_file:
                 return yaml.load(yaml_file, Loader=yaml.FullLoader)
         except FileNotFoundError:
             logging.debug(
-                "File not found with %s, trying another extension pattern." % filepath+extension
+                "File not found with %s, trying another extension pattern." % filepath
+                + extension
             )
-    raise FileNotFoundError("All file extensions tried and none worked for %s" % filepath)
+    raise FileNotFoundError(
+        "All file extensions tried and none worked for %s" % filepath
+    )
 
 
 def attach_to_config_and_remove(config, attach_key):
@@ -62,9 +66,16 @@ def attach_to_config_and_remove(config, attach_key):
     The ``config`` is modified **in place**!.
     """
     if attach_key in config:
-        for attach_value in config[attach_key]:
+        attach_value = config[attach_key]
+        if isinstance(attach_value, list):
+            for attach in attach_value:
+                attachable_config = yaml_file_to_dict(attach)
+                config.update(attachable_config)
+        elif isinstance(attach_value, str):
             attachable_config = yaml_file_to_dict(attach_value)
             config.update(attachable_config)
+        else:
+            raise TypeError("%s needs to have values of type list or str!" % attach_key)
         del config[attach_key]
 
 
@@ -121,6 +132,7 @@ def flatten_bottom_up(dictionary):
             output[k] = v
     return output
 
+
 def flatten_top_down(dictionary):
     """
     Flattens a nested dictionary, keeping the outermost values for repeated keys
@@ -176,6 +188,7 @@ def flatten_top_down(dictionary):
         elif k not in output:
             output[k] = v
     return output
+
 
 def del_value_for_nested_key(config, key):
     """
@@ -252,17 +265,22 @@ def make_choice_in_config(config, key):
     if not isinstance(choice, collections.Hashable):
         choice = freeze(choice)
     del_value_for_nested_key(config, key)
-    if "choose_"+key in config:
+    if "choose_" + key in config:
         try:
             # FIXME: Why are strs different than any other thing that could be
             # in choice? I had a reason, but I can't remember right now...
             if not isinstance(choice, str):
-                logging.debug("config[%s] = dict(%s=config['choose_'+%s][%s])",
-                              key, choice, key, choice)
-                config[key] = {choice: config['choose_'+key][choice]}
+                logging.debug(
+                    "config[%s] = dict(%s=config['choose_'+%s][%s])",
+                    key,
+                    choice,
+                    key,
+                    choice,
+                )
+                config[key] = {choice: config["choose_" + key][choice]}
             else:
                 config[key] = choice
-            del config["choose_"+key]
+            del config["choose_" + key]
         except KeyError:
             warnings.warn("Could not find a choice for %s" % key)
 
@@ -291,13 +309,16 @@ def promote_value_to_key(config, promotable_key):
     """
     for key in list(config):
         value = config[key]
-        if key == "promote_"+promotable_key and isinstance(value, dict):
+        if key == "promote_" + promotable_key and isinstance(value, dict):
             for inner_key, inner_value in value.items():
                 if inner_key == config[promotable_key]:
                     config.update(inner_value)
-                    del config['promote_'+promotable_key]
+                    del config["promote_" + promotable_key]
                     return promotable_key
-            warnings.warn("Couldn't find promotable key %s in %s" % (config[promotable_key], value))
+            warnings.warn(
+                "Couldn't find promotable key %s in %s"
+                % (config[promotable_key], value)
+            )
 
 
 def promote_all(config):
@@ -316,14 +337,13 @@ def promote_all(config):
     """
     all_keys = list(config)
     needed_promotions = [
-        key.replace("promote_", "")
-        for key
-        in all_keys
-        if key.startswith("promote_")
-        ]
+        key.replace("promote_", "") for key in all_keys if key.startswith("promote_")
+    ]
     if set(needed_promotions).issubset(flatten_bottom_up(config)):
         while needed_promotions:
-            current_key_loop = [key for key in list(config) if not key.startswith('promote_')]
+            current_key_loop = [
+                key for key in list(config) if not key.startswith("promote_")
+            ]
             for key in current_key_loop:
                 promoted_key = promote_value_to_key(config, key)
                 if promoted_key:
@@ -331,7 +351,8 @@ def promote_all(config):
     else:
         raise ValueError(
             "This configuration does not have enough information to promote everything!"
-            )
+        )
+
 
 def freeze(unhasable):
     """Allows you to hash lists and dicts"""
@@ -358,7 +379,7 @@ def attach_to_config_and_reduce_keyword(config, full_keyword, reduced_keyword):
         if isinstance(config[full_keyword], list):
             for item in config[full_keyword]:
                 # Suffix fix, this could be smarter:
-                loadable_item = item if item.endswith('.yaml') else item+".yaml"
+                loadable_item = item if item.endswith(".yaml") else item + ".yaml"
                 config[item] = yaml_file_to_dict(loadable_item)
                 for attachment in CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE:
                     attach_to_config_and_remove(config[item], attachment)
@@ -391,19 +412,19 @@ def pass_down(config, key):
     """
     for thing_below in config[key]:
         this_thing = config[thing_below]
-        this_thing.setdefault('inherited_attrs', {})
-        this_thing.setdefault('progenitor_attrs', {})
+        this_thing.setdefault("inherited_attrs", {})
+        this_thing.setdefault("progenitor_attrs", {})
         popped_thing_below = config.pop(thing_below)
         for k, v in config.items():
             # This next part is still a bit confusing, but it looks like it
             # works...?
             if k not in config[key] and k not in this_thing and k != key:
                 logging.debug("Passing %s=%s down to %s", k, v, thing_below)
-                this_thing['inherited_attrs'][k] = v #if k not in config[key]
+                this_thing["inherited_attrs"][k] = v  # if k not in config[key]
                 this_thing[k] = v  # PG: I'm not 100% sure here, but it seems to work?
             else:
                 logging.debug("%s already has an attribute %s", thing_below, k)
-                this_thing['progenitor_attrs'][k] = [v]
+                this_thing["progenitor_attrs"][k] = [v]
         config[thing_below] = popped_thing_below
 
 
@@ -417,17 +438,20 @@ def determine_computer_from_hostname():
         A string for the path of the computer specific yaml file.
     """
     # FIXME: This needs to be a resource file at some point
-    all_computers = yaml_file_to_dict('all_machines.yaml')
+    all_computers = yaml_file_to_dict("all_machines.yaml")
     for this_computer in all_computers:
         for computer_pattern in all_computers[this_computer].values():
             if re.match(computer_pattern, socket.gethostname()):
-                return this_computer+".yaml"
+                return this_computer + ".yaml"
     raise FileNotFoundError(
-        "The yaml file for this computer (%s) could not be determined!" % socket.gethostname()
-        )
+        "The yaml file for this computer (%s) could not be determined!"
+        % socket.gethostname()
+    )
+
 
 class GeneralConfig(dict):
     """ All configs do this! """
+
     def __init__(self, path):
         super().__init__()
         self.config = yaml_file_to_dict(path)
@@ -439,19 +463,23 @@ class GeneralConfig(dict):
         del self.config
 
     def _config_init(self):
-        raise NotImplementedError("Subclasses of GeneralConfig must define a _config_init!")
+        raise NotImplementedError(
+            "Subclasses of GeneralConfig must define a _config_init!"
+        )
+
 
 class ConfigSetup(GeneralConfig):
     """ Config Class for Setups """
+
     def _config_init(self):
         setup_relevant_configs = {
-            'computer': yaml_file_to_dict(determine_computer_from_hostname()),
+            "computer": yaml_file_to_dict(determine_computer_from_hostname())
         }
         recursive_promote_all(setup_relevant_configs)
-        if self.config['standalone_model']:
+        if self.config["standalone_model"]:
             self.config = {
                 **setup_relevant_configs,
-                **ConfigComponent(self.config['model']),
+                **ConfigComponent(self.config["model"]),
             }
             recursive_make_choices(self.config)
             print("Unordered DICT, try again!")
@@ -459,22 +487,27 @@ class ConfigSetup(GeneralConfig):
             # might still be unresolved choices.
             #
             # To resolve, do the pass down again:
-            pass_down(self.config, 'submodels')
+            pass_down(self.config, "submodels")
             # And re-resolve choices:
             recursive_make_choices(self.config)
         else:
-            attach_to_config_and_reduce_keyword(self.config, 'include_models', 'models')
-            for model in self.config['models']:
+            attach_to_config_and_reduce_keyword(self.config, "include_models", "models")
+            for model in self.config["models"]:
                 self.config[model] = ConfigComponent(model)
 
 
 class ConfigComponent(GeneralConfig):
     """ Config class for components """
+
     def _config_init(self):
-        attach_to_config_and_reduce_keyword(self.config, 'include_submodels', 'submodels')
-        pass_down(self.config, 'submodels')
+        attach_to_config_and_reduce_keyword(
+            self.config, "include_submodels", "submodels"
+        )
+        pass_down(self.config, "submodels")
         recursive_make_choices(self.config)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod()

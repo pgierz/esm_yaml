@@ -73,7 +73,9 @@ docs/_build/
 # PyBuilder
 target/
 
-# Jupyter Notebook
+# Jupyter Notebook: We don't want notebooks in something that should run as a
+# library.
+*.ipynb
 .ipynb_checkpoints
 
 # IPython

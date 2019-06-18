@@ -1,8 +1,21 @@
+#!/usr/bin/env python
 """
 Docs
 """
+# Python 2 and 3 version agnostic compatiability:
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
 
+# TODO(pgierz): Check if we can sort this or if it breaks...
 # Python Standard Library imports
+from builtins import dict
+from builtins import super
+from builtins import open
+from future import standard_library
+
+standard_library.install_aliases()
 import collections
 import logging
 import re
@@ -36,10 +49,10 @@ def yaml_file_to_dict(filepath):
         try:
             with open(filepath + extension) as yaml_file:
                 return yaml.load(yaml_file, Loader=yaml.FullLoader)
-        except FileNotFoundError:
+        except IOError as e:
             logging.debug(
-                "File not found with %s, trying another extension pattern." % filepath
-                + extension
+                "(%s) File not found with %s, trying another extension pattern."
+                % (e.errno, filepath + extension)
             )
     raise FileNotFoundError(
         "All file extensions tried and none worked for %s" % filepath
@@ -190,6 +203,17 @@ def flatten_top_down(dictionary):
     return output
 
 
+def merge_dicts(*dict_args):
+    """
+    Given any number of dicts, shallow copy and merge into a new dict,
+    precedence goes to key value pairs in latter dicts.
+    """
+    result = {}
+    for dictionary in dict_args:
+        result.update(dictionary)
+    return result
+
+
 def del_value_for_nested_key(config, key):
     """
     In a dict of dicts, delete a key/value pair.
@@ -262,6 +286,9 @@ def make_choice_in_config(config, key):
     """
     logging.debug("Trying to make choice for %s", key)
     choice = find_value_for_nested_key(config, key)
+    # TODO(xxx): DeprecationWarning: Using or importing the ABCs from
+    # 'collections' instead of from 'collections.abc' is deprecated, and in 3.8
+    # it will stop working
     if not isinstance(choice, collections.Hashable):
         choice = freeze(choice)
     del_value_for_nested_key(config, key)
@@ -319,6 +346,7 @@ def promote_value_to_key(config, promotable_key):
                 "Couldn't find promotable key %s in %s"
                 % (config[promotable_key], value)
             )
+    return None  # Maybe better to raise an error instead.
 
 
 def promote_all(config):
@@ -441,8 +469,15 @@ def determine_computer_from_hostname():
     all_computers = yaml_file_to_dict("all_machines.yaml")
     for this_computer in all_computers:
         for computer_pattern in all_computers[this_computer].values():
-            if re.match(computer_pattern, socket.gethostname()):
-                return this_computer + ".yaml"
+            if isinstance(computer_pattern, str):
+                if re.match(computer_pattern, socket.gethostname()):
+                    return this_computer + ".yaml"
+            elif isinstance(computer_pattern, (list, tuple)):
+                # Pluralize to avoid confusion:
+                computer_patterns = computer_pattern
+                for pattern in computer_patterns:
+                    if re.match(pattern, socket.gethostname()):
+                        return this_computer + ".yaml"
     raise FileNotFoundError(
         "The yaml file for this computer (%s) could not be determined!"
         % socket.gethostname()
@@ -476,11 +511,12 @@ class ConfigSetup(GeneralConfig):
             "computer": yaml_file_to_dict(determine_computer_from_hostname())
         }
         recursive_promote_all(setup_relevant_configs)
-        if self.config["standalone_model"]:
-            self.config = {
-                **setup_relevant_configs,
-                **ConfigComponent(self.config["model"]),
-            }
+        if "standalone_model" in self.config:
+            # NOTE: This could have cleaner sytnax is only Python > 3.5: c =
+            # {**a, **b}, for now we use a function
+            self.config = merge_dicts(
+                setup_relevant_configs, ConfigComponent(self.config["model"])
+            )
             recursive_make_choices(self.config)
             print("Unordered DICT, try again!")
             # Since the dictionary resolves choices in an unordered way, there
@@ -508,6 +544,23 @@ class ConfigComponent(GeneralConfig):
 
 
 if __name__ == "__main__":
-    import doctest
 
-    doctest.testmod()
+    import argparse
+
+    def parse_args():
+        """ The arg parser for interactive use """
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--run_tests", type=bool)
+        parser.add_argument("setup", default=None)
+        return parser.parse_args()
+
+    ARGS = parse_args()
+    if ARGS.run_tests:
+        import doctest
+
+        doctest.testmod()
+        # TODO: Have something that runs unit tests
+
+    if ARGS.setup:
+        CFG = ConfigSetup(ARGS.setup)
+        print(yaml.dump(CFG, default_flow_style=False))

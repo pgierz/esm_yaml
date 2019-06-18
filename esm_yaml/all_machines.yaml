@@ -1,6 +1,8 @@
 ollie:
         login_nodes: 'dhcp*'
-        other_nodes: 'vpn*'
+        other_nodes:
+                - 'vpn*'
+                - 'bkli04m034*'
         compute_nodes: 'prod-*'
 mistral:
         login_nodes: 'mlogin-*.dkrz.de'

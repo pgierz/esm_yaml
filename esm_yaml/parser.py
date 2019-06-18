@@ -20,6 +20,7 @@ import collections
 import logging
 import re
 import socket
+import sys
 import warnings
 
 # Third-Party Imports
@@ -434,6 +435,67 @@ def recursive_promote_all(config):
             recursive_promote_all(value)
 
 
+def recursive_run_function(config, func, *args, **kwargs):
+    """ Recursively runs func on all nested dicts """
+    print("Using", config, " to run:", func)
+    if isinstance(config, list):
+        for item in config:
+            recursive_run_function(item, func, *args, **kwargs)
+    elif isinstance(config, dict):
+        keys = list(config)
+        for key in keys:
+            value = config[key]
+            recursive_run_function(value, func, *args, **kwargs)
+    else:
+        func(config, *args, **kwargs)
+        # raise TypeError("Needs str, list, or dict")
+
+
+def recursive_get(config_to_search, config_elements):
+    if "standalone_model" in config_to_search:
+        # Throw away the first thing:
+        config_elements.pop(0)
+        print(80 * "-")
+        print(config_elements)
+        print(80 * "-")
+    return rec_get(config_to_search, config_elements)
+
+
+def rec_get(config_to_search, config_elements):
+    print(80 * "#")
+    print(config_elements)
+    print(80 * "#")
+    this_config = config_elements.pop(0)
+    # print(config_to_search)
+    result = config_to_search.get(this_config)
+    if not config_elements:
+        return result
+    else:
+        return rec_get(result, config_elements)
+
+
+def find_variable(raw_str, config_to_search):
+    # variable = resolution
+    if isinstance(raw_str, str):
+        if "${" in raw_str:
+            ok_part, rest = raw_str.split("${", 1)
+            var, new_raw = rest.split("}", 1)
+            config_elements = var.split(".")
+            var_result = recursive_get(config_to_search, config_elements)
+            if var_result:
+                print(
+                    "Will return:",
+                    ok_part,
+                    var_result,
+                    find_variable(new_raw, config_to_search),
+                )
+                return ok_part + var_result + find_variable(new_raw, config_to_search)
+            else:
+                warnings.warn("Maybe look in the other config")
+    else:
+        return raw_str
+
+
 def pass_down(config, key):
     """
     Passes attributes downwards.
@@ -484,6 +546,12 @@ def determine_computer_from_hostname():
     )
 
 
+def replace_value_variable_with_value(dictionary, variable, value):
+    keys = list(dictionary)
+    for key in keys:
+        value = dictionary[key]
+
+
 class GeneralConfig(dict):
     """ All configs do this! """
 
@@ -530,6 +598,7 @@ class ConfigSetup(GeneralConfig):
             attach_to_config_and_reduce_keyword(self.config, "include_models", "models")
             for model in self.config["models"]:
                 self.config[model] = ConfigComponent(model)
+        recursive_run_function(self.config, find_variable, self.config)
 
 
 class ConfigComponent(GeneralConfig):
@@ -563,4 +632,4 @@ if __name__ == "__main__":
 
     if ARGS.setup:
         CFG = ConfigSetup(ARGS.setup)
-        print(yaml.dump(CFG, default_flow_style=False))
+        # print(yaml.dump(CFG, default_flow_style=False))

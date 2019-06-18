@@ -122,8 +122,12 @@ forcings_in_workdir:
         aerocoarse: "aero_coarse_@YEAR@.nc"
         aerofin: "aero_fine_@YEAR@.nc"
         aerofarir: "aero_farir_@YEAR@.nc"
-        ozone: "ozon@YEAR@"
+        ozone: "ozonYEAR"
 
+
+test_chapter:
+        something: ${echam.resolution}
+        something_else: ${echam.jsbach.domain}
 
 further_reading:
         - echam.datasets.yaml

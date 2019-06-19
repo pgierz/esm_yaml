@@ -1,80 +1,187 @@
-datasets:
-        r0007:
+choose_dataset:
+
+        ############################## r0006 ##############################
+        r0006:
+
+                # sic:
+                "pisic":
+                        "${echam.forcing_dir}/${echam.resolution}${echam.ocean_resolution}_piControl-LR_sic_1880-2379.nc"
                 "amipsic": 
-                        "/@RES@/amip/@RES@_amipsic_@YEAR@.nc": 
+                        "${echam.forcing_dir}/amip/${echam.resolution}_amipsic_@YEAR@.nc": 
                                 from: 1870
-                                to: 2016
+                # sst:
+                "pisst":
+                        "${echam.forcing_dir}/${echam.resolution}${echam.ocean_resolution}_piControl-LR_sst_1880-2379.nc"
                 "amipsst": 
-                        "/@RES@/amip/@RES@_amipsst_@YEAR@.nc":
+                        "${echam.forcing_dir}//amip/${echam.resolution}_amipsst_@YEAR@.nc":
                                 from: 1870
                                 to: 2016
+                # aerosol:
+                "piaerocoarse": 
+                        "${echam.forcing_dir}/aero/${echam.resolution}_aeropt_kinne_sw_b14_coa.nc"
+                "piaerofarir":
+                        "${echam.forcing_dir}/aero/${echam.resolution}_aeropt_kinne_lw_b16_coa.nc"
+                "piaerofin":
+                        "${echam.forcing_dir}/aero/${echam.resolution}_aeropt_kinne_sw_b14_fin_1865.nc"
                 "histaerocoarse": 
-                        "/@RES@/aero2/@RES@_aeropt_kinne_sw_b14_coa.nc" 
+                        "${echam.forcing_dir}/aero2/${echam.resolution}_aeropt_kinne_sw_b14_coa.nc" 
                 "histaerofarir": 
-                        "/@RES@/aero2/@RES@_aeropt_kinne_lw_b16_coa.nc"
+                        "${echam.forcing_dir}/aero2/${echam.resolution}_aeropt_kinne_lw_b16_coa.nc"
                 "histaerofin": 
-                        "/@RES@/aero2/@RES@_aeropt_kinne_sw_b14_fin_1865.nc":
+                        "${echam.forcing_dir}/aero2/${echam.resolution}_aeropt_kinne_sw_b14_fin_1865.nc":
                                 to: 1864
-                        "/@RES@/aero2/@RES@_aeropt_kinne_sw_b14_fin_@YEAR@.nc":
+                        "${echam.forcing_dir}/aero2/${echam.resolution}_aeropt_kinne_sw_b14_fin_@YEAR@.nc":
                                 from: 1865
                                 to: 2000
+
+                # greenhouse gas conc:
                 "histgreenh":
-                        "/greenhouse_historical.nc"
+                        "${echam.input_dir}/greenhouse_historical.nc"
+
+                # ozone:
+                "piozone":
+                        "${echam.forcing_dir}/ozone/${echam.resolution}_ozone_picontrol.nc"
                 "histozone": 
-                        "/@RES@/ozone/@RES@_ozone_historical_1850.nc": 
+                        "${echam.forcing_dir}/ozone/${echam.resolution}_ozone_historical_1850.nc": 
                                 to: 1850
-                        "/@RES@_ozone_historical_@YEAR@.nc":
+                        "${echam.forcing_dir}/ozone/${echam.resolution}_ozone_historical_@YEAR@.nc":
                                 from: 1851
                                 to: 2008
+                "1850ozone":
+                        "${echam.forcing_dir}/ozone/${echam.resolution}_ozone_historical_1850.nc"
+                "1950ozone":
+                        "${echam.forcing_dir}/ozone/${echam.resolution}_ozone_historical_1950.nc"
+
+                # solar radiation:
                 "histswflux": 
-                        "/solar_irradiance/swflux_14band_1850.nc":
+                        "${echam.input_dir}/solar_irradiance/swflux_14band_1850.nc":
                                 to: 1850
-                        "/solar_irradiance/swflux_14band_@YEAR@.nc":  
+                        "${echam.input_dir}/solar_irradiance/swflux_14band_@YEAR@.nc":  
                                 from: 1851
+
+                # volcanic:
                 "histvolcir": 
-                        "/@RES@/volcano_aerosols/strat_aerosol_ir_@RES@_1850.nc":
+                        "${echam.forcing_dir}/volcano_aerosols/strat_aerosol_ir_${echam.resolution}_1850.nc":
                                 to: 1850
-                        "/@RES@/volcano_aerosols/strat_aerosol_ir_@RES@_@YEAR@.nc":
+                        "${echam.forcing_dir}/volcano_aerosols/strat_aerosol_ir_${echam.resolution}_@YEAR@.nc":
                                 from: 1851
                                 to: 1999
-                        "/@RES@/volcano_aerosols/strat_aerosol_ir_@RES@_1999.nc":
+                        "${echam.forcing_dir}/volcano_aerosols/strat_aerosol_ir_${echam.resolution}_1999.nc":
                                 from: 2000
                 "histvolcsw":
-                        "/@RES@/volcano_aerosols/strat_aerosol_sw_@RES@_1850.nc":
+                        "${echam.forcing_dir}/volcano_aerosols/strat_aerosol_sw_${echam.resolution}_1850.nc":
                                 to: 1850
-                        "/@RES@/volcano_aerosols/strat_aerosol_sw_@RES@_@YEAR@.nc":
+                        "${echam.forcing_dir}/volcano_aerosols/strat_aerosol_sw_${echam.resolution}_@YEAR@.nc":
                                 from: 1851
                                 to: 1999
-                        "/@RES@/volcano_aerosols/strat_aerosol_sw_@RES@_1999.nc":
+                        "${echam.forcing_dir}/volcano_aerosols/strat_aerosol_sw_${echam.resolution}_1999.nc":
                                 from: 2000
-                "piaerocoarse": 
-                        "/@RES@/aero/@RES@_aeropt_kinne_sw_b14_coa.nc"
-                "piaerofarir":
-                        "/@RES@/aero/@RES@_aeropt_kinne_lw_b16_coa.nc"
-                "piaerofin":
-                        "/@RES@/aero/@RES@_aeropt_kinne_sw_b14_fin_1865.nc"
-                "piozone":
-                        "/@RES@/@RES@_ozone_picontrol.nc"
-                "pisic":
-                        "/@RES@/@RES@@OCERES@_piControl-LR_sic_1880-2379.nc"
-                "pisst":
-                        "/@RES@/@RES@@OCERES@_piControl-LR_sst_1880-2379.nc"
                 "cldoptprops":
-                        "/ECHAM6_CldOptProps.nc"
+                        "${echam.input_dir}/ECHAM6_CldOptProps.nc"
                 "janspec":
-                        "/@RES@/@RES@@LEVELS@_jan_spec.nc"
+                        "${echam.forcing_dir}/${echam.resolution}${echam.levels}_jan_spec.nc"
                 "jansurf":
-                        "/@RES@/@RES@@OCERES@_jan_surf.nc"
+                        "${echam.adj_input_dir}/${echam.resolution}/${echam.resolution}${echam.ocean_resolution}_jan_surf.nc"
                 "rrtmglw":
-                        "/rrtmg_lw.nc"
+                        "${echam.input_dir}/rrtmg_lw.nc"
                 "rrtmgsw":
-                        "/rrtmg_sw.nc"
+                        "${echam.input_dir}/rrtmg_sw.nc"
                 "tslclim":
-                        "/@RES@/@RES@_TSLCLIM.nc"
+                        "${echam.forcing_dir}/${echam.resolution}_TSLCLIM.nc"
                 "vgratclim":
-                        "/@RES@/@RES@@OCERES@_VGRATCLIM.nc"
+                        "${echam.adj_input_dir}/${echam.resolution}/${echam.resolution}${echam.ocean_resolution}_VGRATCLIM.nc"
                 "vltclim": 
-                        "/@RES@/@RES@@OCERES@_VLTCLIM.nc"
+                        "${echam.adj_input_dir}/${echam.resolution}/${echam.resolution}${echam.ocean_resolution}_VLTCLIM.nc"
 
+        ############################## r0007 ##############################
+        r0007:
+                # sic:
+                "pisic":
+                        "${echam.forcing_dir}/${echam.resolution}${echam.ocean_resolution}_piControl-LR_sic_1880-2379.nc"
+                "amipsic": 
+                        "${echam.forcing_dir}/amip/${echam.resolution}_amipsic_@YEAR@.nc": 
+                                from: 1870
+                # sst:
+                "pisst":
+                        "${echam.forcing_dir}/${echam.resolution}${echam.ocean_resolution}_piControl-LR_sst_1880-2379.nc"
+                "amipsst": 
+                        "${echam.forcing_dir}//amip/${echam.resolution}_amipsst_@YEAR@.nc":
+                                from: 1870
+                                to: 2016
+                # aerosol:
+                "piaerocoarse": 
+                        "${echam.forcing_dir}/aero/${echam.resolution}_aeropt_kinne_sw_b14_coa.nc"
+                "piaerofarir":
+                        "${echam.forcing_dir}/aero/${echam.resolution}_aeropt_kinne_lw_b16_coa.nc"
+                "piaerofin":
+                        "${echam.forcing_dir}/aero/${echam.resolution}_aeropt_kinne_sw_b14_fin_1865.nc"
+                "histaerocoarse": 
+                        "${echam.forcing_dir}/aero2/${echam.resolution}_aeropt_kinne_sw_b14_coa.nc" 
+                "histaerofarir": 
+                        "${echam.forcing_dir}/aero2/${echam.resolution}_aeropt_kinne_lw_b16_coa.nc"
+                "histaerofin": 
+                        "${echam.forcing_dir}/aero2/${echam.resolution}_aeropt_kinne_sw_b14_fin_1865.nc":
+                                to: 1864
+                        "${echam.forcing_dir}/aero2/${echam.resolution}_aeropt_kinne_sw_b14_fin_@YEAR@.nc":
+                                from: 1865
+                                to: 2000
 
+                # greenhouse gas conc:
+                "histgreenh":
+                        "${echam.input_dir}/greenhouse_historical.nc"
+
+                # ozone:
+                "piozone":
+                        "${echam.forcing_dir}/ozone/${echam.resolution}_ozone_picontrol.nc"
+                "histozone": 
+                        "${echam.forcing_dir}/ozone/${echam.resolution}_ozone_historical_1850.nc": 
+                                to: 1850
+                        "${echam.forcing_dir}/ozone/${echam.resolution}_ozone_historical_@YEAR@.nc":
+                                from: 1851
+                                to: 2008
+                "1850ozone":
+                        "${echam.forcing_dir}/ozone/${echam.resolution}_ozone_historical_1850.nc"
+                "1950ozone":
+                        "${echam.forcing_dir}/ozone/${echam.resolution}_ozone_historical_1950.nc"
+
+                # solar radiation:
+                "histswflux": 
+                        "${echam.input_dir}/solar_irradiance/swflux_14band_1850.nc":
+                                to: 1850
+                        "${echam.input_dir}/solar_irradiance/swflux_14band_@YEAR@.nc":  
+                                from: 1851
+
+                # volcanic:
+                "histvolcir": 
+                        "${echam.forcing_dir}/volcano_aerosols/strat_aerosol_ir_${echam.resolution}_1850.nc":
+                                to: 1850
+                        "${echam.forcing_dir}/volcano_aerosols/strat_aerosol_ir_${echam.resolution}_@YEAR@.nc":
+                                from: 1851
+                                to: 1999
+                        "${echam.forcing_dir}/volcano_aerosols/strat_aerosol_ir_${echam.resolution}_1999.nc":
+                                from: 2000
+                "histvolcsw":
+                        "${echam.forcing_dir}/volcano_aerosols/strat_aerosol_sw_${echam.resolution}_1850.nc":
+                                to: 1850
+                        "${echam.forcing_dir}/volcano_aerosols/strat_aerosol_sw_${echam.resolution}_@YEAR@.nc":
+                                from: 1851
+                                to: 1999
+                        "${echam.forcing_dir}/volcano_aerosols/strat_aerosol_sw_${echam.resolution}_1999.nc":
+                                from: 2000
+                "cldoptprops":
+                        "${echam.input_dir}/ECHAM6_CldOptProps.nc"
+                "janspec":
+                        "${echam.forcing_dir}/${echam.resolution}${echam.levels}_jan_spec.nc"
+                "jansurf":
+                        "${echam.adj_input_dir}/${echam.resolution}/${echam.resolution}${echam.ocean_resolution}_jan_surf.nc"
+                "rrtmglw":
+                        "${echam.input_dir}/rrtmg_lw.nc"
+                "rrtmgsw":
+                        "${echam.input_dir}/rrtmg_sw.nc"
+                "tslclim":
+                        "${echam.forcing_dir}/${echam.resolution}_TSLCLIM.nc"
+                "vgratclim":
+                        "${echam.adj_input_dir}/${echam.resolution}/${echam.resolution}${echam.ocean_resolution}_VGRATCLIM.nc"
+                "vltclim": 
+                        "${echam.adj_input_dir}/${echam.resolution}/${echam.resolution}${echam.ocean_resolution}_VLTCLIM.nc"
 

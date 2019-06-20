@@ -293,6 +293,7 @@ def make_choice_in_config(config, key):
     if not isinstance(choice, collections.Hashable):
         choice = freeze(choice)
     del_value_for_nested_key(config, key)
+    print(config.keys(), key)
     if "choose_" + key in config:
         try:
             # FIXME: Why are strs different than any other thing that could be
@@ -305,6 +306,10 @@ def make_choice_in_config(config, key):
                     key,
                     choice,
                 )
+
+                print("key=", key)
+                print("choice=", choice)
+
                 config[key] = {choice: config["choose_" + key][choice]}
             else:
                 config[key] = choice
@@ -435,18 +440,36 @@ def recursive_promote_all(config):
             recursive_promote_all(value)
 
 
-def recursive_run_function(config, func, *args, **kwargs):
+def recursive_run_function(config, func, counter, caller_tree, *args, **kwargs):
     """ Recursively runs func on all nested dicts """
     print("Using", config, " to run:", func)
+    print("The types are:", type(config), "and ", type(func))
+    print("Recusrion depth counter for this tree:", counter)
+    print("Current tree:")
+    if isinstance(caller_tree, list) and caller_tree:
+        print("\n".join(caller_tree))
     if isinstance(config, list):
         for item in config:
-            recursive_run_function(item, func, *args, **kwargs)
+            print("List things: lala")
+            caller_tree.append(str(item))
+            recursive_run_function(
+                item, func, counter + 1, caller_tree, *args, **kwargs
+            )
+            caller_tree.pop()
     elif isinstance(config, dict):
         keys = list(config)
         for key in keys:
             value = config[key]
-            recursive_run_function(value, func, *args, **kwargs)
+            print("Dict things: haha")
+            caller_tree.append(str(key))
+            recursive_run_function(
+                value, func, counter + 1, caller_tree, *args, **kwargs
+            )
+            caller_tree.pop()
     else:
+        if isinstance(config, str):
+            print("I got a string!! this block should show up")
+        print("!" * 80, "Found an atmoic thing")
         func(config, *args, **kwargs)
         # raise TypeError("Needs str, list, or dict")
 
@@ -483,13 +506,12 @@ def find_variable(raw_str, config_to_search):
             config_elements = var.split(".")
             var_result = recursive_get(config_to_search, config_elements)
             if var_result:
-                print(
-                    "Will return:",
-                    ok_part,
-                    var_result,
-                    find_variable(new_raw, config_to_search),
-                )
-                return ok_part + var_result + find_variable(new_raw, config_to_search)
+                if new_raw:
+                    more_rest = find_variable(new_raw, config_to_search)
+                else:
+                    more_rest = ""
+                print("Will return:", ok_part, var_result, more_rest)
+                return ok_part + var_result + more_rest
             else:
                 warnings.warn("Maybe look in the other config")
     else:
@@ -510,11 +532,11 @@ def pass_down(config, key):
             # works...?
             if k not in config[key] and k not in this_thing and k != key:
                 logging.debug("Passing %s=%s down to %s", k, v, thing_below)
-                this_thing["inherited_attrs"][k] = v  # if k not in config[key]
+                # this_thing["inherited_attrs"][k] = v  # if k not in config[key]
                 this_thing[k] = v  # PG: I'm not 100% sure here, but it seems to work?
             else:
                 logging.debug("%s already has an attribute %s", thing_below, k)
-                this_thing["progenitor_attrs"][k] = [v]
+                # this_thing["progenitor_attrs"][k] = [v]
         config[thing_below] = popped_thing_below
 
 
@@ -598,7 +620,9 @@ class ConfigSetup(GeneralConfig):
             attach_to_config_and_reduce_keyword(self.config, "include_models", "models")
             for model in self.config["models"]:
                 self.config[model] = ConfigComponent(model)
-        recursive_run_function(self.config, find_variable, self.config)
+        recursive_run_function(
+            self.config, find_variable, 0, [self.config["model"]], self.config
+        )
 
 
 class ConfigComponent(GeneralConfig):
@@ -632,4 +656,4 @@ if __name__ == "__main__":
 
     if ARGS.setup:
         CFG = ConfigSetup(ARGS.setup)
-        # print(yaml.dump(CFG, default_flow_style=False))
+        print(yaml.dump(CFG, default_flow_style=False))

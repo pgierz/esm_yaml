@@ -24,7 +24,7 @@ pool_dir: "@MACHINE_POOL_DIR@/ECHAM6"
 executable: echam6
 version: 6.304p1
 
-versions:
+choose_version:
         6.304p1:
                 repo_tag: 6.304p1
                 dataset: r0007               

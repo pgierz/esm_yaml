@@ -8,23 +8,22 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-# TODO(pgierz): Check if we can sort this or if it breaks...
 # Python Standard Library imports
-from builtins import dict
-from builtins import super
-from builtins import open
-from future import standard_library
-
-standard_library.install_aliases()
 import collections
 import logging
 import re
 import socket
-import sys
 import warnings
+
+from builtins import dict
+from builtins import open
+from builtins import super
+from future import standard_library
 
 # Third-Party Imports
 import yaml
+
+standard_library.install_aliases()
 
 CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE = ["further_reading"]
 YAML_AUTO_EXTENSIONS = ["", ".yml", ".yaml", ".YML", ".YAML"]
@@ -50,10 +49,11 @@ def yaml_file_to_dict(filepath):
         try:
             with open(filepath + extension) as yaml_file:
                 return yaml.load(yaml_file, Loader=yaml.FullLoader)
-        except IOError as e:
+        except IOError as error:
             logging.debug(
-                "(%s) File not found with %s, trying another extension pattern."
-                % (e.errno, filepath + extension)
+                "(%s) File not found with %s, trying another extension pattern.",
+                error.errno,
+                filepath + extension,
             )
     raise FileNotFoundError(
         "All file extensions tried and none worked for %s" % filepath
@@ -293,7 +293,6 @@ def make_choice_in_config(config, key):
     if not isinstance(choice, collections.Hashable):
         choice = freeze(choice)
     del_value_for_nested_key(config, key)
-    print(config.keys(), key)
     if "choose_" + key in config:
         try:
             # FIXME: Why are strs different than any other thing that could be
@@ -307,15 +306,15 @@ def make_choice_in_config(config, key):
                     choice,
                 )
 
-                print("key=", key)
-                print("choice=", choice)
+                logging.debug("key=", key)
+                logging.debug("choice=", choice)
 
                 config[key] = {choice: config["choose_" + key][choice]}
             else:
                 config[key] = choice
             del config["choose_" + key]
         except KeyError:
-            warnings.warn("Could not find a choice for %s" % key)
+            warnings.warn("Could not find a choice for %s (yet)" % key)
 
 
 def promote_value_to_key(config, promotable_key):
@@ -442,80 +441,103 @@ def recursive_promote_all(config):
 
 def recursive_run_function(config, func, counter, caller_tree, *args, **kwargs):
     """ Recursively runs func on all nested dicts """
-    print("Using", config, " to run:", func)
-    print("The types are:", type(config), "and ", type(func))
-    print("Recusrion depth counter for this tree:", counter)
-    print("Current tree:")
+
+    logging.debug("Using %s to run: %s", config, func)
+    logging.debug("The types are: %s and %s", type(config), type(func))
+    logging.debug("Current recursion depth: %s", counter)
+    logging.debug("Current tree:")
     if isinstance(caller_tree, list) and caller_tree:
-        print("\n".join(caller_tree))
+        for leaf in caller_tree:
+            logging.debug(leaf)
+
     if isinstance(config, list):
-        for item in config:
-            print("List things: lala")
+        for index, item in enumerate(config):
+            logging.debug("In a list!")
             caller_tree.append(str(item))
-            recursive_run_function(
+            new_item = recursive_run_function(
                 item, func, counter + 1, caller_tree, *args, **kwargs
             )
             caller_tree.pop()
+            config[index] = new_item
     elif isinstance(config, dict):
         keys = list(config)
         for key in keys:
             value = config[key]
-            print("Dict things: haha")
+            logging.debug("In a dict!")
             caller_tree.append(str(key))
-            recursive_run_function(
+            config[key] = recursive_run_function(
                 value, func, counter + 1, caller_tree, *args, **kwargs
             )
             caller_tree.pop()
+    # BUG: What about str and tuple? We only specifically handle list and dict
+    # here, is that OK?
     else:
-        if isinstance(config, str):
-            print("I got a string!! this block should show up")
-        print("!" * 80, "Found an atmoic thing")
-        func(config, *args, **kwargs)
+        logging.debug("In an atomic thing")
+        # FIXME: This is actually wrong, it should just be func(*args, **kwargs)
+        config = func(config, *args, **kwargs)
         # raise TypeError("Needs str, list, or dict")
+    return config
 
 
 def recursive_get(config_to_search, config_elements):
+    """
+    Recusively gets entries in a nested dictionary in the form ``outer_key.middle_key.inner_key = value``
+
+    Given a list of config elements in the form above (e.g. the result of
+    splitting the string ``"outer_key.middle_key.inner_key".split(".")``` on
+    the dot), the value "value" of the innermost nest is returned. 
+
+    Parameters
+    ----------
+    config_to_search : dict
+        The dictionary to search through
+    config_elements : list
+        Each part of the next level of the dictionary to search, as a list.
+
+    Returns
+    -------
+        The value associated with the nested dictionary specified by ``config_elements``.
+
+    Note
+    ----
+        This is actually just a wrapper around the function
+        ``actually_recursive_get``, which is needed to pop off standalone model
+        configurations.
+    """
+    # NOTE(PG) I really don't like the logic in this function... :-( It'd be
+    # much cleaner if this one and actually_recursive_get could be combined...
     if "standalone_model" in config_to_search:
         # Throw away the first thing:
         config_elements.pop(0)
-        print(80 * "-")
-        print(config_elements)
-        print(80 * "-")
-    return rec_get(config_to_search, config_elements)
+    return actually_recursive_get(config_to_search, config_elements)
 
 
-def rec_get(config_to_search, config_elements):
-    print(80 * "#")
-    print(config_elements)
-    print(80 * "#")
+def actually_recursive_get(config_to_search, config_elements):
+    """
+    See the documentation for ``recursive_get``.
+    """
     this_config = config_elements.pop(0)
-    # print(config_to_search)
     result = config_to_search.get(this_config)
-    if not config_elements:
-        return result
-    else:
-        return rec_get(result, config_elements)
+    if config_elements:
+        return actually_recursive_get(result, config_elements)
+    return result
 
 
 def find_variable(raw_str, config_to_search):
-    # variable = resolution
-    if isinstance(raw_str, str):
-        if "${" in raw_str:
-            ok_part, rest = raw_str.split("${", 1)
-            var, new_raw = rest.split("}", 1)
-            config_elements = var.split(".")
-            var_result = recursive_get(config_to_search, config_elements)
-            if var_result:
-                if new_raw:
-                    more_rest = find_variable(new_raw, config_to_search)
-                else:
-                    more_rest = ""
-                print("Will return:", ok_part, var_result, more_rest)
-                return ok_part + var_result + more_rest
+    if isinstance(raw_str, str) and "${" in raw_str:
+        ok_part, rest = raw_str.split("${", 1)
+        var, new_raw = rest.split("}", 1)
+        config_elements = var.split(".")
+        var_result = recursive_get(config_to_search, config_elements)
+        if var_result:
+            if new_raw:
+                more_rest = find_variable(new_raw, config_to_search)
             else:
-                warnings.warn("Maybe look in the other config")
-    else:
-        return raw_str
+                more_rest = ""
+            print("Will return:", ok_part, var_result, more_rest)
+            return ok_part + var_result + more_rest
+        warnings.warn("Maybe look in the other config")
+    return raw_str
 
 
 def pass_down(config, key):
@@ -566,12 +588,6 @@ def determine_computer_from_hostname():
         "The yaml file for this computer (%s) could not be determined!"
         % socket.gethostname()
     )
-
-
-def replace_value_variable_with_value(dictionary, variable, value):
-    keys = list(dictionary)
-    for key in keys:
-        value = dictionary[key]
 
 
 class GeneralConfig(dict):
@@ -644,6 +660,7 @@ if __name__ == "__main__":
         """ The arg parser for interactive use """
         parser = argparse.ArgumentParser()
         parser.add_argument("--run_tests", type=bool)
+        parser.add_argument("--debug", type=bool)
         parser.add_argument("setup", default=None)
         return parser.parse_args()
 
@@ -654,6 +671,10 @@ if __name__ == "__main__":
         doctest.testmod()
         # TODO: Have something that runs unit tests
 
+    if ARGS.debug:
+        logging.basicConfig(level=logging.DEBUG)
+
     if ARGS.setup:
         CFG = ConfigSetup(ARGS.setup)
+        yaml.Dumper.ignore_aliases = lambda *args: True
         print(yaml.dump(CFG, default_flow_style=False))

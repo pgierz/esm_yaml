@@ -659,8 +659,8 @@ if __name__ == "__main__":
     def parse_args():
         """ The arg parser for interactive use """
         parser = argparse.ArgumentParser()
-        parser.add_argument("--run_tests", type=bool)
-        parser.add_argument("--debug", type=bool)
+        parser.add_argument("--run_tests", action="store_true")
+        parser.add_argument("--debug", action="store_true")
         parser.add_argument("setup", default=None)
         return parser.parse_args()
 
@@ -676,5 +676,10 @@ if __name__ == "__main__":
 
     if ARGS.setup:
         CFG = ConfigSetup(ARGS.setup)
+        # The next line makes the YAML more readable. For more information, see
+        # here:
+        #
+        # https://stackoverflow.com/questions/13518819/avoid-references-in-pyyaml
+        #
         yaml.Dumper.ignore_aliases = lambda *args: True
         print(yaml.dump(CFG, default_flow_style=False))

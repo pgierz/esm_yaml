@@ -4,22 +4,23 @@
 # DEFAULT VALUES
 #
 
+executable:     nemo.exe
+version:        3.6
+
 resolution:     ORCA05
+time_step:      1800
 
 use_lim2:       true
 use_tracer:     true
-hosing:         0
+hosing:         false
 free_surface:   linear
-correct_neg_tracer_conc: 1
-
-executable:     nemo.exe
-time_step:      1800
+correct_neg_tracer_conc: true
 
 restart:
         rate:   1
         unit:   months
 
-# directories
+# default directories
 #
 
 ini_restart_dir: /gfs2/work/shkifmsw/models/foci1.10.1/experiments/FOCI1.10-SWtestd/restart/nemo
@@ -27,7 +28,7 @@ input_dir:      /gfs2/work/shkifmsw/foci_input/NEMO/input/r0001/${resolution}
 namelist_dir:   ${esm_runscripts_dir}/namelists/nemo
 bin_dir:        ${setup.dir}/bin
 
-# files
+# default files
 #
 
 restart_in_files:
@@ -46,7 +47,7 @@ config_files:
 
 
 namelist_changes:
-        namelist_config:
+        namelist_cfg:
                 namrun:
                         cn_exp: ${expid}
                         nn_it000: ${firsttimestep} 
@@ -54,10 +55,73 @@ namelist_changes:
                         nn_date0: ${ini_date}
                         cn_ocerst_in: ${restart_in}
                         cn_ocerst_indir: '${work_dir}/'
-                        cn_ocerst_in: ${restart_in}
-                        cn_ocerst_indir: '${work_dir}/'
-                        
+                        cn_ocerst_out: restart_${end_date}
+                        cn_ocerst_outdir: '${work_dir}/'
+                        nn_stock: ${newtimestep}
+                        nn_leapy: 1
+                        nn_rstctl: 2
+                        namrun_rstart: 'false'
+                namtrc_run:                        
+                        nn_rsttr: 2
+                nam_tsd:
+                        nam_tsd_init: '.true.'   
+                namdom:    
+                        rn_rdt: ${timestep}
+                namsbc:         
+                        nn_fsbc: ${coupling_freq}
+                nammpp:
+                        jpni: 0
+                        jpnj: 0
+                        jpnij: 0
+                namsbc_cpl: 
+                        sn_rcv_rnf: "'none', 'no', '', '', ''"
 
+
+choose_free_surface:                        
+        linear:
+                namelist_changes:
+                        namelist_cfg:
+                                namdyn_hpg:
+                                        ln_hpg_zps: '.true.'
+                                        ln_hpg_sco: '.false.'
+                                        ln_dynhpg_imp: '.true.'                
+        nonlinear:
+                namelist_changes:
+                        namelist_cfg:
+                                namdyn_hpg:
+                                        ln_hpg_zps: '.false.'
+                                        ln_hpg_sco: '.true.'
+                                        ln_dynhpg_imp: '.false.'
+                                        
+choose_hosing:
+        true:
+                namelist_changes:
+                        namelist_cfg:
+                                namdyn_sbc:
+                                        ln_hosing: '.true.'        
+
+choose_lresume:
+        true:
+                namelist_changes:
+                        namelist_cfg: 
+                                namrun:
+                                        ln_rstart: '.true.'
+                                nam_tsd:
+                                        nam_tsd_init: '.true.'       
+                choose_run_number:
+                        1:
+                                namelist_changes:
+                                        namelist_cfg:
+                                                namrun:
+                                                        nn_rstctl: 0
+                                                namtrc_run:        
+                                                        nn_rsttr : 0       
+choose_run_number:
+        1:
+                namelist_changes:
+                        namelist_cfg:
+                                namdom:
+                                        nn_msh: 1
 # choices:
 #
 
@@ -92,12 +156,38 @@ choose_use_lim2:
                 config_files:
                         namelist_ice_ref: ${namelist_dir}/namelist_ice_ref
                         namelist_ice_cfg: ${namelist_dir}/namelist_ice_cfg
+                namelist_changes:
+                        namelist_ice_cfg:
+                                namicerun:
+                                        cn_icerst_in: ${restart_in_ice}
+                                        cn_icerst_indir: '${work_dir}'
+                                        cn_icerst_out: restart_ice_${end_date}
+                                        cn_icerst_outdir: '${work_dir}'
+                        namelist_top_cfg:
+                                namtrc_run:
+                                        ln_rsttr: '.true.'
+                choose_lresume:
+                        true:
+                                namelist_changes:
+                                        namelist_ice_cfg:
+                                                namiceini:
+                                                        ln_limini: '.true.'
+                                        namelist_top_cfg:                
+                                                namtrc_run:
+                                                        ln_rsttr: '.false.'
 
 choose_use_tracer:
         true:
                 config_files:
                         namelist_top_ref: ${namelist_dir}/namelist_top_ref
                         namelist_top_cfg: ${namelist_dir}/namelist_top_cfg
+                namelist_changes:
+                        namelist_top_cfg:
+                                namtrc_run:
+                                        cn_trcrst_in: ${restart_in_tracer}
+                                        cn_trcrst_indir: '${work_dir}'
+                                        cn_trcrst_out: restart_trc_${end_date}
+                                        cn_trcrst_outdir: '${work_dir}'
 
 # always true
 #

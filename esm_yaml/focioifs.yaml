@@ -1,0 +1,5 @@
+namelist_changes:
+        nemo:
+                namelist_cfg:
+                        namsbc_cpl:
+                                sn_rcv_rnf: "'coupled', 'no', '', '', ''"

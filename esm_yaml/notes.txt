@@ -1,0 +1,23 @@
+#!/bin/ksh
+
+#dont forget
+
+default: files heißen im work so wie reinkopiert
+
+
+case $script_type in
+                compute)
+                        if [[ "x${RUN_NUMBER_nemo}" = "x1" ]] && [[ "x$LRESUME_nemo" = "x0" ]]
+                        then
+                                PARENT_DATE_nemo=${INI_PARENT_DATE_nemo:-22941231}
+                                PARENT_EXP_ID_nemo=${INI_PARENT_EXP_ID_nemo:-khw0030}
+                        elif [[ "x$RUN_NUMBER_nemo" = "x1" ]] && [[ "x$LRESUME_nemo" = "x1" ]]
+                        then
+                                PARENT_DATE_nemo=${INI_PARENT_DATE_nemo:-${PARENT_DATE_esmstyle}}     # INITIAL_DATE_awicm nehmen?
+                                PARENT_EXP_ID_nemo=${INI_PARENT_EXP_ID_nemo:-${PARENT_EXP_ID_esmstyle}}
+                                PARENT_EXP_ID_nemo=${PARENT_EXP_ID_nemo:-${EXP_ID}}
+                        fi
+                        ;;
+        esac
+
+

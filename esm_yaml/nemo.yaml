@@ -1,0 +1,127 @@
+# NEMO YAML CONFIGURATION FILE
+#
+
+# DEFAULT VALUES
+#
+
+resolution:     ORCA05
+
+use_lim2:       true
+use_tracer:     true
+hosing:         0
+free_surface:   linear
+correct_neg_tracer_conc: 1
+
+executable:     nemo.exe
+time_step:      1800
+
+restart:
+        rate:   1
+        unit:   months
+
+# directories
+#
+
+ini_restart_dir: /gfs2/work/shkifmsw/models/foci1.10.1/experiments/FOCI1.10-SWtestd/restart/nemo
+input_dir:      /gfs2/work/shkifmsw/foci_input/NEMO/input/r0001/${resolution}
+namelist_dir:   ${esm_runscripts_dir}/namelists/nemo
+bin_dir:        ${setup.dir}/bin
+
+# files
+#
+
+restart_in_files:
+        restart_in: ${expid}_${timestep_formatted}_restart_${prev_date}
+        restart_in_ice: ${expid}_${timestep_formatted}_restart_ice_${prev_date}
+        restart_in_tracer: ${expid}_${timestep_formatted}_restart_trc_${prev_date}
+
+restart_out_files:
+        restart_out: ${expid}_${timestep_formatted}_restart_${end_date}
+        restart_out_ice: ${expid}_${timestep_formatted}_restart_ice_${end_date}
+        restart_out_tracer: ${expid}_${timestep_formatted}_restart_trc_${end_date}
+
+config_files: 
+        namelist_ref: ${namelist_dir}/namelist_ref
+        namelist_cfg: ${namelist_dir}/namelist_cfg
+
+
+namelist_changes:
+        namelist_config:
+                namrun:
+                        cn_exp: ${expid}
+                        nn_it000: ${firsttimestep} 
+                        nn_itend: ${newtimestep}
+                        nn_date0: ${ini_date}
+                        cn_ocerst_in: ${restart_in}
+                        cn_ocerst_indir: '${work_dir}/'
+                        cn_ocerst_in: ${restart_in}
+                        cn_ocerst_indir: '${work_dir}/'
+                        
+
+# choices:
+#
+
+choose_resolution:
+        ORCA05:
+                nx: 722
+                ny: 511
+                time_step: 1800i
+                input_files:
+                        bathy_meter: bathy_meter.nc
+                        coordinates: coordinates.nc
+                        subbasins: orca05_subbasins_3.6.nc
+                        tpot: Levitus_p2.1_1m_01_12_Tpot_ORCA_R05.nc
+                        s_correc: Levitus_p2.1_1m_01_12_S_correc_ORCA_R05.nc
+                        s_correc_sss: Levitus_p2.1_1m_01_12_S_correc_ORCA_R05_SSS_EB.nc
+                        Ice_init: Ice_initialization_KKG36F13H-R.nc
+                        coef-G70: orca05_bfr_coef-G70.nc
+                input_in_work:
+                        subbasins: orca05_subbasins_3.6.nc
+                        tpot: Levitus_p2.1_1m_01_12_Tpot_ORCA_R05.nc
+                        s_correc: Levitus_p2.1_1m_01_12_S_correc_ORCA_R05.nc
+                        s_correc_sss: Levitus_p2.1_1m_01_12_S_correc_ORCA_R05_SSS_EB.nc
+                        coef-G70: orca05_bfr_coef-G70.nc
+        
+        GYRE_XIOS:
+                nx: 32
+                ny: 22
+                time_step: 7200
+
+choose_use_lim2:
+        true:
+                config_files:
+                        namelist_ice_ref: ${namelist_dir}/namelist_ice_ref
+                        namelist_ice_cfg: ${namelist_dir}/namelist_ice_cfg
+
+choose_use_tracer:
+        true:
+                config_files:
+                        namelist_top_ref: ${namelist_dir}/namelist_top_ref
+                        namelist_top_cfg: ${namelist_dir}/namelist_top_cfg
+
+# always true
+#
+
+config_in_work: 
+        namelist_ref: namelist_ref
+        namelist_cfg: namelist_cfg
+        namelist_ice_ref: namelist_ref
+        namelist_ice_cfg: namelist_cfg
+        namelist_top_ref: namelist_ref
+        namelist_top_cfg: namelist_cfg
+
+input_in_work:
+        bathy_meter: bathy_meter.nc
+        coordinates: coordinates.nc
+        Ice_init: Ice_initialization.nc 
+
+restart_in_in_work:
+        restart_in: ${expid}_${timestep_formatted}_restart_${prev_date}_*.nc
+        restart_in_ice: ${expid}_${timestep_formatted}_restart_ice_${prev_date}_*.nc
+        restart_in_tracer: ${expid}_${timestep_formatted}_restart_tracer_${prev_date}_*.nc
+
+restart_out_in_work:
+        restart_out: ${expid}_${timestep_formatted}_restart_${end_date}_*.nc
+        restart_out_ice: ${expid}_${timestep_formatted}_restart_ice_${end_date}_*.nc
+        restart_out_tracer: ${expid}_${timestep_formatted}_restart_trc_${end_date}_*.nc
+

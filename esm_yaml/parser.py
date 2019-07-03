@@ -267,7 +267,7 @@ def find_value_for_nested_key(config, key):
     return None  # NOTE: This **should** never happen...?
 
 
-def make_choice_in_config(config, key):
+def make_choice_in_config(config, key, first_time=True):
     """
     Given a specific ``config``, pulls out the corresponding choices for ``key``.
 
@@ -314,7 +314,8 @@ def make_choice_in_config(config, key):
                 config[key] = choice
             del config["choose_" + key]
         except KeyError:
-            warnings.warn("Could not find a choice for %s (yet)" % key)
+            if not first_time:
+                warnings.warn("Could not find a choice for %s (yet)" % key)
 
 
 def promote_value_to_key(config, promotable_key):
@@ -419,13 +420,15 @@ def attach_to_config_and_reduce_keyword(config, full_keyword, reduced_keyword):
     del config[full_keyword]
 
 
-def recursive_make_choices(config):
+def recursive_make_choices(config, first_time=True):
     """Recursively calls make choices for any dict in config"""
     all_config_keys = list(config)
     for k in all_config_keys:
         v = config[k]
         if isinstance(k, str) and k.startswith("choose_"):
-            make_choice_in_config(config, k.replace("choose_", ""))
+            make_choice_in_config(
+                config, k.replace("choose_", ""), first_time=first_time
+            )
         if isinstance(v, dict):
             recursive_make_choices(v)
 
@@ -590,6 +593,32 @@ def determine_computer_from_hostname():
     )
 
 
+def do_math_in_entry(entry):
+    entry = " " + entry + " "
+    while "$((" in entry:
+        math, after_math = entry.split("))", 1)
+
+        print("after first step: math=", math, "after_math=", after_math)
+        math, before_math = math[::-1].split("(($", 1)
+        math = math[::-1]
+        before_math = before_math[::-1]
+
+        # saved_math = []
+        # for math_part in math:
+        #    saved_math.append(math_part[::-1])
+        # math = "".join(saved_math)
+        # print(math)
+        # if len(math) > 1:
+        #    before_math, math = math.split("$((", -1)
+        # else:
+        #    before_math = ""
+        #    math = math.split("$((")
+        ## Now we want to actually do math
+        result = str(eval(math))
+        entry = before_math + result + after_math
+    return entry.strip()
+
+
 class GeneralConfig(dict):
     """ All configs do this! """
 
@@ -624,20 +653,23 @@ class ConfigSetup(GeneralConfig):
                 setup_relevant_configs, ConfigComponent(self.config["model"])
             )
             recursive_make_choices(self.config)
-            print("Unordered DICT, try again!")
+            logging.debug("Unordered DICT, try again!")
             # Since the dictionary resolves choices in an unordered way, there
             # might still be unresolved choices.
             #
             # To resolve, do the pass down again:
             pass_down(self.config, "submodels")
             # And re-resolve choices:
-            recursive_make_choices(self.config)
+            recursive_make_choices(self.config, first_time=False)
         else:
             attach_to_config_and_reduce_keyword(self.config, "include_models", "models")
             for model in self.config["models"]:
                 self.config[model] = ConfigComponent(model)
         recursive_run_function(
             self.config, find_variable, 0, [self.config["model"]], self.config
+        )
+        recursive_run_function(
+            self.config, do_math_in_entry, 0, [self.config["model"]], self.config
         )
 
 
@@ -673,13 +705,6 @@ if __name__ == "__main__":
 
     if ARGS.debug:
         logging.basicConfig(level=logging.DEBUG)
-
-    if ARGS.setup:
-        CFG = ConfigSetup(ARGS.setup)
-        # The next line makes the YAML more readable. For more information, see
-        # here:
-        #
-        # https://stackoverflow.com/questions/13518819/avoid-references-in-pyyaml
-        #
-        yaml.Dumper.ignore_aliases = lambda *args: True
-        print(yaml.dump(CFG, default_flow_style=False))
+    example = "one_$((1+2 * $((5*1))))_two_$((3*4))"
+    print(example)
+    print(do_math_in_entry(example))

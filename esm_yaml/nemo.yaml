@@ -37,13 +37,30 @@ restart_in_files:
         restart_in_tracer: ${expid}_${timestep_formatted}_restart_trc_${prev_date}
 
 restart_out_files:
-        restart_out: ${expid}_${timestep_formatted}_restart_${end_date}
-        restart_out_ice: ${expid}_${timestep_formatted}_restart_ice_${end_date}
-        restart_out_tracer: ${expid}_${timestep_formatted}_restart_trc_${end_date}
+        restart_out: ${expid}_${newtimestep_formatted}_restart_${end_date}
+        restart_out_ice: ${expid}_${newtimestep_formatted}_restart_ice_${end_date}
+        restart_out_tracer: ${expid}_${newtimestep_formatted}_restart_trc_${end_date}
 
 config_files: 
         namelist_ref: ${namelist_dir}/namelist_ref
         namelist_cfg: ${namelist_dir}/namelist_cfg
+
+output_files:
+        mesh_mask:      mesh_mask*.nc
+        5d:             ${expid}_5d_${start_date}_${end_date}_grid_*.nc
+        1m:             ${expid}_1m_${start_date}_${end_date}_grid_*.nc
+
+log_files:
+        tracer:         tracer.stat
+        ocean:          '*ocean.output'
+        
+
+# calendar:
+
+secs_before_start: $(( seconds_since_initial - runtime ))
+timestep: $(( sec_before_start / time_step ))
+newtimestep: $(( timestep + timesteps_per_run ))
+
 
 
 namelist_changes:
@@ -211,7 +228,16 @@ restart_in_in_work:
         restart_in_tracer: ${expid}_${timestep_formatted}_restart_tracer_${prev_date}_*.nc
 
 restart_out_in_work:
-        restart_out: ${expid}_${timestep_formatted}_restart_${end_date}_*.nc
-        restart_out_ice: ${expid}_${timestep_formatted}_restart_ice_${end_date}_*.nc
-        restart_out_tracer: ${expid}_${timestep_formatted}_restart_trc_${end_date}_*.nc
+        restart_out: ${expid}_${newtimestep_formatted}_restart_${end_date}_*.nc
+        restart_out_ice: ${expid}_${newtimestep_formatted}_restart_ice_${end_date}_*.nc
+        restart_out_tracer: ${expid}_${newtimestep_formatted}_restart_trc_${end_date}_*.nc
 
+output_in_work:
+        mesh_mask:      mesh_mask*.nc
+        5d:             ${expid}_5d_${start_date}_${end_date}_grid_*.nc
+        1m:             ${expid}_1m_${start_date}_${end_date}_grid_*.nc
+
+log_in_work:
+        tracer:         tracer.stat
+        ocean:          '*ocean.output'
+        

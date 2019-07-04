@@ -20,7 +20,7 @@ oasis3mct:
 version: "1.1"
 scenario: "PI-CTRL"
 time_step: 450
-resolution: echam.resolution+"_"+fesom.resolution
+resolution: ${echam.resolution}_${fesom.resolution}
 resume: TRUE
 
 
@@ -63,75 +63,61 @@ choose_resume:
 required:
         - resolution
 
-choose_coupling_direction:
-        o2a:
+
+echam:
+        coupling_fields:
+                snt_atmo:
+                        grid: atmo
+                        description: |
+                               whatever snt means
+                        unit: kg m s
+                        standard_cf_name: 'shit no tuna?'
+                        cf_code: 42
+
+        grids:
+                atmo:
+                        nx=${echam.nx}
+                        ny=${echam.ny}
+
+coupling_target_fields:
+        o2a_flux: 
+                - 'sst_atmo:sit_atmo:sie_atmo <--distwgt-- sst_feom:sit_feom:sie_feom'
+                - 'snt_atmo <--distwgt-- snt_feom'     
+
+        a2o_flux:
+                - 'taux_oce:tauy_oce:taux_ico:tauy_ico <--bicubic-- taux_atm:tauy_atm:taux_ica:tauy_ica'
+                - 'prec_oce <--distwgt-- prec_atm'
+                - 'snow_oce <--distwgt-- snow_atm'
+                - 'evap_oce <--distwgt-- evap_atm'
+                - 'subl_oce <--distwgt-- subl_atm'
+                - 'heat_oce <--distwgt-- heat_atm'
+                - 'heat_ico <--distwgt-- heat_ica'
+                - 'heat_swo <--distwgt-- heat_swa'
+                - 'hydr_oce <--distwgt-- hydr_atm'
+
+
+coupling_methods:                  
+        '<--distwgt--':
+                implementation: '${coupler}.<--distwgt--'
+                bins: 15
+                other_number: 6
+
+
+postpro:
+        BOT_stream.nc:
+                source_field: 
+                        - a
+                        - b 
+                        - c
+                method: monthly mean
+
+        BOT_stream2.nc: 'e2, f2, g2 <--monthly_mean-- e,f,g'       
+          
+coupling_direction:
+         'feom->atmo':
                 lag: o2a_lag
-                restart_file: o2a_flux
                 seq: 1
-                from_grid: feom
-                to_grid: atmo
-                transformation: distwgt
-         a2o:
+         'atmo->feom':
                 lag: $a2o_lag
-                restart_file: a2o_flux
                 seq: $a2o_seq
-                from_grid: atmo
-                to_grid: feom
-                transformation: distwgt
-
-coupled_fields:
-        id:
-                1:      
-                        snd: "sst_feom:sit_feom:sie_feom"
-                        rcv: "sst_atmo:sit_atmo:sie_atmo"
-                        coupling_direction: o2a
-                4:
-                        snd: "snt_feom" 
-                        rcv: "snt_atmo"
-                        coupling_direction: o2a
-                5:
-                        snd: "taux_atm:tauy_atm:taux_ica:tauy_ica"
-                        rcv: "taux_oce:tauy_oce:taux_ico:tauy_ico"
-                        transformation: bicubic
-                        coupling_direction: a2o
-                9:
-                        snd: "prec_atm" 
-                        rcv: "prec_oce"
-                        coupling_direction: a2o
-                10:     
-                        snd: "snow_atm"
-                        rcv: "snow_oce"
-                        coupling_direction: a2o
-                11:
-                        snd: "evap_atm"
-                        rcv: "evap_oce" 
-                        coupling_direction: a2o
-                12:
-                        snd: "subl_atm" 
-                        rcv: "subl_oce" 
-                        coupling_direction: a2o
-                13:
-                        snd: "heat_atm" 
-                        rcv: "heat_oce"
-                        coupling_direction: a2o
-                14:
-                        snd: "heat_ica" 
-                        rcv: "heat_ico"
-                        coupling_direction: a2o
-                15:
-                        snd: "heat_swa" 
-                        rcv: "heat_swo" 
-                        coupling_direction: a2o
-                16:
-                        snd: "hydr_atm" 
-                        rcv: "hydr_oce" 
-                        coupling_direction: a2o
-
-grids:
-        feom:
-                nx: $fesom.nx
-                ny: $fesom.ny
-        atmo:
-                nx: $echam.nx
-                ny: $echam.ny
 

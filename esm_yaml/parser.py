@@ -20,6 +20,10 @@ from builtins import open
 from builtins import super
 from future import standard_library
 
+
+# Date class
+from esm_calendar import Date
+
 # Third-Party Imports
 import yaml
 
@@ -442,42 +446,25 @@ def recursive_promote_all(config):
             recursive_promote_all(value)
 
 
-def recursive_run_function(config, func, counter, caller_tree, *args, **kwargs):
+def recursive_run_function_lhs(config, func, last_key, *args, **kwargs):
     """ Recursively runs func on all nested dicts """
-
-    logging.debug("Using %s to run: %s", config, func)
-    logging.debug("The types are: %s and %s", type(config), type(func))
-    logging.debug("Current recursion depth: %s", counter)
-    logging.debug("Current tree:")
-    if isinstance(caller_tree, list) and caller_tree:
-        for leaf in caller_tree:
-            logging.debug(leaf)
 
     if isinstance(config, list):
         for index, item in enumerate(config):
             logging.debug("In a list!")
-            caller_tree.append(str(item))
-            new_item = recursive_run_function(
-                item, func, counter + 1, caller_tree, *args, **kwargs
-            )
-            caller_tree.pop()
+            new_item = recursive_run_function_lhs(item, func, None, *args, **kwargs)
             config[index] = new_item
     elif isinstance(config, dict):
         keys = list(config)
         for key in keys:
             value = config[key]
             logging.debug("In a dict!")
-            caller_tree.append(str(key))
-            config[key] = recursive_run_function(
-                value, func, counter + 1, caller_tree, *args, **kwargs
-            )
-            caller_tree.pop()
+            config[key] = recursive_run_function_lhs(value, func, key, *args, **kwargs)
     # BUG: What about str and tuple? We only specifically handle list and dict
     # here, is that OK?
     else:
         logging.debug("In an atomic thing")
-        # FIXME: This is actually wrong, it should just be func(*args, **kwargs)
-        config = func(config, *args, **kwargs)
+        config = func(config, last_key, *args, **kwargs)
         # raise TypeError("Needs str, list, or dict")
     return config
 
@@ -509,9 +496,12 @@ def recursive_get(config_to_search, config_elements):
     """
     # NOTE(PG) I really don't like the logic in this function... :-( It'd be
     # much cleaner if this one and actually_recursive_get could be combined...
-    if "standalone_model" in config_to_search:
+    if config_to_search["model"] == config_elements[0] or config_elements[0] == "setup":
         # Throw away the first thing:
+        print("Throwing away the first part of config_elements")
+        print("Before:", config_elements)
         config_elements.pop(0)
+        print("After:", config_elements)
     return actually_recursive_get(config_to_search, config_elements)
 
 
@@ -520,24 +510,34 @@ def actually_recursive_get(config_to_search, config_elements):
     See the documentation for ``recursive_get``.
     """
     this_config = config_elements.pop(0)
-    result = config_to_search.get(this_config)
+    try:
+        result = config_to_search.get(this_config)
+    except AttributeError:
+        raise AttributeError("Sorry: %s.get(%s)" % (config_to_search, this_config))
+
     if config_elements:
         return actually_recursive_get(result, config_elements)
     return result
 
 
-def find_variable(raw_str, config_to_search):
+def find_variable(raw_str, lhs, config_to_search):
     if isinstance(raw_str, str) and "${" in raw_str:
         ok_part, rest = raw_str.split("${", 1)
         var, new_raw = rest.split("}", 1)
         config_elements = var.split(".")
+        print("Split the string on .")
+        print(config_elements)
         var_result = recursive_get(config_to_search, config_elements)
         if var_result:
             if new_raw:
-                more_rest = find_variable(new_raw, config_to_search)
+                more_rest = find_variable(new_raw, lhs, config_to_search)
             else:
                 more_rest = ""
-            print("Will return:", ok_part, var_result, more_rest)
+            # Make sure everything is a string:
+            ok_part = str(ok_part)
+            var_result = str(var_result)
+            more_rest = str(more_rest)
+            print("Will return:", ok_part + var_result + more_rest)
             return ok_part + var_result + more_rest
         warnings.warn("Maybe look in the other config")
     return raw_str
@@ -593,8 +593,8 @@ def determine_computer_from_hostname():
     )
 
 
-def do_math_in_entry(entry):
-    entry = " " + entry + " "
+def do_math_in_entry(entry, lhs):
+    entry = " " + str(entry) + " "
     while "$((" in entry:
         math, after_math = entry.split("))", 1)
 
@@ -603,20 +603,48 @@ def do_math_in_entry(entry):
         math = math[::-1]
         before_math = before_math[::-1]
 
-        # saved_math = []
-        # for math_part in math:
-        #    saved_math.append(math_part[::-1])
-        # math = "".join(saved_math)
-        # print(math)
-        # if len(math) > 1:
-        #    before_math, math = math.split("$((", -1)
-        # else:
-        #    before_math = ""
-        #    math = math.split("$((")
         ## Now we want to actually do math
+        if date_marker in math:
+            all_dates = []
+            steps = math.split(" ")
+            print(steps)
+            new_steps = []
+            for step in steps:
+                if step:
+                    new_steps.append(step)
+            steps = new_steps
+            print(steps)
+            math = ""
+            index = 0
+            for step in steps:
+                print(index, "-->", step)
+                if step in ["+", "-"]:
+                    math = math + step
+                else:
+                    print("Making a Date out of", step.replace(date_marker, ""))
+                    all_dates.append(Date(step.replace(date_marker, "")))
+                    math = math + "all_dates[" + str(index) + "]"
+                    index += 1
+
+        print(math)
         result = str(eval(math))
         entry = before_math + result + after_math
     return entry.strip()
+
+
+date_marker = "THIS_IS_A_DATE_JKLJKLJKL"
+
+
+def mark_dates(entry, lhs, config):
+    if isinstance(lhs, str) and lhs.endswith("date"):
+        entry = str(entry) + date_marker
+    return entry
+
+
+def unmark_dates(entry, lhs, config):
+    if isinstance(entry, str) and entry.endswith(date_marker):
+        entry = entry.replace(date_marker, "")
+    return entry
 
 
 class GeneralConfig(dict):
@@ -665,11 +693,16 @@ class ConfigSetup(GeneralConfig):
             attach_to_config_and_reduce_keyword(self.config, "include_models", "models")
             for model in self.config["models"]:
                 self.config[model] = ConfigComponent(model)
-        recursive_run_function(
-            self.config, find_variable, 0, [self.config["model"]], self.config
+        recursive_run_function_lhs(
+            self.config, mark_dates, self.config["model"], self.config
         )
-        recursive_run_function(
-            self.config, do_math_in_entry, 0, [self.config["model"]], self.config
+        recursive_run_function_lhs(
+            self.config, find_variable, self.config["model"], self.config
+        )
+        recursive_run_function_lhs(self.config, do_math_in_entry, self.config["model"])
+
+        recursive_run_function_lhs(
+            self.config, unmark_dates, self.config["model"], self.config
         )
 
 
@@ -705,6 +738,8 @@ if __name__ == "__main__":
 
     if ARGS.debug:
         logging.basicConfig(level=logging.DEBUG)
-    example = "one_$((1+2 * $((5*1))))_two_$((3*4))"
-    print(example)
-    print(do_math_in_entry(example))
+
+    if ARGS.setup:
+        CFG = ConfigSetup(ARGS.setup)
+        yaml.Dumper.ignore_aliases = lambda *args: True
+        print(yaml.dump(CFG, default_flow_style=False))

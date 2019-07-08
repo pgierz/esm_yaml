@@ -509,6 +509,10 @@ def actually_recursive_get(config_to_search, config_elements):
     """
     See the documentation for ``recursive_get``.
     """
+    print(80 * "-")
+    print("actually_recursive_get")
+    yaml.Dumper.ignore_aliases = lambda *args: True
+    print(yaml.dump(config_to_search, default_flow_style=False))
     this_config = config_elements.pop(0)
     try:
         result = config_to_search.get(this_config)
@@ -525,9 +529,21 @@ def find_variable(raw_str, lhs, config_to_search):
         ok_part, rest = raw_str.split("${", 1)
         var, new_raw = rest.split("}", 1)
         config_elements = var.split(".")
+        if len(config_elements) == 1:
+            try:
+                raw_str = ok_part + "${" + config_to_search["model"] + "." + rest
+                return find_variable(raw_str, lhs, config_to_search)
+            except:
+                pass
+        if config_elements[0] == "setup":
+            config_elements = config_elements[1:]
         print("Split the string on .")
         print(config_elements)
-        var_result = recursive_get(config_to_search, config_elements)
+        try:
+            var_result = recursive_get(config_to_search, config_elements)
+        except:
+            var_to_find = ".".join(config_elements)
+            raise AttributeError("Variable not found:", var_to_find)
         if var_result:
             if new_raw:
                 more_rest = find_variable(new_raw, lhs, config_to_search)
@@ -680,30 +696,38 @@ class ConfigSetup(GeneralConfig):
             self.config = merge_dicts(
                 setup_relevant_configs, ConfigComponent(self.config["model"])
             )
+            del self.config["couplings"]
             recursive_make_choices(self.config)
             logging.debug("Unordered DICT, try again!")
             # Since the dictionary resolves choices in an unordered way, there
             # might still be unresolved choices.
             #
             # To resolve, do the pass down again:
-            pass_down(self.config, "submodels")
+            # pass_down(self.config, "submodels")
             # And re-resolve choices:
             recursive_make_choices(self.config, first_time=False)
         else:
+            self.config = merge_dicts(self.config, setup_relevant_configs)
             attach_to_config_and_reduce_keyword(self.config, "include_models", "models")
             for model in self.config["models"]:
-                self.config[model] = ConfigComponent(model)
-        recursive_run_function_lhs(
-            self.config, mark_dates, self.config["model"], self.config
-        )
-        recursive_run_function_lhs(
-            self.config, find_variable, self.config["model"], self.config
-        )
-        recursive_run_function_lhs(self.config, do_math_in_entry, self.config["model"])
+                if model in self.config:
+                    print("Updating dictionary for ", model)
+                    tmp_config = ConfigComponent(model)
+                    self.config[model] = merge_dicts(tmp_config, self.config[model])
+                else:
+                    self.config[model] = ConfigComponent(model)
 
-        recursive_run_function_lhs(
-            self.config, unmark_dates, self.config["model"], self.config
-        )
+        # recursive_run_function_lhs(
+        #    self.config, mark_dates, self.config["model"], self.config
+        # )
+        # recursive_run_function_lhs(
+        #    self.config, find_variable, self.config["model"], self.config
+        # )
+        # recursive_run_function_lhs(self.config, do_math_in_entry, self.config["model"])
+
+        # recursive_run_function_lhs(
+        #    self.config, unmark_dates, self.config["model"], self.config
+        # )
 
 
 class ConfigComponent(GeneralConfig):
@@ -713,7 +737,7 @@ class ConfigComponent(GeneralConfig):
         attach_to_config_and_reduce_keyword(
             self.config, "include_submodels", "submodels"
         )
-        pass_down(self.config, "submodels")
+        # pass_down(self.config, "submodels")
         recursive_make_choices(self.config)
 
 

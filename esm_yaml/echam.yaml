@@ -99,12 +99,6 @@ scenarios:
 
 ADJ_INPUT_DIR: "${input_dir}/${echam.resolution}"
 
-couplings:
-        fesom:
-                ADJ_INPUT_DIR: "${fesom.mesh_dir}/tarfiles${echam.resolution}/input/echam6"
-                remove_forcings:
-                        - sst
-                        - sic  
 
 inputs_in_workdir:
         "cldoptprops": "/ECHAM6_CldOptProps.nc"
@@ -125,9 +119,14 @@ forcings_in_workdir:
         ozone: "ozonYEAR"
 
 
+fesom:
+        mesh_dir: /some/var
+
 test_chapter:
         something: ${echam.resolution}
-        something_else: ${echam.jsbach.domain}
+        something2: ${resolution}
+        something_else: ${jsbach.domain}
+        something_else2: ${setup.resolution}
 
 my_date: 20010101
 increment_date: '00010101'
@@ -137,8 +136,8 @@ my_previous_date: $(( ${echam.my_date} - ${echam.increment_date} ))
 date_test:
         file1: ${echam.model}_restart_${echam.my_next_date}
 
-fesom:
-        mesh_dir: "/some/dir"
+
+setup_info: ${setup.scenario} 
 
 further_reading:
         - echam.datasets.yaml

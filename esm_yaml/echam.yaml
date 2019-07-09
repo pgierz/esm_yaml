@@ -1,5 +1,30 @@
 # ECHAM YAML DEFAULT CONFIGURATION FILE
 
+# TEST PART
+#
+#
+#
+
+test_chapter:
+        something: ${echam.resolution}
+        something2: ${resolution}
+        something_else: ${jsbach.domain}
+        something_else2: ${setup.resolution}
+increment_date: '00010101'
+my_next_date: $(( ${echam.my_date} + ${echam.increment_date} ))
+my_previous_date: $(( ${echam.my_date} - ${echam.increment_date} ))
+
+date_test:
+        file1: ${echam.model}_restart_${echam.my_next_date}
+
+
+setup_info: ${setup.scenario} 
+
+# END TEST PART
+#
+#
+#
+
 model: echam
 repository: https://gitlab.dkrz.de/modular_esm/echam6
 type: atmosphere
@@ -19,21 +44,23 @@ license_text: |
         Please make sure you have a licence to use echam.In case you are
         unsure, please contact redmine....
 
-pool_dir: "${computer.pool_directories.pool}/ECHAM6"
 
 executable: echam6
 version: 6.304p1
-
-choose_version:
-        6.304p1:
-                repo_tag: 6.304p1
-                dataset: r0007               
+resolution: T63
+scenario: PI-CTRL
+postprocessing_stream: 'BOT ATM LOG'
+yr_perp_off: false
+transient_advance_forcing: false
+ocean_resolution: 'GR15'
 
 INI_PARENT_DATE: 22941231 
 INI_PARENT_EXP_ID: khw0030
 
-INPUT_DIR: "${computer.pool_directories.pool}/ECHAM6/input/${echam.dataset}"
-INI_RESTART_DIR: "${computer.pool_directories.pool}/MPIESM/restart/dev/${input_parent_exp_id}/restart/echam6"
+restart:
+        frequency: 1
+        unit: "months"        
+        firstlast: "last"
 
 
 namelist_changes:
@@ -47,7 +74,21 @@ namelist_changes:
                 radctl: 
                         co2vmr: 888999
 
-resolution: T63
+
+# default directories
+
+model_dir: "${esm_master_dir}/echam-${version}"                       
+bin_dir: "${setup.model_dir}/bin"
+pool_dir: "${computer.pool_directories.pool}/ECHAM6"
+input_dir: "${pool_dir}/ECHAM6/input/${dataset}"
+adj_input_dir: "${input_dir}/${resolution}"
+forcing_dir: "${input_dir}/${resolution}"
+greenhouse_dir: "${pool_dir}/ECHAM6"
+ini_restart_dir: "${pool_dir}/MPIESM/restart/dev/${input_parent_exp_id}/restart/echam6"
+
+
+# choices
+
 choose_resolution:
         T63:
                 levels: "L47"
@@ -72,36 +113,112 @@ choose_resolution:
                 _nx: 384
                 _ny: 192
 
-restart:
-        frequency: 1
-        unit: months        
+choose_version:
+        6.304p1:
+                repo_tag: 6.304p1
+                dataset: r0007               
 
-scenarios:
-        always:
-                inputs:
-                        cldoptprops: cldoptprops
-                        janspec: janspec
-                        jansurf: jansurf
-                        rrtmglw: rrtmglw
-                        rrtmgsw: rrtmgsw
-                        tslclim: tslclim
-                        vgrtclim: vgratclim
-                        vltclim: vltclim
-
+choose_scenario:
         PI-CTRL:
-                forcings:
+                forcing_files:
                         sst: pisst
                         sic: pisic
                         aerocoarse: piaerocoarse
                         aerofin: piaerofin
                         aerofarir: piaerofarir
                         ozone: piozone
+	PALEO:
+		forcing_files:
+                        aerocoarse: piaerocoarse
+                        aerofin: piaerofin
+                        aerofarir: piaerofarir
+			ozone: piozone
+	4CO2:
+		forcing_files:
+                        aerocoarse: piaerocoarse
+                        aerofin: piaerofin
+                        aerofarir: piaerofarir
+			ozone: piozone
+	1percCO2:
+		forcing_files:
+                        aerocoarse: piaerocoarse
+                        aerofin: piaerofin
+                        aerofarir: piaerofarir
+			ozone: piozone
+			greenhouse: 1percCO2greenh
+        1850:
+                forcing_files:
+                        sst: pisst
+                        sic: pisic
+                        aerocoarse: piaerocoarse
+                        aerofin: piaerofin
+                        aerofarir: piaerofarir
+			ozone: 1850ozone
+	1950:
+		forcing_files:
+                        aerocoarse: piaerocoarse
+                        aerofin: piaerofin
+                        aerofarir: piaerofarir
+			ozone: 1950ozone
+		input_files:
+			MAC-SP: MAC-SP
+        HIST:
+		greenhouse_dir: "${forcing_dir}"
+                forcing_files:
+                        aerocoarse: piaerocoarse
+                        aerofarir: piaerofarir
+                        aerofin: histaerofin
+                        sst: amipsst
+                        sic: amipsic
+			ozone: histozone
+			greenhouse: histgreenh
+		input_files:
+			MAC-SP: MAC-SP
+        RCP26:
+		greenhouse_dir: "${forcing_dir}"
+		forcing_files:
+                        aerocoarse: piaerocoarse
+                        aerofarir: piaerofarir
+                        aerofin: rcp26aerofin
+			ozone: rcp26ozone
+			greenhouse: rcp26greenh
+		input_files:
+			MAC-SP: MAC-SP
+        RCP45:
+		greenhouse_dir: "${forcing_dir}"
+		forcing_files:
+                        aerocoarse: piaerocoarse
+                        aerofarir: piaerofarir
+                        aerofin: rcp45aerofin
+			ozone: rcp45ozone
+			greenhouse: rcp45greenh
+		input_files:
+			MAC-SP: MAC-SP
+        RCP85:
+		greenhouse_dir: "${forcing_dir}"
+		forcing_files:
+                        aerocoarse: piaerocoarse
+                        aerofarir: piaerofarir
+                        aerofin: rcp85aerofin
+			ozone: rcp85ozone
+			greenhouse: rcp85greenh
+		input_files:
+			MAC-SP: MAC-SP
 
-ADJ_INPUT_DIR: "${input_dir}/${echam.resolution}"
+input_files:
+        cldoptprops: cldoptprops
+        janspec: janspec
+        jansurf: jansurf
+        rrtmglw: rrtmglw
+        rrtmgsw: rrtmgsw
+        tslclim: tslclim
+        vgrtclim: vgratclim
+        vltclim: vltclim
+
 
 
 inputs_in_workdir:
-        "cldoptprops": "/ECHAM6_CldOptProps.nc"
+        "cldoptprops": "ECHAM6_CldOptProps.nc"
         "janspec": "unit.23"
         "jansurf": "unit.24"
         "rrtmglw": "rrtmg_lw.nc"
@@ -109,35 +226,16 @@ inputs_in_workdir:
         "tslclim": "unit.92"
         "vgratclim": "unit.91"
         "vltclim": "unit.90"
+	"MAC-SP": "MAC-SP.nc"
 
 forcings_in_workdir:
         sic: "unit.96"
         sst: "unit.20"
-        #aerocoarse: "aero_coarse_${calendar.year}.nc"
-        #aerofin: "aero_fine_${calendar.year}.nc"
-        #aerofarir: "aero_farir_${calendar.year}.nc"
-        ozone: "ozonYEAR"
-
-
-fesom:
-        mesh_dir: /some/var
-
-test_chapter:
-        something: ${echam.resolution}
-        something2: ${resolution}
-        something_else: ${jsbach.domain}
-        something_else2: ${setup.resolution}
-
-my_date: 20010101
-increment_date: '00010101'
-my_next_date: $(( ${echam.my_date} + ${echam.increment_date} ))
-my_previous_date: $(( ${echam.my_date} - ${echam.increment_date} ))
-
-date_test:
-        file1: ${echam.model}_restart_${echam.my_next_date}
-
-
-setup_info: ${setup.scenario} 
+        aerocoarse: "aero_coarse_@YEAR@.nc"
+        aerofin: "aero_fine_@YEAR@.nc"
+        aerofarir: "aero_farir_@YEAR@.nc"
+        ozone: "ozon@YEAR@"
+	greenhouse: "greenhouse_gases.nc"
 
 further_reading:
         - echam.datasets.yaml

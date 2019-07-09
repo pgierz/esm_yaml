@@ -53,26 +53,16 @@ postprocessing_stream: 'BOT ATM LOG'
 yr_perp_off: false
 transient_advance_forcing: false
 ocean_resolution: 'GR15'
+disturbance: "1.000001"
 
-INI_PARENT_DATE: 22941231 
-INI_PARENT_EXP_ID: khw0030
+parent_date: 22941231 
+parent_expid: khw0030
+parent_dir: "${pool_dir}/MPIESM/restart/dev/${input_parent_exp_id}/restart/echam6"
 
 restart:
         frequency: 1
         unit: "months"        
         firstlast: "last"
-
-
-namelist_changes:
-        namelist.echam:
-                runctl:
-                        out_expname: '${expid}'
-                        dt_start:    '${setup.start_date}'
-                        dt_stop:     '${setup.end_date}'
-                        dt_resume:   '${setup.start_date}'
-
-                radctl: 
-                        co2vmr: 888999
 
 
 # default directories
@@ -84,8 +74,7 @@ input_dir: "${pool_dir}/ECHAM6/input/${dataset}"
 adj_input_dir: "${input_dir}/${resolution}"
 forcing_dir: "${input_dir}/${resolution}"
 greenhouse_dir: "${pool_dir}/ECHAM6"
-ini_restart_dir: "${pool_dir}/MPIESM/restart/dev/${input_parent_exp_id}/restart/echam6"
-
+namelist_dir: "${esm_master_dir}/esm_runscripts/namelists/echam/${version}/${scenario}"
 
 # choices
 
@@ -172,6 +161,9 @@ choose_scenario:
                         sic: amipsic
 			ozone: histozone
 			greenhouse: histgreenh
+                        volcanir: histvolcanir
+                        volcsw: histvolcsw
+                        swflux: histswflux
 		input_files:
 			MAC-SP: MAC-SP
         RCP26:
@@ -182,6 +174,9 @@ choose_scenario:
                         aerofin: rcp26aerofin
 			ozone: rcp26ozone
 			greenhouse: rcp26greenh
+                        volcanir: histvolcanir
+                        volcsw: histvolcsw
+                        swflux: histswflux
 		input_files:
 			MAC-SP: MAC-SP
         RCP45:
@@ -192,6 +187,9 @@ choose_scenario:
                         aerofin: rcp45aerofin
 			ozone: rcp45ozone
 			greenhouse: rcp45greenh
+                        volcanir: histvolcanir
+                        volcsw: histvolcsw
+                        swflux: histswflux
 		input_files:
 			MAC-SP: MAC-SP
         RCP85:
@@ -202,21 +200,93 @@ choose_scenario:
                         aerofin: rcp85aerofin
 			ozone: rcp85ozone
 			greenhouse: rcp85greenh
+                        volcanir: histvolcanir
+                        volcsw: histvolcsw
+                        swflux: histswflux
 		input_files:
 			MAC-SP: MAC-SP
 
-input_files:
-        cldoptprops: cldoptprops
-        janspec: janspec
-        jansurf: jansurf
-        rrtmglw: rrtmglw
-        rrtmgsw: rrtmgsw
-        tslclim: tslclim
-        vgrtclim: vgratclim
-        vltclim: vltclim
 
+choose_lresume:
+        false:
+                restart_modifications:
+                        echam: 
+                                - vdate "<--set_dim--" ${start_date}
+                                - fdate "<--set_dim--" ${yearbefore}
+                                - ndate "<--set_dim--" ${nsteps}  
+                        *: 
+                                - vdate "<--set_dim--" ${start_date}
+                                - fdate "<--set_dim--" ${yearbefore}
+                                - ndate "<--set_dim--" ${nsteps}  
+        true:
+                namelist_changes:
+                        namelist.echam:
+                                runctl:
+                                        dt_start: "remove_from_namelist"
 
+        
+choose_start_date.year:
+        disturbed_years: 
+                namelist_changes:
+                        namelist.echam:        
+                                dynctl:
+                                        enstdif: "${disturbance}"
+                                        
+choose_co2:
+        *:
+                namelist_changes:
+                        namelist.echam:
+                                radctl:
+                                        co2vmr: "${co2}"
 
+choose_ch4:
+        *:
+                namelist_changes:
+                        namelist.echam:
+                                radctl:
+                                        ch4vmr: "${ch4}"
+choose_n2o:
+        *:
+                namelist_changes:
+                        namelist.echam:
+                                radctl:
+                                        c2ovmr: "${n2o}"
+
+choose_cecc:
+        *:
+                yr_perp_off: true
+                namelist_changes:
+                        namelist.echam:
+                                radctl:
+                                        cecc: "${cecc}"
+choose_cobld:
+        *:
+                yr_perp_off: true
+                namelist_changes:
+                        namelist.echam:
+                                radctl:
+                                        cobld: "${cobld}"
+choose_clonp:
+        *:
+                yr_perp_off: true
+                namelist_changes:
+                        namelist.echam:
+                                radctl:
+                                        clonp: "${clonp}"
+
+choose_yr_perp_off:
+        true:
+                namelist_changes:
+                        namelist.echam:
+                                radctl:
+                                        yr_perp: "remove_from_namelist"
+                                runctl:
+                                        l_orbsvop87: ".false."
+
+choose_transient_advance_forcing:
+        true:
+                [year, co2vmr, ch4vmr, n2ovmr, cecc, cobld, clonp]: "<--grep(${start_date.year})-- ${forcing_table}"
+                                        
 inputs_in_workdir:
         "cldoptprops": "ECHAM6_CldOptProps.nc"
         "janspec": "unit.23"
@@ -236,6 +306,36 @@ forcings_in_workdir:
         aerofarir: "aero_farir_@YEAR@.nc"
         ozone: "ozon@YEAR@"
 	greenhouse: "greenhouse_gases.nc"
+        volcir: "strat_aerosol_ir_@YEAR@.nc"
+        volcsw: "strat_aerosol_sw_@YEAR@.nc"
+        swflux: "swflux_@YEAR@.nc"
+
+restart_files:
+        echam: 
+                - restart_${expid}_echam_${end_date}.nc
+                - restart_${expid}_${end_date}_echam.nc
+
+restarts_in_workdir:        
+        echam: restart_${expid}_echam.nc
+
+namelist_changes:
+        namelist.echam:
+                runctl:
+                        out_expname: '${expid}'
+                        dt_start:    '${pseudo_start_date}'
+                        dt_stop:     '${pseudo_end_date}'
+                        dt_resume:   '${pseudo_resume_date}'
+                        lresume: ".${lresume}."
+                        lcouple: ".false."
+                        delta_time: "${time_step}"
+                        putrerun: "${restart.rate}, ${restart.unit}, ${restart.firstlast}, 0"
+                parctl:
+                        nproca: "nproca"
+                        nprocb: "nprocb"
+                        out_datapath: "'${work_dir}'"        
+                radctl: 
+                        co2vmr: 888999
+
 
 further_reading:
         - echam.datasets.yaml

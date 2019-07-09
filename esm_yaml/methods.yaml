@@ -1,0 +1,6 @@
+
+"<--set_dim--"
+        method: "ncatted -a ${lhs},global,o,l,${rhs} ${lh_file}"
+
+"<--grep(arg1)--"
+        method: "grep ${arg1} ${rhs}"

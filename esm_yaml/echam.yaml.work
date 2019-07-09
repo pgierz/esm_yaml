@@ -83,6 +83,7 @@ pool_dir: "${computer.pool_directories.pool}/ECHAM6"
 input_dir: "${pool_dir}/ECHAM6/input/${dataset}"
 adj_input_dir: "${input_dir}/${resolution}"
 forcing_dir: "${input_dir}/${resolution}"
+greenhouse_dir: "${pool_dir}/ECHAM6"
 ini_restart_dir: "${pool_dir}/MPIESM/restart/dev/${input_parent_exp_id}/restart/echam6"
 
 
@@ -126,15 +127,83 @@ choose_scenario:
                         aerofin: piaerofin
                         aerofarir: piaerofarir
                         ozone: piozone
+	PALEO:
+		forcing_files:
+                        aerocoarse: piaerocoarse
+                        aerofin: piaerofin
+                        aerofarir: piaerofarir
+			ozone: piozone
+	4CO2:
+		forcing_files:
+                        aerocoarse: piaerocoarse
+                        aerofin: piaerofin
+                        aerofarir: piaerofarir
+			ozone: piozone
+	1percCO2:
+		forcing_files:
+                        aerocoarse: piaerocoarse
+                        aerofin: piaerofin
+                        aerofarir: piaerofarir
+			ozone: piozone
+			greenhouse: 1percCO2greenh
         1850:
                 forcing_files:
                         sst: pisst
                         sic: pisic
+                        aerocoarse: piaerocoarse
+                        aerofin: piaerofin
+                        aerofarir: piaerofarir
+			ozone: 1850ozone
+	1950:
+		forcing_files:
+                        aerocoarse: piaerocoarse
+                        aerofin: piaerofin
+                        aerofarir: piaerofarir
+			ozone: 1950ozone
+		input_files:
+			MAC-SP: MAC-SP
         HIST:
+		greenhouse_dir: "${forcing_dir}"
                 forcing_files:
+                        aerocoarse: piaerocoarse
+                        aerofarir: piaerofarir
+                        aerofin: histaerofin
                         sst: amipsst
                         sic: amipsic
-        
+			ozone: histozone
+			greenhouse: histgreenh
+		input_files:
+			MAC-SP: MAC-SP
+        RCP26:
+		greenhouse_dir: "${forcing_dir}"
+		forcing_files:
+                        aerocoarse: piaerocoarse
+                        aerofarir: piaerofarir
+                        aerofin: rcp26aerofin
+			ozone: rcp26ozone
+			greenhouse: rcp26greenh
+		input_files:
+			MAC-SP: MAC-SP
+        RCP45:
+		greenhouse_dir: "${forcing_dir}"
+		forcing_files:
+                        aerocoarse: piaerocoarse
+                        aerofarir: piaerofarir
+                        aerofin: rcp45aerofin
+			ozone: rcp45ozone
+			greenhouse: rcp45greenh
+		input_files:
+			MAC-SP: MAC-SP
+        RCP85:
+		greenhouse_dir: "${forcing_dir}"
+		forcing_files:
+                        aerocoarse: piaerocoarse
+                        aerofarir: piaerofarir
+                        aerofin: rcp85aerofin
+			ozone: rcp85ozone
+			greenhouse: rcp85greenh
+		input_files:
+			MAC-SP: MAC-SP
 
 input_files:
         cldoptprops: cldoptprops
@@ -157,15 +226,16 @@ inputs_in_workdir:
         "tslclim": "unit.92"
         "vgratclim": "unit.91"
         "vltclim": "unit.90"
+	"MAC-SP": "MAC-SP.nc"
 
 forcings_in_workdir:
         sic: "unit.96"
         sst: "unit.20"
-        #aerocoarse: "aero_coarse_${calendar.year}.nc"
-        #aerofin: "aero_fine_${calendar.year}.nc"
-        #aerofarir: "aero_farir_${calendar.year}.nc"
-        ozone: "ozonYEAR"
-
+        aerocoarse: "aero_coarse_@YEAR@.nc"
+        aerofin: "aero_fine_@YEAR@.nc"
+        aerofarir: "aero_farir_@YEAR@.nc"
+        ozone: "ozon@YEAR@"
+	greenhouse: "greenhouse_gases.nc"
 
 further_reading:
         - echam.datasets.yaml

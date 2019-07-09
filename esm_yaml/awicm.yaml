@@ -73,6 +73,9 @@ echam:
                         unit: kg m s
                         standard_cf_name: 'shit no tuna?'
                         cf_code: 42
+fesom:
+mesh_dir: /some/var
+
 
         grids:
                 atmo:

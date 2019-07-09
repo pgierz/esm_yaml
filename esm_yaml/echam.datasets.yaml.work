@@ -1,0 +1,79 @@
+# inputs                
+#
+input_sources:
+        "cldoptprops": "${input_dir}/ECHAM6_CldOptProps.nc"
+        "janspec": "${input_dir}/${resolution}/${resolution}${levels}_jan_spec.nc"
+        "jansurf": "${adj_input_dir}/${resolution}/${resolution}${ocean_resolution}_jan_surf.nc"
+        "rrtmglw": "${input_dir}/rrtmg_lw.nc"
+        "rrtmgsw": "${input_dir}/rrtmg_sw.nc"
+        "tslclim": "${input_dir}/${resolution}/${resolution}_TSLCLIM.nc"
+        "vgratclim": "${adj_input_dir}/${resolution}/${resolution}${ocean_resolution}_VGRATCLIM.nc"
+        "vltclim": "${adj_input_dir}/${resolution}/${resolution}${ocean_resolution}_VLTCLIM.nc"
+
+
+# forcings
+forcing_sources:
+        # sst
+        "amipsst": 
+                "${input_dir}/${resolution}/amip/${resolution}_amipsst_@YEAR@.nc":
+                        from: 1870
+                        to: 2016
+        "pisst": "${input_dir}/${resolution}/${resolution}${ocean_resolution}_piControl-LR_sst_1880-2379.nc"
+
+        # sic               
+        "amipsic": 
+                "${input_dir}/${resolution}/amip/${resolution}_amipsic_@YEAR@.nc": 
+                        from: 1870
+                        to: 2016
+        "pisic": "${input_dir}/${resolution}/${resolution}${ocean_resolution}_piControl-LR_sic_1880-2379.nc"
+
+        # aero
+        "histaerocoarse": "/${resolution}/aero2/${resolution}_aeropt_kinne_sw_b14_coa.nc" 
+        "histaerofarir": "/${resolution}/aero2/${resolution}_aeropt_kinne_lw_b16_coa.nc"
+        "histaerofin": 
+                "/${resolution}/aero2/${resolution}_aeropt_kinne_sw_b14_fin_1865.nc":
+                        to: 1864
+                "/${resolution}/aero2/${resolution}_aeropt_kinne_sw_b14_fin_@YEAR@.nc":
+                        from: 1865
+                        to: 2000
+        "piaerocoarse": "/${resolution}/aero/${resolution}_aeropt_kinne_sw_b14_coa.nc"
+        "piaerofarir": "/${resolution}/aero/${resolution}_aeropt_kinne_lw_b16_coa.nc"
+        "piaerofin": "/${resolution}/aero/${resolution}_aeropt_kinne_sw_b14_fin_1865.nc"
+        # volcanic
+        "histvolcir": 
+                "/${resolution}/volcano_aerosols/strat_aerosol_ir_${resolution}_1850.nc":
+                        to: 1850
+                "/${resolution}/volcano_aerosols/strat_aerosol_ir_${resolution}_@YEAR@.nc":
+                        from: 1851
+                        to: 1999
+                "/${resolution}/volcano_aerosols/strat_aerosol_ir_${resolution}_1999.nc":
+                        from: 2000
+        "histvolcsw":
+                "/${resolution}/volcano_aerosols/strat_aerosol_sw_${resolution}_1850.nc":
+                        to: 1850
+                "/${resolution}/volcano_aerosols/strat_aerosol_sw_${resolution}_@YEAR@.nc":
+                        from: 1851
+                        to: 1999
+                "/${resolution}/volcano_aerosols/strat_aerosol_sw_${resolution}_1999.nc":
+                        from: 2000
+        # greenhouse
+        "histgreenh": "/greenhouse_historical.nc"
+        # radiation
+        "histswflux": 
+                "/solar_irradiance/swflux_14band_1850.nc":
+                        to: 1850
+                "/solar_irradiance/swflux_14band_@YEAR@.nc":  
+                        from: 1851
+                        
+
+choose_dataset:
+        r0007:
+                forcing_sources:
+# ozone                
+                        "histozone": 
+                                "/${resolution}/ozone/${resolution}_ozone_historical_1850.nc": 
+                                        to: 1850
+                                "/${resolution}_ozone_historical_@YEAR@.nc":
+                                        from: 1851
+                                        to: 2008
+                        "piozone": "/${resolution}/${resolution}_ozone_picontrol.nc"

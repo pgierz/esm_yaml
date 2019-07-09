@@ -1,0 +1,171 @@
+# ECHAM YAML DEFAULT CONFIGURATION FILE
+
+# TEST PART
+#
+#
+#
+
+test_chapter:
+        something: ${echam.resolution}
+        something2: ${resolution}
+        something_else: ${jsbach.domain}
+        something_else2: ${setup.resolution}
+increment_date: '00010101'
+my_next_date: $(( ${echam.my_date} + ${echam.increment_date} ))
+my_previous_date: $(( ${echam.my_date} - ${echam.increment_date} ))
+
+date_test:
+        file1: ${echam.model}_restart_${echam.my_next_date}
+
+
+setup_info: ${setup.scenario} 
+
+# END TEST PART
+#
+#
+#
+
+model: echam
+repository: https://gitlab.dkrz.de/modular_esm/echam6
+type: atmosphere
+
+standalone_model: True
+
+include_submodels:
+        - jsbach
+        - hdmodel
+
+description: |
+        The ECHAM atmosphere model, major version 6
+        (someone from Hamburg)
+        paper citation
+
+license_text: |
+        Please make sure you have a licence to use echam.In case you are
+        unsure, please contact redmine....
+
+
+executable: echam6
+version: 6.304p1
+resolution: T63
+scenario: PI-CTRL
+postprocessing_stream: 'BOT ATM LOG'
+yr_perp_off: false
+transient_advance_forcing: false
+ocean_resolution: 'GR15'
+
+INI_PARENT_DATE: 22941231 
+INI_PARENT_EXP_ID: khw0030
+
+restart:
+        frequency: 1
+        unit: "months"        
+        firstlast: "last"
+
+
+namelist_changes:
+        namelist.echam:
+                runctl:
+                        out_expname: '${expid}'
+                        dt_start:    '${setup.start_date}'
+                        dt_stop:     '${setup.end_date}'
+                        dt_resume:   '${setup.start_date}'
+
+                radctl: 
+                        co2vmr: 888999
+
+
+# default directories
+
+model_dir: "${esm_master_dir}/echam-${version}"                       
+bin_dir: "${setup.model_dir}/bin"
+pool_dir: "${computer.pool_directories.pool}/ECHAM6"
+input_dir: "${pool_dir}/ECHAM6/input/${dataset}"
+adj_input_dir: "${input_dir}/${resolution}"
+forcing_dir: "${input_dir}/${resolution}"
+ini_restart_dir: "${pool_dir}/MPIESM/restart/dev/${input_parent_exp_id}/restart/echam6"
+
+
+# choices
+
+choose_resolution:
+        T63:
+                levels: "L47"
+                Timestep: 450
+                _nx: 192
+                _ny: 96
+                choose_cores_per_node:
+                        24:
+                                nproca: 24
+                                nprocb: 18
+                        36:     
+                                nproca: 24
+                                nprocb: 18                                
+        T31:
+                levels: "L19"
+                Timestep: 450
+                _nx: 96
+                _ny: 48
+        T127:
+                levels: "L47"
+                Timestep: 200
+                _nx: 384
+                _ny: 192
+
+choose_version:
+        6.304p1:
+                repo_tag: 6.304p1
+                dataset: r0007               
+
+choose_scenario:
+        PI-CTRL:
+                forcing_files:
+                        sst: pisst
+                        sic: pisic
+                        aerocoarse: piaerocoarse
+                        aerofin: piaerofin
+                        aerofarir: piaerofarir
+                        ozone: piozone
+        1850:
+                forcing_files:
+                        sst: pisst
+                        sic: pisic
+        HIST:
+                forcing_files:
+                        sst: amipsst
+                        sic: amipsic
+        
+
+input_files:
+        cldoptprops: cldoptprops
+        janspec: janspec
+        jansurf: jansurf
+        rrtmglw: rrtmglw
+        rrtmgsw: rrtmgsw
+        tslclim: tslclim
+        vgrtclim: vgratclim
+        vltclim: vltclim
+
+
+
+inputs_in_workdir:
+        "cldoptprops": "ECHAM6_CldOptProps.nc"
+        "janspec": "unit.23"
+        "jansurf": "unit.24"
+        "rrtmglw": "rrtmg_lw.nc"
+        "rrtmgsw": "rrtmg_sw.nc"
+        "tslclim": "unit.92"
+        "vgratclim": "unit.91"
+        "vltclim": "unit.90"
+
+forcings_in_workdir:
+        sic: "unit.96"
+        sst: "unit.20"
+        #aerocoarse: "aero_coarse_${calendar.year}.nc"
+        #aerofin: "aero_fine_${calendar.year}.nc"
+        #aerofarir: "aero_farir_${calendar.year}.nc"
+        ozone: "ozonYEAR"
+
+
+further_reading:
+        - echam.datasets.yaml

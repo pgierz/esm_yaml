@@ -310,13 +310,32 @@ forcings_in_workdir:
         volcsw: "strat_aerosol_sw_@YEAR@.nc"
         swflux: "swflux_@YEAR@.nc"
 
-restart_files:
+restart_in_files:
         echam: 
-                - restart_${expid}_echam_${end_date}.nc
-                - restart_${expid}_${end_date}_echam.nc
+                - restart_${expid}_echam_${prev_date}.nc
+                - restart_${expid}_${prev_date}_echam.nc
 
-restarts_in_workdir:        
+restart_ins_in_workdir:        
         echam: restart_${expid}_echam.nc
+
+restart_out_files:
+        echam: restart_${expid}_echam_&DATE&.nc
+        
+output_files:
+        echam_grb: ${expid}_echam6_echam_*.grb
+        echam_codes: ${expid}_echam6_echam.codes
+        echam_nc: ${expid}_echam6_echam_*.nc  
+
+output_in_workdir:
+        echam_grb:  ${expid}_*.01_echam
+        echam_codes: ${expid}_*.01_echam.codes
+        echam_nc:  ${expid}_*.01_echam.nc
+
+log_files:
+        atmout: ${expid}_echam6_atmout_${start_date}_${end_date}
+
+logs_in_workdir:        
+        atmout: atmout
 
 namelist_changes:
         namelist.echam:
@@ -336,6 +355,23 @@ namelist_changes:
                 radctl: 
                         co2vmr: 888999
 
+errors:
+        mo_exception:
+                check_frequency: 300
+                detection_method: "<--grep(mo_exeption.f90)--" ${standard_out}
+                error_message: |
+!!! DETECTED ERROR !!!
+Problem with echam >> mo_exception.f90 << has occured. Killing your job, sorry.
+                action_method:
+                        - "<--kill_job--"
+        wind_speed:
+                check_frequency: 300
+                detection_method: "<--grep(wind speed)--" ${standard_out}
+                error_message: |
+!!! DETECTED ERROR !!!
+high wind speed was found during your run, applying wind speed fix and resubmitting...
+                action_method:
+                        - "<--repair_job_after_windspeed--"
 
 further_reading:
         - echam.datasets.yaml

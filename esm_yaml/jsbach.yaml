@@ -19,31 +19,96 @@ directories:
 
 pool_dir: "@MACHINE_POOL_DIR@/JSBACH/"
 
-dynamic_vegetations: 
-        TRUE:
+choose_dynamic_vegetations: 
+        true:
                 DYNVEG: "_dynveg"
-        FALSE:
+        false:
                 DYNVEG: "_no_dynveg"
 
 executable: NONE #component model of echam, internally coupled
+version: 3.20
+dataset: r0009
 
-versions:
+forcing_sources:
+        lctlib: "${echam.model_dir}/lctlib_nlct21.def"
+
+choose_versions:
         3.20:
                 repo_tag: 6.304p1
                 dataset: r0010               
                 forcings:
-                        lctlib: "@MODEL_DIR@/echam-6.3.04p1/lctlib_nlct21.def"
-        
-scenarios:
-        PI-CTRL:
-                forcings:
-                        jsbach: jsbach
                         a_nd_file: a_nd_file
                         lightning: lightning
                         popdens: popdens
+                namelist_dir: ${esm_master_dir}/esm-runscripts/namelists/jsbach/${scenario}/${DYNVEG}
+        3.10:
+                repo_tag: 6.302p4
+                dataset: r0007
+                namelist_dir: ${esm_master_dir}/esm-runscripts/namelists/jsbach/${scenario}/${echam.resolution}
+
+forcings:
+        LU_trans: LU_trans
+
+choose_scenario:
+        PI-CTRL:
+                forcings:
+                        jsbach: jsbach_1850
                         LU: LU_1850
-                        Ndepo: Ndepo_1850
-                        LU_trans: LU_trans
+                        choose_versions:
+                                3.20:
+                                        Ndepo: Ndepo_1850
+        1850:
+                forcings:
+                        jsbach: jsbach_1850
+                        LU: LU_1850
+                        choose_versions:
+                                3.20:
+                                        Ndepo: Ndepo_1850
+        PALEO:
+                forcings:
+                        jsbach: jsbach_1850
+                        LU: LU_1850
+                        choose_versions:
+                                3.20:
+                                        Ndepo: Ndepo_1850
+        4CO2:
+                forcings:
+                        jsbach: jsbach_1850
+                        LU: LU_1850
+                        choose_versions:
+                                3.20:
+                                        Ndepo: Ndepo_1850
+        1percCO2:
+                forcings:
+                        jsbach: jsbach_1850
+                        LU: LU_1850
+                        choose_versions:
+                                3.20:
+                                        Ndepo: Ndepo_1850
+        RCP26:
+                forcings:
+                        jsbach: jsbach_1850
+                        LU: LU_RCP26
+                        cover_fract: cover_fract_HIST
+        RCP45:
+                forcings:
+                        jsbach: jsbach_1850
+                        LU: LU_RCP45
+                        cover_fract: cover_fract_HIST
+        RCP85:
+                forcings:
+                        jsbach: jsbach_1850
+                        LU: LU_RCP85
+                        cover_fract: cover_fract_HIST
+        HIST:
+                forcings:
+                        jsbach: jsbach_1850
+                        LU: LU_HIST
+                        cover_fract: cover_fract_HIST
+        1950:                
+                forcings:
+                        jsbach: jsbach_1976
+                        LU: LU_1950
 
 forcings_in_workdir:
         "jsbach": "jsbach.nc"

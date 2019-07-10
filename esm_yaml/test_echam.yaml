@@ -7,7 +7,7 @@ type: atmosphere
 standalone_model: True
 
 include_submodels:
-        - jsbach
+        - test_jsbach
         - hdmodel
 
 description: |

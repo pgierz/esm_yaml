@@ -1,30 +1,5 @@
 # ECHAM YAML DEFAULT CONFIGURATION FILE
 
-# TEST PART
-#
-#
-#
-
-test_chapter:
-        something: ${echam.resolution}
-        something2: ${resolution}
-        something_else: ${jsbach.domain}
-        something_else2: ${setup.resolution}
-increment_date: '00010101'
-my_next_date: $(( ${echam.my_date} + ${echam.increment_date} ))
-my_previous_date: $(( ${echam.my_date} - ${echam.increment_date} ))
-
-date_test:
-        file1: ${echam.model}_restart_${echam.my_next_date}
-
-
-setup_info: ${setup.scenario} 
-
-# END TEST PART
-#
-#
-#
-
 model: echam
 repository: https://gitlab.dkrz.de/modular_esm/echam6
 type: atmosphere
@@ -62,6 +37,9 @@ parent_dir: "${pool_dir}/MPIESM/restart/dev/${input_parent_exp_id}/restart/echam
 pseudo_start_date: ${start_date}
 pseudo_end_date: ${next_date}
 pseudo_resume_date: ${start_date}
+year_before_date: $(( ${start_date} - "1 years" )) # irgendwie so
+year_before_length: $((${start_date} - ${year_before_date} ))
+steps_in_year_before: $(( ${year_before_length} / ${time_step} - 1 ))
 
 restart:
         frequency: 1
@@ -216,12 +194,12 @@ choose_lresume:
                 restart_modifications:
                         echam: 
                                 - vdate "<--set_dim--" ${start_date}
-                                - fdate "<--set_dim--" ${yearbefore}
-                                - ndate "<--set_dim--" ${nsteps}  
+                                - fdate "<--set_dim--" ${year_before_date}
+                                - ndate "<--set_dim--" ${steps_in_year_before}  
                         *: 
                                 - vdate "<--set_dim--" ${start_date}
-                                - fdate "<--set_dim--" ${yearbefore}
-                                - ndate "<--set_dim--" ${nsteps}  
+                                - fdate "<--set_dim--" ${year_before_date}
+                                - ndate "<--set_dim--" ${steps_in_year_before}  
         true:
                 # pseudo_start_date: $(( ${start_date} - ${time_step} ))
                 namelist_changes:
@@ -313,6 +291,7 @@ forcings_in_workdir:
 	greenhouse: "greenhouse_gases.nc"
         volcir: "strat_aerosol_ir_@YEAR@.nc"
         volcsw: "strat_aerosol_sw_@YEAR@.nc"
+        volcsw: "strat_aerosol_sw_@YEAR@.nc"
         swflux: "swflux_@YEAR@.nc"
 
 restart_in_files:
@@ -367,6 +346,7 @@ errors:
 Problem with echam >> mo_exception.f90 << has occured. Killing your job, sorry.
                 action_method:
                         - "<--kill_job--"
+
         wind_speed:
                 check_frequency: 300
                 detection_method: "<--grep(wind speed)--" ${standard_out}

@@ -1,0 +1,65 @@
+# ECHAM YAML DEFAULT CONFIGURATION FILE
+
+model: hdmodel
+repository: https://gitlab.dkrz.de/modular_esm/echam6
+domain: hydrology
+
+description: |
+        The Hagemann/Dümenil hydrology model,
+        (someone from Hamburg)
+        paper citation
+
+license_text: |
+        Please make sure you have a licence to use echam. In case you are
+        unsure, please contact redmine....
+
+pool_dir: "${computer.pool_directories.pool}/HD"
+input_dir: "${echam.input_dir}"
+
+executable: NONE
+
+choose_lresume:
+        false:
+                input_files:
+                        hdstart: hdstart
+        true:
+                restart_in_files: 
+                        hdrestart: hdrestart
+
+ini_restart_dir: "${pool_dir}/MPIESM/restart/dev/${parent_exp_id}/restart/jsbach"
+
+input_files :
+        hdpara: hdpara
+        rmp_hd: rmp_hd        
+        
+input_in_workdir:
+        hdpara: "hdpara.nc"
+        rmp_hd: "rmp_hd.nc"
+        hdstart: "hdstart.nc"
+
+input_sources:
+        hdpara: "${input_dir}/hdpara.nc"
+        rmp_hd: "${input_dir}/rmp_${echam.resolution}_to_hd.nc"
+        hdstart: "${input_dir}/hdstart.nc"
+       
+restart_in_in_workdir:
+        hdrestart: hdrestart.nc
+
+restart_in_sources:
+        hdrestart: 
+                - restart_${parent_expid}_hd_${parent_date}.nc
+                - hdrestart.nc
+
+restart_out_in_workdir:                  
+        hdrestart: restart_${parent_expid}_hd_${end_date}.nc
+
+log_in_workdir:
+        outflow: hd_outflow_*.log # DIBA muss noch rausfinden was * in diesem Fall ist
+
+log_files:        
+        log: ${expid}_jsbach_hd_outflow_${end_date}.log
+
+choose_hdpara_file:  
+        *:
+                input_sources:
+                        hdpara: ${hdpara_file}

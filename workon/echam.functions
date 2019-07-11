@@ -1,0 +1,42 @@
+
+echam_prepare_restart_in()
+{
+                                case $substream in 
+                                        yasso | jsbid | jsbach | surf | nitro | veg | land ) 
+                                                ;;
+                                esac
+}
+
+echam_modify_restart_in() {
+                    year="${START_DATE_echam:0:4}"
+                    rest="${START_DATE_echam:4:8}"
+                    yearbefore="$((year-1))$rest"
+                    distance=`eval ${FUNCTION_PATH}/time_between ${timebetween_flag} -c\$\{CALTYPE_${setup_name}\} -- ${yearbefore}_ ${startdate}_ seconds`
+                    nsteps=$((distance/TIME_STEP_echam-1))
+                    vdate_old=`ncdump -h $file | grep 'vdate.*=' | cut -d '=' -f2 | cut -d ' ' -f2` 
+                    if [[ "x${vdate_old}" != "x${START_DATE_echam}" ]]; then
+                        echo "This is a spinoff and redate experiment, will modify echam restart files in experiment folder (restart/echam/)."
+                        ncatted -a vdate,global,o,l,${START_DATE_echam} -a fdate,global,o,l,$yearbefore -a nstep,global,o,l,$nsteps $file 
+                    else
+                        echo "This is a NOT a spinoff and redate experiment, will NOT modify any echam restart files in experiment folder."
+                    fi
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

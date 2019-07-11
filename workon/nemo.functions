@@ -1,0 +1,49 @@
+
+nemo_calendar()
+{
+        
+        # SECONDS_SINCE_INITIAL is time between end of run and initial time  
+        # RUNTIME_nemo is length of run    
+        # secs_before_start_nemo is time between start of run and initial time 
+        secs_before_start_nemo=$(( SECONDS_SINCE_INITIAL_nemo - RUNTIME_nemo )) 
+        steps_before_start_nemo=$(( secs_before_start_nemo / TIME_STEP_nemo )) 
+                
+	# read nemo timestep
+	if [ -s $CONFIG_DIR_nemo/${EXP_ID}.nemotimestep ]; then
+   		read nemotimestep <  $CONFIG_DIR_nemo/${EXP_ID}.nemotimestep
+	else
+		if [[ "x$LRESUME_nemo" == "x0" ]]; then
+			becho "Initial run, starting from time step 0"
+			nemotimestep=0
+		else
+  			print "Could not read nemotimestep from ${EXP_ID}.nemotimestep"
+  			print "${EXP_ID}.nemotimestep missing or empty"
+                        nemotimestep=$steps_before_start_nemo
+                        print "Setting nemotimestep=$nemotimestep"
+		fi
+	fi
+
+	timesteps_per_run_nemo=$(( RUNTIME_nemo / TIME_STEP_nemo ))
+
+	nemotimestep_formatted=$(printf "%08d" $nemotimestep)
+	nemonewtimestep=$(( nemotimestep + timesteps_per_run_nemo))	
+	nemonewtimestep_formatted=$(printf "%08d" $nemonewtimestep)
+	firsttimestep_nemo=$((nemotimestep + 1))	
+
+	coupling_freq_nemo=$((TIME_STEP_oasis3mct / TIME_STEP_nemo))
+}
+
+
+
+
+nemo_modify_config()
+{		
+
+	if [[ "x$CORRECT_NEG_TRACER_CONC_nemo" == "x1" ]]; then
+		general_replace_namelist_value namelist_top_cfg namtrc_rad ln_trcrad ".true."
+	else
+		general_replace_namelist_value namelist_top_cfg namtrc_rad ln_trcrad ".true."
+	fi
+}
+
+

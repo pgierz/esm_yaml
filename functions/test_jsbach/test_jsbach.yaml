@@ -57,4 +57,4 @@ forcings_in_workdir:
         "LU_trans": "landuseTransitions.@YEAR@.nc"
 
 further_reading:
-        - jsbach.datasets.yaml
+        - test_jsbach.datasets.yaml

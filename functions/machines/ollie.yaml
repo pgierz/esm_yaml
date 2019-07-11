@@ -18,13 +18,13 @@
 
 jobtype: compute
 
-promote_jobtype:
+choose_jobtype:
         post:
                 partition: smp
         compute: 
                 partition: mpp
 
-promote_partition: 
+choose_partition: 
         "mpp":
                 cores_per_node: 36
         "smp":

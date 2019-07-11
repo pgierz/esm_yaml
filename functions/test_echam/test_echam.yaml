@@ -8,7 +8,6 @@ standalone_model: True
 
 include_submodels:
         - test_jsbach
-        - hdmodel
 
 description: |
         The ECHAM atmosphere model, major version 6
@@ -32,8 +31,8 @@ choose_version:
 INI_PARENT_DATE: 22941231 
 INI_PARENT_EXP_ID: khw0030
 
-INPUT_DIR: "${computer.pool_directories.pool}/ECHAM6/input/${echam.dataset}"
-INI_RESTART_DIR: "${computer.pool_directories.pool}/MPIESM/restart/dev/${input_parent_exp_id}/restart/echam6"
+input_dir: "${computer.pool_directories.pool}/ECHAM6/input/${echam.dataset}"
+ini_restart_dir: "${computer.pool_directories.pool}/MPIESM/restart/dev/${input_parent_exp_id}/restart/echam6"
 
 
 namelist_changes:
@@ -137,7 +136,7 @@ date_test:
         file1: ${echam.model}_restart_${echam.my_next_date}
 
 
-setup_info: ${setup.scenario} 
+setup_info: ${setup.scenario}_${echam.resolution}_${resolution}_${setup.resolution}
 
 further_reading:
         - test_echam.datasets.yaml

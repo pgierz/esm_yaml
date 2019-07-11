@@ -31,41 +31,6 @@ jsbach_prepare_forcing()
 
 
 
-# AWICM
-
-jsbach_set_defaults()
-{
-	if [[ "x${ADJUST_TO_FESOM_GRID_jsbach}" = "x1" ]]; then
-		jsbach_nc=""
-	fi
-}
-
-jsbach_set_directory_paths()
-{
-	jsbach_INPUT_DIR=${jsbach_INPUT_DIR:-${POOL_DIR_jsbach}/JSBACH/input/${jsbach_DATASET}}
-
-	if [[ "x${ADJUST_TO_FESOM_GRID_jsbach}" = "x1" ]]; then
-		test_if_set RES_fesom
-		ADJ_INPUT_DIR_jsbach=${MESH_DIR_fesom}/tarfiles${RES_jsbach}/input
-		ADJ_INPUT_DIR_jsbach=${ADJ_INPUT_DIR_jsbach}/jsbach
-		OCERES_jsbach=${OCERES_jsbach:-${RES_fesom}}
-	else
-		ADJ_INPUT_DIR_jsbach=${jsbach_INPUT_DIR}/${RES_jsbach}
-		OCERES_jsbach=${OCERES_jsbach:-${RES_mpiom}}
-	fi
-}
-
-jsbach_modify_config()
-{
-	if [[ "x${ADJUST_TO_FESOM_GRID_jsbach}" = "x1" ]]
-	then
-		general_remove_namelist_value namelist.jsbach hydrology_ctl gethd	
-		general_remove_namelist_value namelist.jsbach hydrology_ctl puthd	
-	fi
-
-}
-
-
 # MPIESM
 
 jsbach_prepare_init()
@@ -336,6 +301,3 @@ jsbach_post_process()
 	cd $SCRIPT_DIR
 }
 
-jsbach_after_last_run_in_chunk() {
-        mecho "Nothing to do..." 
-}

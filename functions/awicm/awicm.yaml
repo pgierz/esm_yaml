@@ -88,8 +88,14 @@ echam:
 
 fesom:
         mesh_dir: /some/var
-
-
+jsbach:
+        dynveg_file_ending: ""
+        adj_input_dir: "${fesom.mesh_dir}/tarfiles${echam.resolution}/input/jsbach"
+        namelist_changes:
+                namelist.jsbach:
+                        hydrology_ctl:
+                                gethd: "remove_from_namelist"
+                                puthd: "remove_from_namelist"
 
 coupling_target_fields:
         o2a_flux: 

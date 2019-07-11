@@ -3,3 +3,10 @@ choose_lresume:
                 echam:
                         pseudo_resume_date: $(( ${echam.start_date} - ${echam.time_step}))
                         pseudo_end_date: $(( ${echam.next_date} - ${echam.time_step}))
+
+forcing_sources:
+        choose_echam.version:
+                6.3.04p2:
+                        lctlib:
+
+

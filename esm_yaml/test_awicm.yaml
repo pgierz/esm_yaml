@@ -4,7 +4,7 @@
 #
 
 model_dir:
-        ${esm_master_dir}/awicm-${version}
+        $esm_master_dir/awicm-$version
 
 submodels:
         - fesom
@@ -14,7 +14,7 @@ coupler: oasis3mct
 
 oasis3mct:
         model_dir:
-                ${awicm.model_dir}/oasis
+                $awicm.model_dir/oasis
         
 
 version: "1.1"
@@ -52,8 +52,8 @@ choose_resolution:
 choose_resume:
         TRUE:
                 output_exchanged_vars: FALSE
-                a2o_lag: "${echam.time_step}"
-                o2a_lag: "${fesom.time_step}"
+                a2o_lag: "@TIME_STEP_echam@"
+                o2a_lag: "@TIME_STEP_fesom@"
                 a2o_seq: 1
         FALSE:
                 a2o_lag: 0
@@ -65,14 +65,6 @@ required:
 
 
 echam:
-        restart:
-                firstlast: "'first'"
-        namelist_changes:
-                namelist.echam:
-                        runctl:
-                                lcouple: '.true.'
-        adj_input_dir: "${fesom.mesh_dir}/tarfiles${echam.resolution}/input/echam6"
-        ocean_resolution: "${fesom.resolution}"
         coupling_fields:
                 snt_atmo:
                         grid: atmo
@@ -81,15 +73,14 @@ echam:
                         unit: kg m s
                         standard_cf_name: 'shit no tuna?'
                         cf_code: 42
+fesom:
+mesh_dir: /some/var
+
+
         grids:
                 atmo:
                         nx=${echam.nx}
                         ny=${echam.ny}
-
-fesom:
-        mesh_dir: /some/var
-
-
 
 coupling_target_fields:
         o2a_flux: 

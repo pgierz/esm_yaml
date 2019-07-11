@@ -59,6 +59,10 @@ parent_date: 22941231
 parent_expid: khw0030
 parent_dir: "${pool_dir}/MPIESM/restart/dev/${input_parent_exp_id}/restart/echam6"
 
+pseudo_start_date: ${start_date}
+pseudo_end_date: ${next_date}
+pseudo_resume_date: ${start_date}
+
 restart:
         frequency: 1
         unit: "months"        
@@ -219,6 +223,7 @@ choose_lresume:
                                 - fdate "<--set_dim--" ${yearbefore}
                                 - ndate "<--set_dim--" ${nsteps}  
         true:
+                # pseudo_start_date: $(( ${start_date} - ${time_step} ))
                 namelist_changes:
                         namelist.echam:
                                 runctl:
@@ -352,8 +357,6 @@ namelist_changes:
                         nproca: "nproca"
                         nprocb: "nprocb"
                         out_datapath: "'${work_dir}'"        
-                radctl: 
-                        co2vmr: 888999
 
 errors:
         mo_exception:

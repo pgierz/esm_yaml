@@ -1,4 +1,4 @@
-# ECHAM YAML DEFAULT CONFIGURATION FILE
+# JSBACH YAML DEFAULT CONFIGURATION FILE
 
 model: jsbach
 repository: https://gitlab.dkrz.de/modular_esm/echam6
@@ -13,11 +13,10 @@ license_text: |
         Please make sure you have a licence to use echam.In case you are
         unsure, please contact redmine....
 
-directories:
-        MODEL_DIR: /DUMMY_NEEDS_TO_BE_SET_IN_SCRIPT/
 
-
-pool_dir: "@MACHINE_POOL_DIR@/JSBACH/"
+pool_dir: "${computer.pool_directories.pool}/JSBACH"
+input_dir: "${pool_dir}/ECHAM6/input/${dataset}"
+adj_input_dir: "${input_dir}/${resolution}"
 
 choose_dynamic_vegetations: 
         true:
@@ -25,26 +24,23 @@ choose_dynamic_vegetations:
         false:
                 DYNVEG: "_no_dynveg"
 
-executable: NONE #component model of echam, internally coupled
 version: 3.20
 dataset: r0009
 
 forcing_sources:
-        lctlib: "${echam.model_dir}/lctlib_nlct21.def"
+        lctlib: "${model_dir}/lctlib_nlct21.def"
 
 choose_versions:
         3.20:
-                repo_tag: 6.304p1
                 dataset: r0010               
                 forcings:
                         a_nd_file: a_nd_file
                         lightning: lightning
                         popdens: popdens
-                namelist_dir: ${esm_master_dir}/esm-runscripts/namelists/jsbach/${scenario}/${DYNVEG}
+                namelist_dir: "${esm_master_dir}/esm-runscripts/namelists/jsbach/${scenario}/${DYNVEG}"
         3.10:
-                repo_tag: 6.302p4
                 dataset: r0007
-                namelist_dir: ${esm_master_dir}/esm-runscripts/namelists/jsbach/${scenario}/${echam.resolution}
+                namelist_dir: "${esm_master_dir}/esm-runscripts/namelists/jsbach/${scenario}/${resolution}"
 
 forcings:
         LU_trans: LU_trans
@@ -121,5 +117,51 @@ forcings_in_workdir:
         "Ndepo": "Ndepo.@YEAR@.nc"
         "LU_trans": "landuseTransitions.@YEAR@.nc"
 
+streams:
+        - jsbach
+        - jsbid
+        - yasso
+        - surf
+        - nitro
+        - veg
+        - land
+
+
+ym_dates:
+        - YEAR_
+
+restart_in_files:
+        "STREAM_in[${streams}]": "STREAM"
+
+restart_in_sources:
+        "STREAM_in[${streams}]":
+                - "restart_${expid}_STREAM_${prev_date}.nc"
+                - "restart_${expid}_${prev_date}_STREAM.nc"
+
+restart_in_in_workdir:        
+        "STREAM_in[${streams}]": "restart_${expid}_STREAM.nc"
+
+restart_out_files:
+        "STREAM_in[${streams}]_DATE_in[${write_restart_dates}]": "STREAM_DATE"
+
+restart_out_targets:
+        "STREAM_in[${streams]_DATE_in[${write_restart_dates}]": "restart_${expid}_STREAM_DATE.nc"
+
+restart_out_in_workdir:
+        "STREAM_in[${stream}]_DATE_in[${write_restart_dates}]": "restart_${expid}_STREAM_DATE.nc"
+
+output_targets:
+        "STREAM_in[${streams}]_DATE_in[${write_output_dates}]_grb": ${expid}_echam6_STREAM_DATE.grb
+        "STREAM_in[${streams}]_DATE_in[${write_output_dates}]_codes": ${expid}_echam6_STREAM.codes
+        "STREAM_in[${streams}]_DATE_in[${write_output_dates}]_nc": ${expid}_echam6_STREAM_DATE.nc
+
+output_in_workdir:
+        echam_grb:  ${expid}_*.01_echam
+        echam_codes: ${expid}_*.01_echam.codes
+        echam_nc:  ${expid}_*.01_echam.nc
+
+
+
 further_reading:
+        - jsbach.inherit.yaml
         - jsbach.datasets.yaml

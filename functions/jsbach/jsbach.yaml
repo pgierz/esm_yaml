@@ -20,9 +20,9 @@ adj_input_dir: "${input_dir}/${resolution}"
 
 choose_dynamic_vegetations: 
         true:
-                DYNVEG: "_dynveg"
+                dynveg: "_dynveg"
         false:
-                DYNVEG: "_no_dynveg"
+                dynveg: "_no_dynveg"
 
 version: 3.20
 dataset: r0009
@@ -37,7 +37,11 @@ choose_versions:
                         a_nd_file: a_nd_file
                         lightning: lightning
                         popdens: popdens
-                namelist_dir: "${esm_master_dir}/esm-runscripts/namelists/jsbach/${scenario}/${DYNVEG}"
+                choose_dynamic_vegetations: 
+                        true:
+                                namelist_dir: "${esm_master_dir}/esm-runscripts/namelists/jsbach/${scenario}/dynveg"
+                        false:
+                                namelist_dir: "${esm_master_dir}/esm-runscripts/namelists/jsbach/${scenario}/no_dynveg"
         3.10:
                 dataset: r0007
                 namelist_dir: "${esm_master_dir}/esm-runscripts/namelists/jsbach/${scenario}/${resolution}"
@@ -106,7 +110,7 @@ choose_scenario:
                         jsbach: jsbach_1976
                         LU: LU_1950
 
-forcings_in_workdir:
+forcing_in_workdir:
         "jsbach": "jsbach.nc"
         "lctlib": "lctlib_nclt21.def"
         "cover_fract": "cover_fract.@YEAR@.nc"
@@ -116,6 +120,9 @@ forcings_in_workdir:
         "LU" : "landuse_harvest.@YEAR@.nc"
         "Ndepo": "Ndepo.@YEAR@.nc"
         "LU_trans": "landuseTransitions.@YEAR@.nc"
+
+forcing_modifications:
+        Ndepo:  "<--setyear-- @YEAR@"                
 
 streams:
         - jsbach
@@ -128,7 +135,7 @@ streams:
 
 
 ym_dates:
-        - YEAR_
+        - "${DATE.year}${DATE.month} <--DATE_in[${write_output_dates}]--"
 
 restart_in_files:
         "STREAM_in[${streams}]": "STREAM"
@@ -151,16 +158,19 @@ restart_out_in_workdir:
         "STREAM_in[${stream}]_DATE_in[${write_restart_dates}]": "restart_${expid}_STREAM_DATE.nc"
 
 output_targets:
-        "STREAM_in[${streams}]_DATE_in[${write_output_dates}]_grb": ${expid}_echam6_STREAM_DATE.grb
-        "STREAM_in[${streams}]_DATE_in[${write_output_dates}]_codes": ${expid}_echam6_STREAM.codes
-        "STREAM_in[${streams}]_DATE_in[${write_output_dates}]_nc": ${expid}_echam6_STREAM_DATE.nc
+        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_grb": ${expid}_echam6_STREAM_DATE.grb
+        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_codes": ${expid}_echam6_STREAM.codes
+        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_nc": ${expid}_echam6_STREAM_DATE.nc
 
 output_in_workdir:
-        echam_grb:  ${expid}_*.01_echam
-        echam_codes: ${expid}_*.01_echam.codes
-        echam_nc:  ${expid}_*.01_echam.nc
+        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_grb": "${expid}_DATE.01_STREAM"
+        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_codes": "${expid}_DATE.01_STREAM.codes"
+        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_nc": "${expid}_DATE.01_STREAM.nc"
 
-
+output_files:
+        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_grb": "STREAM_in[${streams}]_DATE_in[${ym_dates}]_grb"
+        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_codes": "STREAM_in[${streams}]_DATE_in[${ym_dates}]_codes"
+        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_nc": "STREAM_in[${streams}]_DATE_in[${ym_dates}]_nc"
 
 further_reading:
         - jsbach.inherit.yaml

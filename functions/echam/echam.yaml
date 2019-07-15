@@ -270,7 +270,7 @@ choose_transient_advance_forcing:
         true:
                 [year, co2vmr, ch4vmr, n2ovmr, cecc, cobld, clonp]: "<--grep(${start_date.year})-- ${forcing_table}"
                                         
-inputs_in_workdir:
+input_in_workdir:
         "cldoptprops": "ECHAM6_CldOptProps.nc"
         "janspec": "unit.23"
         "jansurf": "unit.24"
@@ -281,7 +281,7 @@ inputs_in_workdir:
         "vltclim": "unit.90"
 	"MAC-SP": "MAC-SP.nc"
 
-forcings_in_workdir:
+forcing_in_workdir:
         sic: "unit.96"
         sst: "unit.20"
         aerocoarse: "aero_coarse_@YEAR@.nc"
@@ -294,31 +294,53 @@ forcings_in_workdir:
         volcsw: "strat_aerosol_sw_@YEAR@.nc"
         swflux: "swflux_@YEAR@.nc"
 
-restart_in_files:
-        echam: 
-                - restart_${expid}_echam_${prev_date}.nc
-                - restart_${expid}_${prev_date}_echam.nc
+streams:
+        - echam
+        - accw
+        - co2
 
-restart_ins_in_workdir:        
-        echam: restart_${expid}_echam.nc
+ym_dates:
+        - "${DATE.year}${DATE.month} <--DATE_in[${write_output_dates}]--"
+
+restart_in_files:
+        "STREAM_in[${streams}]": "STREAM"
+
+restart_in_sources:
+        "STREAM_in[${streams}]":
+                - "restart_${expid}_STREAM_${prev_date}.nc"
+                - "restart_${expid}_${prev_date}_STREAM.nc"
+
+restart_in_in_workdir:        
+        "STREAM_in[${streams}]": "restart_${expid}_STREAM.nc"
 
 restart_out_files:
-        echam: restart_${expid}_echam_&DATE&.nc
-        
-output_files:
-        echam_grb: ${expid}_echam6_echam_*.grb
-        echam_codes: ${expid}_echam6_echam.codes
-        echam_nc: ${expid}_echam6_echam_*.nc  
+        "STREAM_in[${streams}]_DATE_in[${write_restart_dates}]": "STREAM_DATE"
+
+restart_out_targets:
+        "STREAM_in[${streams]_DATE_in[${write_restart_dates}]": "restart_${expid}_STREAM_DATE.nc"
+
+restart_out_in_workdir:
+        "STREAM_in[${stream}]_DATE_in[${write_restart_dates}]": "restart_${expid}_STREAM_DATE.nc"
+
+output_targets:
+        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_grb": ${expid}_echam6_STREAM_DATE.grb
+        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_codes": ${expid}_echam6_STREAM.codes
+        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_nc": ${expid}_echam6_STREAM_DATE.nc
 
 output_in_workdir:
-        echam_grb:  ${expid}_*.01_echam
-        echam_codes: ${expid}_*.01_echam.codes
-        echam_nc:  ${expid}_*.01_echam.nc
+        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_grb": "${expid}_DATE.01_STREAM"
+        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_codes": "${expid}_DATE.01_STREAM.codes"
+        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_nc": "${expid}_DATE.01_STREAM.nc"
+
+output_files:
+        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_grb": "STREAM_in[${streams}]_DATE_in[${ym_dates}]_grb"
+        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_codes": "STREAM_in[${streams}]_DATE_in[${ym_dates}]_codes"
+        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_nc": "STREAM_in[${streams}]_DATE_in[${ym_dates}]_nc"
 
 log_files:
         atmout: ${expid}_echam6_atmout_${start_date}_${end_date}
 
-logs_in_workdir:        
+log_in_workdir:        
         atmout: atmout
 
 namelist_changes:

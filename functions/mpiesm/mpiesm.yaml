@@ -5,8 +5,6 @@ choose_lresume:
                         pseudo_end_date: $(( ${echam.next_date} - ${echam.time_step}))
 
 forcing_sources:
-        choose_echam.version:
-                6.3.04p2:
-                        lctlib:
+        lctlib: "${model_dir}/util/running/adjunct_files/jsbach/lctlib_nlct21.def"
 
 

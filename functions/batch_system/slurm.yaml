@@ -63,6 +63,7 @@ choose_launcher:
 submitted: false
 script_name: "<--methods.scriptname--"
 actual_script_dir: "<--methods.script_dir--"
+hostname_list: "DUMMY_HOST1 DUMMY_HOST2"
 
 choose_SLURM_NNODES:
         *:
@@ -70,9 +71,21 @@ choose_SLURM_NNODES:
                 script_name: "<--scriptname--"
                 actual_script_dir: "<--script_dir--"
                 total_nnodes: ${SLURM_NNODES}
+                hostname_list: "<--show_hostnames--"
 
 "<--scriptname--": 
-        method: squeue --job ${JOB_ID} -o "%o" | cut -f1 -d' ' | basename | cut -f1 -d' '
+        method: "squeue --job ${JOB_ID} -o '%o' | cut -f1 -d' ' | basename | cut -f1 -d' '"
 "<--scriptdir--": 
-        method: squeue --job ${JOB_ID} --format "%Z" squeue --job ${JOB_ID} --format "%Z"
+        method: "squeue --job ${JOB_ID} --format '%Z' squeue --job ${JOB_ID} --format '%Z'"
+"<--show_hostnames--":
+        method: "scontrol show hostnames"
+
+config_files:        
+        hostfile: hostfile_srun
+
+config_create:
+        hostfile:
+                - "${MODEL.startproc}-${MODEL.endproc} ./${MODEL.exe} <--append-- <--MODEL_in[${setup.orderedexecs}]-- "        
+
+execution_command: "${launcher} ${launcher_flags} --multi-prog ${config_files.hostfile}"
 

@@ -96,7 +96,7 @@ namelist_changes:
                         jpnij: 0
                 namsbc_cpl: 
                         sn_rcv_rnf: "'none', 'no', '', '', ''"
-
+        
 
 choose_free_surface:                        
         linear:
@@ -137,6 +137,17 @@ choose_lresume:
                                                         nn_rstctl: 0
                                                 namtrc_run:        
                                                         nn_rsttr : 0       
+
+choose_correct_neg_tracer_conc:
+        true:                                                        
+                namelist_changes:
+                        namelist.top.cfg:
+                                ln_trcrad: ".true."
+        false:                                                        
+                namelist_changes:
+                        namelist.top.cfg:
+                                ln_trcrad: ".false."
+                                                        
 choose_run_number:
         1:
                 namelist_changes:

@@ -39,3 +39,13 @@ pool_directories:
         projects: "/work/ollie/projects"
 
 cores_per_node: 888
+
+
+choose_submitted:
+        true:
+                modules_needed:
+                        - centoslibs
+
+
+accounting: false
+hyper_flag: "" # No hyperthreading on ollie

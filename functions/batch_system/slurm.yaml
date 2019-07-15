@@ -1,0 +1,78 @@
+# SLURM YAML CONFIGURATION FILE
+#
+#
+
+
+submit: sbatch
+launcher: srun
+mail_type: NONE
+account: None   
+hyper_thread: ""
+
+
+
+# intermediate vars
+
+mail1: ""
+mail2: ""
+
+choose_jobtype:
+        compute:
+                exclusive_flag: "--exclusive"
+        post:
+                exclusive_flag: ""
+
+choose_accounting:
+        true:
+                account_flag: "--account=${account}"
+
+# belongs somewhere else                
+# choose_use_hyperthreading: 
+#         "1":
+#                tasks_per_node: "$((${cores_per_node} * 2))"
+#         "0":
+#                tasks_per_node: "${cores_per_node}"
+
+choose_mail_type:
+        *: 
+                mail1:  "--mail_type=${mail_type}"
+choose_mail_user:
+        *: 
+                mail2:  "--mail_user=${mail_user}"
+
+notification_flag: "${mail1} ${mail2}"
+hyperthreading_flag: "--ntasks-per-node=${tasks_per_node}"
+single_proc_submit_flag: "--ntasks-per-node=1"
+tasks_flag: "--ntasks: ${tasks}"
+partition_flag: "--partition=${partition}"
+time_flag: "--time=${wallclock_time}"
+additional_flags: ""
+output_flags: "--output=${expid}_${jobtype}_%j.log --error=${expid}_${jobtype}_%j.log"
+name_flag: "--job-name=§{expid}"
+
+submit_flags: "${exclusive_flag} ${account_flag} ${partition_flag} ${time_flag} ${additional_flags} ${output_flags} ${tasks_flag} ${hyperthreading_flag} ${name_flag}" 
+
+choose_launcher:
+        srun:
+                launcher_flags: "-l --kill-on-bad-exit=1 --cpu_bind=cores"
+        mpiexec.hydra:  
+                launcher_flags: "-bootstrap slurm"
+        mpirun:
+                launcher_flags: "-l"
+
+submitted: false
+script_name: "<--methods.scriptname--"
+actual_script_dir: "<--methods.script_dir--"
+
+choose_SLURM_NNODES:
+        *:
+                submitted: true
+                script_name: "<--scriptname--"
+                actual_script_dir: "<--script_dir--"
+                total_nnodes: ${SLURM_NNODES}
+
+"<--scriptname--": 
+        method: squeue --job ${JOB_ID} -o "%o" | cut -f1 -d' ' | basename | cut -f1 -d' '
+"<--scriptdir--": 
+        method: squeue --job ${JOB_ID} --format "%Z" squeue --job ${JOB_ID} --format "%Z"
+

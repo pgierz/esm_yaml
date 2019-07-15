@@ -1,0 +1,6 @@
+# MISTRAL YAML CONFIGURATION FILES
+
+#hyper_flag: "--cpus-per-task=1"
+additional_flags: "--mem=0"
+
+accounting: true

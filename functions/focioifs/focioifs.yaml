@@ -21,6 +21,8 @@ oifs:
 nemo:
         version: '3.6'
         resolution: ORCA05
+        coupling_freq: "$(( ${time_step} / ${nemo.time_step} ))"
+
 
 resolution: ${oifs.resolution}_${nemo.resolution}
 

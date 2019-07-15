@@ -26,10 +26,19 @@ restart:
 ini_restart_dir: /gfs2/work/shkifmsw/models/foci1.10.1/experiments/FOCI1.10-SWtestd/restart/nemo
 input_dir:      /gfs2/work/shkifmsw/foci_input/NEMO/input/r0001/${resolution}
 namelist_dir:   ${esm_runscripts_dir}/namelists/nemo
-bin_dir:        ${setup.dir}/bin
+bin_dir:        ${setup.model_dir}/bin
 
 # default files
 #
+#
+
+thisstep: $(( $((${seconds_since_initial} - ${runtime})) / ${time_step}))
+newstep: $(( ${thisstep} + ${timestep_per_run} ))
+timestep_formatted: "<--format(%08d)-- ${thisstep}"
+newtimestep_formatted: "<--format(%08d)-- ${newstep}"
+
+
+
 
 restart_in_files:
         restart_in: ${expid}_${timestep_formatted}_restart_${prev_date}
@@ -57,11 +66,6 @@ log_files:
 
 # calendar:
 
-secs_before_start: $(( seconds_since_initial - runtime ))
-timestep: $(( sec_before_start / time_step ))
-newtimestep: $(( timestep + timesteps_per_run ))
-
-
 
 namelist_changes:
         namelist_cfg:
@@ -84,7 +88,7 @@ namelist_changes:
                         nam_tsd_init: '.true.'   
                 namdom:    
                         rn_rdt: ${timestep}
-                namsbc:         
+                namsbc:        #?????? 
                         nn_fsbc: ${coupling_freq}
                 nammpp:
                         jpni: 0

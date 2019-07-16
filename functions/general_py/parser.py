@@ -352,28 +352,66 @@ def recursive_make_choices(config, first_time=True):
             recursive_make_choices(v)
 
 
-def recursive_run_function_lhs(config, func, last_key, *args, **kwargs):
+def recursive_run_function_lhs(right, func, left, *args, **kwargs):
     """ Recursively runs func on all nested dicts """
 
-    if isinstance(config, list):
-        for index, item in enumerate(config):
+    if isinstance(right, list):
+        for index, item in enumerate(right):
             logging.debug("In a list!")
             new_item = recursive_run_function_lhs(item, func, None, *args, **kwargs)
-            config[index] = new_item
-    elif isinstance(config, dict):
-        keys = list(config)
+            right[index] = new_item
+    elif isinstance(right, dict):
+        keys = list(right)
         for key in keys:
-            value = config[key]
+            value = right[key]
             logging.debug("In a dict!")
-            config[key] = recursive_run_function_lhs(value, func, key, *args, **kwargs)
+            right[key] = recursive_run_function_lhs(value, func, key, *args, **kwargs)
     # BUG: What about str and tuple? We only specifically handle list and dict
     # here, is that OK?
     else:
         logging.debug("In an atomic thing")
-        config = func(config, last_key, *args, **kwargs)
+        right = func(right, left, *args, **kwargs)
         # raise TypeError("Needs str, list, or dict")
-    return config
+    return right
 
+def recursive_run_function_new(leftname, right, level, func, *args, **kwargs):
+    """ Recursively runs func on all nested dicts """
+    if level is "always":
+        do_func_for=[str, dict, list]
+    if level is "atomic":
+        do_func_for = [str, int, float]
+
+    # def func(left, right, *args, **kwargs):
+
+    if type(right) in do_func_for:
+        if isinstance(right, dict):
+            keys = list(right)
+            for key in keys:
+                value = right[key]
+                del right[key]
+                right.update(func(key, value, *args, **kwargs))
+        elif isinstance(right, list):
+            for index, item in enumerate(right):
+                del right[index]
+                right.append(func(None, item, *args, **kwargs))
+        else:
+            right = func(None, right, *args, **kwargs)
+
+    print("Recursive run thingy:", right)
+
+    if isinstance(right, list):
+        for index, item in enumerate(right):
+            logging.debug("In a list!")
+            new_item = recursive_run_function_new(None, item, level, func, *args, **kwargs)
+            right[index] = new_item
+
+    elif isinstance(right, dict):
+        keys = list(right)
+        for key in keys:
+            value = right[key]
+            logging.debug("In a dict!")
+            right[key] = recursive_run_function_new(key, value, level, func, *args, **kwargs)
+    return right
 
 
 def recursive_get(config_to_search, config_elements):
@@ -461,6 +499,37 @@ def find_variable(raw_str, lhs, config_to_search):
             return ok_part + var_result + more_rest
         warnings.warn("Maybe look in the other config")
     return raw_str
+
+def list_to_multikey_lhs(lhs, rhs, config_to_search):
+    list_fence = "[["
+    list_end = "]]"
+    print("Running list_to_multikey_lhs")
+    print("lhs=", lhs)
+    print(type(lhs))
+    print("rhs=", rhs)
+    print(type(rhs))
+    if isinstance(lhs, str) and lhs:
+        if list_fence in lhs:
+            return_dict = {}
+            ok_part, rest = lhs.split(list_fence, 1)
+            actual_list, new_raw = rest.split(list_end, 1)
+            key_in_list, value_in_list = actual_list.split("-->", 1)
+            key_elements = key_in_list.split(".")
+            entries_of_key = recursive_get(config_to_search, key_elements)
+            return_dict2 = {lhs.replace("[["+actual_list+"]]", key): rhs.replace(value_in_list, key) for key in entries_of_key}
+
+            if list_fence in new_raw :
+                for key, value in return_dict2.items():
+                    return_dict.update(list_to_multikey_lhs(key, value, config_to_search))
+            else:
+                return_dict=return_dict2
+            print("About to return:", return_dict)
+            return return_dict
+        print("About to return:", {lhs: rhs})
+        return {lhs: rhs}
+    else:
+        return rhs
+
 
 
 def pass_down(config, key):
@@ -562,7 +631,7 @@ def mark_dates(entry, lhs, config):
 
 
 def unmark_dates(entry, lhs, config):
-    if isinstance(entry, str) and entry.endswith(date_marker):
+    if isinstance(entry, str) and date_marker in entry:
         entry = entry.replace(date_marker, "")
     return entry
 
@@ -636,6 +705,10 @@ class ConfigSetup(GeneralConfig):
            self.config, unmark_dates, self.config["model"], self.config
         )
 
+        recursive_run_function_new(
+           None, self.config, "always",
+           list_to_multikey_lhs, self.config,
+        )
 
 class ConfigComponent(GeneralConfig):
     """ Config class for components """

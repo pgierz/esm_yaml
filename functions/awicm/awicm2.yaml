@@ -1,3 +1,6 @@
+
+
+
 model: AWICM2
 
 include_models:
@@ -23,9 +26,6 @@ choose_resolution:
 
 echam:
         ADJ_INPUT_DIR: "/tarfiles${echam.resolution}/input/echam6"
-        remove_forcings:
-                - sst
-                - sic  
         namelist_changes:
                 namelist.echam:
                         runctl:

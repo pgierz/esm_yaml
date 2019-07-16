@@ -1,0 +1,58 @@
+#!/usr/bin/bash
+
+awicm_set_defaults()
+{
+    # PG: default switch for lgfw_atmo in namcouple:
+    lgfw=${lgfw:-0} 
+}
+
+awicm_prepare_config()
+{
+    if [[ -f ${CONFIG_DIR_oasis3mct}/oasis3mct_config_switches.dat ]]; then
+        source ${CONFIG_DIR_oasis3mct}/oasis3mct_config_switches.dat
+    fi
+    if [[ "x$lgfw" == "x1" ]]; then
+            # FIXME: We will need a 13 here as the first argument when the
+            # hosing file/echam/fesom coupling works correctly.
+            oasis3mct_add_general_info_to_namcouple 12 2 fesom echam6 $RUNTIME_awicm
+    else
+            oasis3mct_add_general_info_to_namcouple 11 2 fesom echam6 $RUNTIME_awicm
+    fi
+    LOCTRANS="LOCTRANS SCRIPR"
+    OUTTYPE=$expmode
+    INTERP="DISTWGT U SCALAR LATITUDE 15 6"
+    RMP_FILE="#"
+    GLOBAL="#"
+
+    INTERP="BICUBIC D SCALAR LATITUDE 15"
+
+
+    INTERP="DISTWGT U SCALAR LATITUDE 15 6"
+
+
+    if [[ "x$lgfw" == "x1" ]]; then
+        oasis3mct_add_exchange_to_namecouple_input gfw_atmo 17 86400 gfw_atmo.nc
+        # FIXME: The next two lines are needed once the hosing file/echam/fesom
+        # coupling works correclty, as a replacement for the line above.
+        #
+        # oasis3mct_add_exchange_to_namcouple hydr_gla hydr_glo 17 2 a2o_flux
+        # oasis3mct_add_exchange_to_namecouple_input gfw_atmo 18 86400 gfw_atmo.nc
+    fi
+    oasis3mct_finalize_namcouple
+}
+
+awicm_after_last_run_in_chunk()
+{
+        for component in $coupled_setup_component_list; do
+                echo "                  Calling ${component}_after_last_run_in_chunk"
+                call_if_exists ${component}_after_last_run_in_chunk
+        done
+}
+
+awicm_before_first_run_in_chunk()
+{
+        for component in $coupled_setup_component_list; do
+                echo "                  Calling ${component}_before_first_run_in_chunk"
+                call_if_exists ${component}_before_first_run_in_chunk
+        done
+}

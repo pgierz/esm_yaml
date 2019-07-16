@@ -1,32 +1,33 @@
-#
-# AWICM
+# AWICM 1 YAML CONFIGURATION FILE
 #
 #
 
+model: awicm
 model_dir:
         ${esm_master_dir}/awicm-${version}
 
-submodels:
+include_submodels:
         - fesom
         - echam
-
-coupler: oasis3mct
-
-oasis3mct:
-        model_dir:
-                ${awicm.model_dir}/oasis
-        
+        - oasis3mct  
 
 version: "1.1"
 scenario: "PI-CTRL"
-time_step: 450
+time_step: 3600
 resolution: ${echam.resolution}_${fesom.resolution}
-resume: TRUE
-
+lresume: true
+postprocessing: false
+post_time: "00:05:00"
 
 choose_versions:
         1.1:
-                tag: CMIP6
+                echam: 
+                        version: "6.304p1"
+                jsbach:
+                        version: "3.20"
+                fesom: 
+                        version: "1.4"
+        CMIP6:
                 echam: 
                         version: "6.304p1"
                 jsbach:
@@ -42,27 +43,30 @@ choose_versions:
                         version: "2.0"
                 
 choose_resolution:
-        T63_CORE:
-                nproca_echam: 24
-                nprocb_echam: 18
-                nproca_fesom: 288
-                nprocb_fesom: 1
+        T63_CORE2:
+                echam:
+                        nproca: 24
+                        nprocb: 18
+                fesom:
+                        nproc: 288
+                compute_time: "02:00:00"
+        T63_REF87K:
+                echam:
+                        nproca: 24
+                        nprocb: 18
+                fesom:
+                        nproc: 216
+                compute_time: "02:00:00"
+        T63_REF:
+                echam:
+                        nproca: 24
+                        nprocb: 18
+                fesom:
+                        nproc: 128
                 compute_time: "02:00:00"
 
-choose_resume:
-        TRUE:
-                output_exchanged_vars: FALSE
-                a2o_lag: "${echam.time_step}"
-                o2a_lag: "${fesom.time_step}"
-                a2o_seq: 1
-        FALSE:
-                a2o_lag: 0
-                o2a_lag: 0
-                a2o_seq: 2
 
-required:
-        - resolution
-
+# necessary changes to submodels compared to standalone setups               
 
 echam:
         restart:
@@ -73,21 +77,10 @@ echam:
                                 lcouple: '.true.'
         adj_input_dir: "${fesom.mesh_dir}/tarfiles${echam.resolution}/input/echam6"
         ocean_resolution: "${fesom.resolution}"
-        coupling_fields:
-                snt_atmo:
-                        grid: atmo
-                        description: |
-                               whatever snt means
-                        unit: kg m s
-                        standard_cf_name: 'shit no tuna?'
-                        cf_code: 42
-        grids:
-                atmo:
-                        nx=${echam.nx}
-                        ny=${echam.ny}
+        remove_forcing_files:
+                - sst
+                - sic  
 
-fesom:
-        mesh_dir: /some/var
 jsbach:
         dynveg_file_ending: ""
         adj_input_dir: "${fesom.mesh_dir}/tarfiles${echam.resolution}/input/jsbach"
@@ -96,6 +89,24 @@ jsbach:
                         hydrology_ctl:
                                 gethd: "remove_from_namelist"
                                 puthd: "remove_from_namelist"
+oasis3mct:
+        model_dir:
+                ${model_dir}/oasis
+        
+
+# coupling / namcouple setup                                
+
+choose_lresume:
+        true:
+                output_exchanged_vars: false
+                a2o_lag: "${echam.time_step}"
+                o2a_lag: "${fesom.time_step}"
+                a2o_seq: 1
+        false:
+                output_exchanged_vars: true
+                a2o_lag: 0
+                o2a_lag: 0
+                a2o_seq: 2
 
 coupling_target_fields:
         o2a_flux: 
@@ -113,29 +124,30 @@ coupling_target_fields:
                 - 'heat_swo <--distwgt-- heat_swa'
                 - 'hydr_oce <--distwgt-- hydr_atm'
 
-
 coupling_methods:                  
         '<--distwgt--':
                 implementation: '${coupler}.<--distwgt--'
                 bins: 15
                 other_number: 6
+        '<--bicubic--':
+                implementation: '${coupler}.<--bicubic--'
+                bins: 15
 
-
-postpro:
-        BOT_stream.nc:
-                source_field: 
-                        - a
-                        - b 
-                        - c
-                method: monthly mean
-
-        BOT_stream2.nc: 'e2, f2, g2 <--monthly_mean-- e,f,g'       
-          
-coupling_direction:
-         'feom->atmo':
-                lag: o2a_lag
-                seq: 1
-         'atmo->feom':
-                lag: $a2o_lag
-                seq: $a2o_seq
+coupling_directions:
+        'fesom->echam':
+                from: fesom
+                to: echam
+                'feom->atmo':
+                        from_grid: feom
+                        to_grid: atmo
+                        lag: o2a_lag
+                        seq: 1
+         'echam->fesom':
+                 from: echam
+                 to: fesom
+                 'atmo->feom':
+                        from_grid: atmo
+                        to_grid: feom
+                        lag: $a2o_lag
+                        seq: $a2o_seq
 

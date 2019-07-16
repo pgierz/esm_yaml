@@ -358,6 +358,53 @@ namelist_changes:
                         nproca: "nproca"
                         nprocb: "nprocb"
                         out_datapath: "'${work_dir}'"        
+                        
+
+coupling_fields:
+        sst_atmo:
+                grid: atmo
+        sit_atmo:
+                grid: atmo
+        sie_atmo:
+                grid: atmo
+        snt_atmo:
+                grid: atmo
+                #description: |
+                #       whatever snt means
+                #unit: kg m s
+                #standard_cf_name: 'shit no tuna?'
+                #cf_code: 42
+        taux_atm:
+                grid: atmo
+        tauy_atm:
+                grid: atmo
+        taux_ica:
+                grid: atmo
+        tauy_ica:
+                grid: atmo
+        prec_atm:
+                grid: atmo
+        snow_atm:
+                grid: atmo
+        evap_atm:
+                grid: atmo
+        subl_atm:
+                grid: atmo
+        heat_atm:
+                grid: atmo
+        heat_ica:
+                grid: atmo
+        heat_swa:
+                grid: atmo
+        hydr_atm:
+                grid: atmo
+grids:
+        atmo:
+                nx: "${nx}"
+                ny: "${ny}"
+
+
+
 
 errors:
         mo_exception:

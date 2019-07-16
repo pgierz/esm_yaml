@@ -149,3 +149,6 @@ restart_in_files:
         "[[A.levelAecham-->LEV]]_[[streams-->STREAM]]_[[numbers-->NUMBERS]]": LEV_${echam.model}_STREAM_${echam.my_next_date}_NUMBERS
 
 
+z_example_numbers:
+        "lala_[[numbers-->NUM]]_[[numbers-->POW2]]_toot_[[streams-->STREAM]]"
+

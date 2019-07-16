@@ -516,7 +516,18 @@ def list_to_multikey_lhs(lhs, rhs, config_to_search):
             key_in_list, value_in_list = actual_list.split("-->", 1)
             key_elements = key_in_list.split(".")
             entries_of_key = recursive_get(config_to_search, key_elements)
-            return_dict2 = {lhs.replace("[["+actual_list+"]]", key): rhs.replace(value_in_list, key) for key in entries_of_key}
+            if isinstance(rhs, str):
+                return_dict2 = {lhs.replace("[["+actual_list+"]]", key).replace(value_in_list, key):
+                        rhs.replace(value_in_list, key) for key in entries_of_key}
+            if isinstance(rhs, list):
+                replaced_list = []
+                for item in rhs:
+                    if isinstance(item, str):
+                        replaced_list.append(item.replace(value_in_list, key))
+                    else:
+                        replaced_list.append(item)
+                return_dict2 = {lhs.replace("[["+actual_list+"]]", key).replace(value_in_list, key): 
+                        replaced_list for key in entries_of_key}
 
             if list_fence in new_raw :
                 for key, value in return_dict2.items():
@@ -527,6 +538,23 @@ def list_to_multikey_lhs(lhs, rhs, config_to_search):
             return return_dict
         print("About to return:", {lhs: rhs})
         return {lhs: rhs}
+    if list_fence in rhs:
+        rhs_list = []
+        ok_part, rest = rhs.split(list_fence, 1)
+        actual_list, new_raw = rest.split(list_end, 1)
+        key_in_list, value_in_list = actual_list.split("-->", 1)
+        key_elements = key_in_list.split(".")
+        entries_of_key = recursive_get(config_to_search, key_elements)
+        for entry in entries_of_key:
+            rhs_list.append(rhs.replace("[["+actual_list+"]]", entry).replace(value_in_list, entry))
+        if list_fence in new_raw:
+            out_list = []
+            for rhs_listitem in rhs_list:
+                out_list += list_to_multikey_lhs(None, rhs_listitem, config_to_search)
+                print(80*"$")
+                print(out_list)
+            rhs_list = out_list
+        return rhs_list
     else:
         return rhs
 

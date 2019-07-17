@@ -191,12 +191,8 @@ choose_scenario:
 
 choose_lresume:
         false:
-                restart_modifications:
-                        echam: 
-                                - vdate "<--set_dim--" ${start_date}
-                                - fdate "<--set_dim--" ${year_before_date}
-                                - ndate "<--set_dim--" ${steps_in_year_before}  
-                        *: 
+                restart_in_modifications:
+                        [[streams-->STREAM]]: 
                                 - vdate "<--set_dim--" ${start_date}
                                 - fdate "<--set_dim--" ${year_before_date}
                                 - ndate "<--set_dim--" ${steps_in_year_before}  
@@ -300,42 +296,42 @@ streams:
         - co2
 
 ym_dates:
-        - "${DATE.year}${DATE.month} <--DATE_in[${write_output_dates}]--"
+        - "[[write_output_dates-->WHEN]]<--year--WHEN<--month--.WHEN<--day--"
 
 restart_in_files:
-        "STREAM_in[${streams}]": "STREAM"
+        "[[streams-->STREAM]]": "STREAM"
 
 restart_in_sources:
-        "STREAM_in[${streams}]":
+        "[[streams-->STREAM]]":
                 - "restart_${expid}_STREAM_${prev_date}.nc"
                 - "restart_${expid}_${prev_date}_STREAM.nc"
 
 restart_in_in_workdir:        
-        "STREAM_in[${streams}]": "restart_${expid}_STREAM.nc"
+        "[[streams-->STREAM]]": "restart_${expid}_STREAM.nc"
 
 restart_out_files:
-        "STREAM_in[${streams}]_DATE_in[${write_restart_dates}]": "STREAM_DATE"
+        "[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]": "STREAM_WHEN"
 
 restart_out_targets:
-        "STREAM_in[${streams]_DATE_in[${write_restart_dates}]": "restart_${expid}_STREAM_DATE.nc"
+        "[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]": "restart_${expid}_STREAM_WHEN.nc"
 
 restart_out_in_workdir:
-        "STREAM_in[${stream}]_DATE_in[${write_restart_dates}]": "restart_${expid}_STREAM_DATE.nc"
+        "STREAM_in[${stream}]_DATE_in[${write_restart_dates}]": "restart_${expid}_STREAM_WHEN.nc"
 
 output_targets:
-        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_grb": ${expid}_echam6_STREAM_DATE.grb
-        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_codes": ${expid}_echam6_STREAM.codes
-        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_nc": ${expid}_echam6_STREAM_DATE.nc
+        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": ${expid}_echam6_STREAM_WHEN.grb
+        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": ${expid}_echam6_STREAM.codes
+        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": ${expid}_echam6_STREAM_WHEN.nc
 
 output_in_workdir:
-        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_grb": "${expid}_DATE.01_STREAM"
-        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_codes": "${expid}_DATE.01_STREAM.codes"
-        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_nc": "${expid}_DATE.01_STREAM.nc"
+        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": "${expid}_WHEN.01_STREAM"
+        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": "${expid}_WHEN.01_STREAM.codes"
+        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": "${expid}_WHEN.01_STREAM.nc"
 
 output_files:
-        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_grb": "STREAM_in[${streams}]_DATE_in[${ym_dates}]_grb"
-        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_codes": "STREAM_in[${streams}]_DATE_in[${ym_dates}]_codes"
-        "STREAM_in[${streams}]_DATE_in[${ym_dates}]_nc": "STREAM_in[${streams}]_DATE_in[${ym_dates}]_nc"
+        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": "STREAM_WHEN_grb"
+        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": "STREAM_WHEN_codes"
+        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": "STREAM_WHEN_nc"
 
 log_files:
         atmout: ${expid}_echam6_atmout_${start_date}_${end_date}

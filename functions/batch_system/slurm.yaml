@@ -85,7 +85,7 @@ config_files:
 
 config_create:
         hostfile:
-                - "${MODEL.startproc}-${MODEL.endproc} ./${MODEL.exe} <--append-- <--MODEL_in[${setup.orderedexecs}]-- "        
+                - "[[setup.orderedexecs-->MODEL]]<--startproc-- - MODEL<--endproc-- ./MODEL<--exe-- <--append--"        
 
 execution_command: "${launcher} ${launcher_flags} --multi-prog ${config_files.hostfile}"
 

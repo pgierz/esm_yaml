@@ -316,7 +316,7 @@ restart_out_targets:
         "[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]": "restart_${expid}_STREAM_WHEN.nc"
 
 restart_out_in_workdir:
-        "STREAM_in[${stream}]_DATE_in[${write_restart_dates}]": "restart_${expid}_STREAM_WHEN.nc"
+        "[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]": "restart_${expid}_STREAM_WHEN.nc"
 
 output_targets:
         "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": ${expid}_echam6_STREAM_WHEN.grb

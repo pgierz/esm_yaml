@@ -1,0 +1,86 @@
+# FESOM YAML CONFIGURATION FILE
+#
+
+model: fesom
+branch: master
+version: "1.4"
+
+
+restart:
+        rate: "12"
+        unit: "m"
+        first: 12
+        flag: "last"
+time_step: 1800
+resolution: CORE2
+
+mesh_rotated: false
+old_mesh_format: false
+with_part_format: false
+time_dimension: "time"
+
+model_dir: "${esm_master_dir}/fesom-${version}/"
+bin_dir: "${setup_dir}/bin"
+climate_data_dir: "${pool_dir}/hydrography/"
+forcing_data_dir: "${pool_dir}/forcing/"
+ini_data_dir: "${pool_dir}/pool-data/"
+
+steps_per_day: "$(( 86400 / ${time_step} ))"
+restart_date: "$(( ${start_date} - ${time_step} ))"
+
+choose_version:
+        1.4:
+                executable: fesom
+                choose_resolution:
+                        CORE2:
+                                nx: 126859
+                                mesh_dir: "${pool_dir}/meshes_default/core/"
+                        GLOB:
+                                nx: 830305
+                                mesh_dir: "${pool_dir}/meshes_default/glob/"
+                        REF87K:
+                                nx: 86803
+                                mesh_dir: "${pool_dir}/meshes/mesh_ref87k/"
+                        REF:
+                                nx: 43943
+                                mesh_dir: "${pool_dir}/meshes/mesh_ref/"
+                        BOLD:
+                                nx: 1306775
+                                mesh_dir: "${pool_dir}/meshes_default/bold/"
+                        fArc:
+                                nx: 638387
+                        PI-GRID:
+                                nx: 3140
+                                mesh_dir: "${pool_dir}/meshes_default/pi-grid/"
+                        CAVCORE2:
+                                nx: 72411
+        2.0:
+                executable: fvom.x
+                leapyear: 0
+                choose_resolution:
+                        CORE2:
+                                nx: 126858
+                                mesh_dir: "${pool_dir}/meshes/mesh_CORE2_final/"
+                        GLOB:
+                                nx: 830305
+
+
+choose_lresume:
+        false:                                
+                config_files:
+                        fesom.clock:
+                                - "<--append-- 0.0000000000000 ${initial_date.doy} ${initial_date.year}"  
+                                - "<--append-- 0.0000000000000 ${initial_date.doy} ${initial_date.year}"
+        true:   
+                config_files:
+                        lasttime: "$(( 86400 - ${time_step} ))"
+                        starttime: "86400.0000000000"
+                        startday: "$(( ${start_date.doy} - 1 ))"
+                        choose_startday.doy:
+                                1:
+                                        starttime: "0.0000000000000"
+                                        startday: "1"
+
+                        fesom.clock: 
+                                - "<--append-- ${lasttime} ${restart_date.doy} ${restart_date.year}"
+                                - "<--append-- ${starttime} ${startday} ${start_date.year}"        

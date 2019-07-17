@@ -28,23 +28,13 @@ choose_version:
                 repo_tag: 6.304p1
                 dataset: r0007               
 
-INI_PARENT_DATE: 22941231 
-INI_PARENT_EXP_ID: khw0030
+input_parent_date: 22941231 
+input_parent_exp_id: khw0030
 
 input_dir: "${computer.pool_directories.pool}/ECHAM6/input/${echam.dataset}"
 ini_restart_dir: "${computer.pool_directories.pool}/MPIESM/restart/dev/${input_parent_exp_id}/restart/echam6"
 
 
-namelist_changes:
-        namelist.echam:
-                runctl:
-                        out_expname: '${expid}'
-                        dt_start:    '${setup.start_date}'
-                        dt_stop:     '${setup.end_date}'
-                        dt_resume:   '${setup.start_date}'
-
-                radctl: 
-                        co2vmr: 888999
 
 resolution: T63
 choose_resolution:
@@ -136,7 +126,29 @@ date_test:
         file1: ${echam.model}_restart_${echam.my_next_date}
 
 
-setup_info: ${setup.scenario}_${echam.resolution}_${resolution}_${setup.resolution}
 
 further_reading:
         - test_echam.datasets.yaml
+
+streams:
+        - echam
+        - accw
+        - co2
+
+A:
+        levelAecham:          
+                - 1echam
+                - 2echam
+
+numbers:
+        - eins
+        - zwei
+        - drei
+
+restart_in_files:
+        "[[A.levelAecham-->LEV]]_[[streams-->STREAM]]_[[numbers-->NUMBERS]]": LEV_${echam.model}_STREAM_${echam.my_next_date}_NUMBERS
+
+
+z_example_numbers:
+        "lala_[[numbers-->NUM]]_[[numbers-->POW2]]_toot_[[streams-->STREAM]]"
+

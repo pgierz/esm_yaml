@@ -15,59 +15,14 @@ fesom_set_directory_paths()
 }
 
 
-fesom_prepare_restart_in()
-{
-
-
-#	unset date month day monthday
-	if [[ "x${fesom_VERSION}" = "x2.0" ]]; then
-		add_to ${INI_RESTART_DIR_fesom_protect}fesom.${PARENT_YEAR_fesom}.oce.restart.nc fesom.${RESTART_YEAR_fesom}.oce.restart.nc $WF_fesom 
-		add_to ${INI_RESTART_DIR_fesom_protect}fesom.${PARENT_YEAR_fesom}.ice.restart.nc fesom.${RESTART_YEAR_fesom}.ice.restart.nc $WF_fesom 
-	else
-		add_to ${INI_RESTART_DIR_fesom_protect}fesom.${PARENT_YEAR_fesom}.oce.nc  fesom.${RESTART_YEAR_fesom}.oce.nc $WF_fesom
-		add_to ${INI_RESTART_DIR_fesom_protect}fesom.${PARENT_YEAR_fesom}.oce.diag.nc fesom.${RESTART_YEAR_fesom}.oce.diag.nc $WF_fesom
-		add_to ${INI_RESTART_DIR_fesom_protect}fesom.${PARENT_YEAR_fesom}.ice.nc fesom.${RESTART_YEAR_fesom}.ice.nc $WF_fesom
-	fi
-
-	echo "                  Taking fesom climate data from CLIMATE_DATA_DIR_fesom=${CLIMATE_DATA_DIR_fesom}"
-	echo "                  Taking fesom forcing data from FORCING_DATA_DIR_fesom${FORCING_DATA_DIR_fesom}"
-	echo "                  Taking fesom tide forcing data from TIDE_FORCING_DIR_fesom=${TIDE_FORCING_DIR_fesom}"
-	echo "                  Taking fesom restarts from ${INI_RESTART_DIR_fesom_protect}"
-}
-# Set fesom.clock
-
-
 fesom_modify_config()
 {
 
 
 	if [[ "x$setup_name" = "xfesom_standalone" ]]; then
 		general_replace_namelist_value namelist.config paths ForcingDataPath \'${FORCING_DATA_DIR_fesom}\'
-		if ! [[ ${fesom_VERSION} = "2.0" ]]; then
-		general_replace_namelist_value namelist.oce boundary restore_s_surf 1.929e-06           # As discussed with Tido Semmler and Dima on 24.8.2018
-		fi
-		if [[ "x${LEAPYEAR_fesom}" = "x1" ]]; then
-            general_replace_namelist_value namelist.config calendar include_fleapyear ".true."
-	    else
-	        general_replace_namelist_value namelist.config calendar include_fleapyear ".false."
-		fi
 
         ASFORCING_fesom=${ASFORCING_fesom:-"CORE2"} # add for future option with different forcings
-		if [[ ${fesom_VERSION} = "2.0" ]]; then
-			    general_replace_namelist_value namelist.forcing nam_sbc nm_xwind_file \'"${FORCING_DATA_DIR_fesom}/u_10."\'
-			    general_replace_namelist_value namelist.forcing nam_sbc nm_ywind_file \'"${FORCING_DATA_DIR_fesom}/v_10."\'
-			    general_replace_namelist_value namelist.forcing nam_sbc nm_humi_file  \'"${FORCING_DATA_DIR_fesom}/q_10."\'
-			    general_replace_namelist_value namelist.forcing nam_sbc nm_qsr_file   \'"${FORCING_DATA_DIR_fesom}/ncar_rad."\'
-			    general_replace_namelist_value namelist.forcing nam_sbc nm_qlw_file   \'"${FORCING_DATA_DIR_fesom}/ncar_rad."\'
-			    general_replace_namelist_value namelist.forcing nam_sbc nm_tair_file  \'"${FORCING_DATA_DIR_fesom}/t_10."\'
-			    general_replace_namelist_value namelist.forcing nam_sbc nm_prec_file  \'"${FORCING_DATA_DIR_fesom}/ncar_precip."\'
-			    general_replace_namelist_value namelist.forcing nam_sbc nm_snow_file  \'"${FORCING_DATA_DIR_fesom}/ncar_precip."\'
-			    general_replace_namelist_value namelist.forcing nam_sbc nm_mslp_file  \'"${FORCING_DATA_DIR_fesom}/slp."\'
-			    general_replace_namelist_value namelist.forcing nam_sbc nm_runoff_file   \'"${FORCING_DATA_DIR_fesom}/runoff.nc"\'
-			    general_replace_namelist_value namelist.forcing nam_sbc nm_sss_data_file \'"${FORCING_DATA_DIR_fesom}/PHC2_salx.nc"\'
-      		else
-			echo "          Forcing namelist nam_sbc is not changed for fesom 1.4"
-		fi	
 	else
 		general_remove_namelist_value namelist.config paths ForcingDataPath
 	fi
@@ -90,15 +45,6 @@ fesom_modify_config()
 		STARTYEAR_fesom=${YR0_INI_fesom}
 	fi
 
-	general_replace_namelist_value namelist.config timestep step_per_day $STEPS_PER_DAY_fesom
-	general_replace_namelist_value namelist.config paths MeshPath \'${MESH_DIR_fesom}\'
-	general_replace_namelist_value namelist.config paths OpbndPath \'${OPBND_DIR_fesom}\'
-	general_replace_namelist_value namelist.config paths ClimateDataPath \'${CLIMATE_DATA_DIR_fesom}\'
-	general_replace_namelist_value namelist.config paths TideForcingPath \'${TIDE_FORCING_DIR_fesom}\'
-	general_replace_namelist_value namelist.config paths ResultPath \'${WORK_DIR}\'
-	general_replace_namelist_value namelist.config timestep run_length ${RESTART_fesom}
-	general_replace_namelist_value namelist.config timestep run_length_unit ${RESTART_UNIT_fesom}
-
 	if [[ "x${LRESUME_fesom}" = "x1" ]] && [[ "x$RUN_NUMBER_fesom" = "x1" ]]; then
 		general_replace_namelist_value namelist.config clockinit yearnew ${PARENT_YEAR_fesom}
         elif [[ "x${LRESUME_fesom}" = "x0" ]]; then 
@@ -108,18 +54,6 @@ fesom_modify_config()
 		general_replace_namelist_value namelist.config clockinit daynew ${PARENTDOY_fesom}
 		general_replace_namelist_value namelist.config clockinit yearnew ${PARENT_YEAR_fesom}
 	fi
-
-	general_replace_namelist_value namelist.config inout restartflag ${RESTART_FLAG_fesom}
-	general_replace_namelist_value namelist.config inout output_length ${RESTART_fesom}
-	general_replace_namelist_value namelist.config inout output_length_unit ${RESTART_UNIT_fesom}
-
-	if [[ ${fesom_VERSION} = "1.4" ]]; then
-		general_remove_namelist_value namelist.config inout restart_length		
-		general_remove_namelist_value namelist.config inout restart_length_unit	
-    	else
-    		general_replace_namelist_value namelist.config inout restart_length ${RESTART_fesom}
-	    	general_replace_namelist_value namelist.config inout restart_length_unit ${RESTART_UNIT_fesom}
-    	fi
 
 }
 

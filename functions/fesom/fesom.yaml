@@ -3,7 +3,11 @@
 
 model: fesom
 branch: master
-version: "1.4"
+version: "2.0"
+
+
+further_reading:
+        - fesom-${version}.yaml
 
 
 restart:
@@ -24,6 +28,7 @@ bin_dir: "${setup_dir}/bin"
 climate_data_dir: "${pool_dir}/hydrography/"
 forcing_data_dir: "${pool_dir}/forcing/"
 ini_data_dir: "${pool_dir}/pool-data/"
+namelist_dir: "${esm_runscripts_dir}/namelists/fesom2"                        
 
 steps_per_day: "$(( 86400 / ${time_step} ))"
 restart_date: "$(( ${start_date} - ${time_step} ))"
@@ -97,7 +102,10 @@ choose_version:
                         namelist.oce:
                                 boundary:
                                         restore_s_surf: "1.929e-06"
-                                                
+                namelist_dir: "${esm_runscripts_dir}/namelists/fesom"                        
+                remove_from_config_files:
+                        - namelist.io
+
 
 namelist_changes:
         namelist.config:
@@ -155,6 +163,41 @@ choose_lresume:
 
 
 
+config_files:
+        config: namelist.config
+        forcing: namelist.forcing
+        ice:    namelist.ice
+        oce:    namelist.oce
+        io:     namelist.io
+
+config_sources:
+        config: "${namelist_dir}/namelist.config"
+        forcing: "${namelist_dir}/namelist.forcing"
+        ice:    "${namelist_dir}/namelist.ice"
+        oce:    "${namelist_dir}/namelist.oce"
+        io:     "${namelist_dir}/namelist.io"
+
+config_in_work:
+        config: namelist.config
+        forcing: namelist.forcing
+        ice:    namelist.ice
+        oce:    namelist.oce
+        io:     namelist.io
+
+
+output_files:
+        [[streams --> STREAM]]_[[write_output_dates --> WHEN]]: [[streams --> STREAM]]_[[write_output_dates --> WHEN]]
+        [[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2: [[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2
+
+output_targets:
+        [[streams --> STREAM]]_[[write_output_dates --> WHEN]]: ${expid}_STREAM_fesom_WHEN.nc
+        [[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2: ${expid}_STREAM.fesom.WHEN<--year--.nc
+
+output_in_work:
+        [[streams --> STREAM]]_[[write_output_dates --> WHEN]]: STREAM_fesom_WHEN.nc
+        [[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2: STREAM.fesom.WHEN<--year--.nc
+
+restart_out_files:
 
 
 restart_in_files:

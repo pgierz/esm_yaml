@@ -407,7 +407,38 @@ def determine_set_variables_in_choose_block(mapping, valid_model_names, model_na
             set_variables.append((model_name, var_name))
     return set(set_variables)
 
+def find_one_independent_choose(all_set_variables):
+    task_list = []
+    # task_list=['choose_partition', 'choose_jobtype']
+    for key in all_set_variables:
+        value = all_set_variables[key]
+        for choose_keyword, set_vars in value.items():
+        #choose_keyword="choose_partition"
+        #set_vars=value[choose_keyword]
+            task_list.append((key, choose_keyword))
+            task_list = add_more_important_tasks(choose_keyword, all_set_variables, task_list)
+            logging.debug(task_list)
+            return task_list
 
+
+        
+def add_more_important_tasks(choose_keyword, all_set_variables, task_list):
+    logging.debug("Incoming task list %s", task_list)
+    keyword = choose_keyword.replace("choose_", "")
+    logging.debug("Keyword = %s", keyword)
+    for model in all_set_variables:
+        for choose_thing in all_set_variables[model]:
+            logging.debug("Choose_thing = %s", choose_thing)
+            for (host, keyword_that_is_set) in all_set_variables[model][choose_thing]:
+                logging.debug("Host = %s, keyword_that_is_set=%s", host, keyword_that_is_set)
+                if keyword_that_is_set == keyword:
+                    if (model, choose_thing) not in task_list:
+                        task_list.insert(0, (model, choose_thing))
+                        add_more_important_tasks(choose_thing, all_set_variables, task_list)
+                        return task_list
+                    else:
+                        raise KeyError("Opps cyclic dependency: %s" % task_list)
+    return task_list
 
 def make_choices_new(tree, right, full_config):
     """

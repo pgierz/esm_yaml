@@ -1,300 +1,19 @@
 #!/usr/bin/ksh
 
+
 fesom_set_defaults()
 {
-        # PG: Hack to make sure users don't forget to put monthly restart info
-	if [[ "x$NMONTH_fesom" = "x1" ]] && [[ "x$NYEAR_fesom" = "x0"  ]]
-	then
-		RESTART_RATE_fesom=${RESTART_RATE_fesom:-1}
-		RESTART_FIRST_fesom=${RESTART_FIRST_fesom:-1}
-		RESTART_UNIT_fesom=${RESART_UNIT_fesom:-'m'}
-
-		RESTART_fesom=${RESTART_fesom:-1}
-	else
-		RESTART_fesom=${RESTART_fesom:-12}
-	fi
-
-    PARENT_DATE_fesom=${INI_PARENT_DATE_fesom:-}
-
-	TIME_STEP_fesom=${TIME_STEP_fesom:-1800}
-	STEPS_PER_DAY_fesom=$(( 86400 / $TIME_STEP_fesom ))
-
-	RESTART_FLAG_fesom="last"
-  	NY_fesom=1
-
-	fesom_BRANCH=${fesom_BRANCH:-master}
-
-	MESH_ROTATED_fesom=${MESH_ROTATED_fesom:-0}
-	OLD_MESH_FORMAT_fesom=${OLD_MESH_FORMAT_fesom:-0}
-	WITH_PART_FORMAT_fesom=${WITH_PART_FORMAT_fesom:-0}
-
-	TIME_DIMENSION_fesom=${TIME_DIMENSION_fesom:-time}
-
-	if [[ ${fesom_VERSION} = "1.4" ]]; then
-		RESTART_UNIT_fesom=${RESTART_UNIT_fesom:-"m"}
-		RESTART_RATE_fesom=${RESTART_RATE_fesom:-${RESTART_fesom}}
-		RESTART_FIRST_fesom=${RESTART_FIRST_fesom:-12}
-		RES_fesom=${RES_fesom:-REF87K}
-
-		EXE_fesom=${EXE_fesom:-fesom}
-
-                ocemod=fesom
-		case $RES_fesom in
-			CORE2)
-  				NX_fesom=126859
-				;;	
-			AGUV)
-				echo "not supported..."; exit 1
-				NX_fesom=810471
-				;;
-  			GLOB|MR)
-				NX_fesom=830305
-				;;
-			REF87K)
-				NX_fesom=86803
-				;;
-  			REF)
-				NX_fesom=43943
-				;;
-  			BOLD)
-				NX_fesom=1306775
-				;;
-            		fArc)
-                		NX_fesom=638387
-                		;;
-			PI-GRID)
-				NX_fesom=3140
-				;;
-			CAVCORE2)
-				NX_fesom=72411
-				;;
-
-			*)
-				echo -e "\t\tUnknown Standard FESOM resolution: ${RES_fesom}"
-                                if [ "x${NX_fesom}" == "x" ]; then
-                                        echo "You must specify the NX_fesom by yourself, since it is not a standard mesh!"
-                                        exit 42
-                                else
-                                        echo -e "\t\tUsing NX_fesom=$NX_fesom"
-                                fi
-				;;
-		esac
-
-	elif [[ ${fesom_VERSION} = "2.0" ]]; then
-		RESTART_UNIT_fesom=${RESTART_UNIT_fesom:-"m"}
-		EXE_fesom=${EXE_fesom:-fvom.x}
-		RES_fesom=${RES_fesom:-CORE2}
-		LEAPYEAR_fesom=${LEAPYEAR_fesom:-0}
-
-                ocemod=fesom2.0
-		case $RES_fesom in
-			CORE2)
-  				NX_fesom=126858
-				;;
-  			GLOB|MR)
-				NX_fesom=830305
-				;;
-			*)
-				echo "Unknown FESOM resolution ${RES_fesom}"
-				if [ "x${NX_fesom}" == "x" ]; then
-					echo "You are using a non-standard FESOM mesh $RES_fesom; but didn't give the number of mesh points. Please set NX_fesom in the runscript!"
-					exit 42
-				else
-					echo "Using non-standard FESOM mesh $RES_fesom"
-					echo "Running with NX_fesom=$NX_fesom"
-				fi
-				;;
-		esac
- 	else
-				echo "Unknown FESOM version ${fesom_VERSION}"
-				exit 42
-	fi
-
-	echo "		Running fesom-version fesom_VERSION=${fesom_VERSION}"
-	echo "			fesom-mesh RES_fesom=${RES_fesom}"
-	echo "		Restarting every RESTART_RATE_fesom=$RESTART_RATE_fesom RESTART_UNIT_fesom=$RESTART_UNIT_fesom"
-	echo "		FESOM time step: TIME_STEP_fesom=${TIME_STEP_fesom}"
-
-	THREADS_fesom=1
-	COMMAND_fesom=${EXE_fesom}
 
 	fesom_prepare_yaml
 }
 
 
-fesom_calendar()
-{
-	test_if_set START_DATE_fesom
-	test_if_set PREV_DATE_fesom
-	test_if_set FIN_DATE_fesom
-	test_if_set NEXT_DATE_fesom
-	test_if_set YR0_fesom
-	test_if_set YRN_fesom
-}
-
 fesom_set_directory_paths()
 {
-	test_if_set RES_fesom
-
-	if [[ ${fesom_VERSION} = "1.4" ]]; then
-		case $RES_fesom in
-			REF87K)
-				MESH_DIR_fesom=${MESH_DIR_fesom:-${POOL_DIR_fesom}/meshes/mesh_ref87k/}
-				;;
-			REF)
-				MESH_DIR_fesom=${MESH_DIR_fesom:-${POOL_DIR_fesom}/meshes/mesh_ref/}
-				;;
-			BOLD)
-				MESH_DIR_fesom=${MESH_DIR_fesom:-${POOL_DIR_fesom}/meshes_default/bold}
-				;;
-			CORE2)
-				MESH_DIR_fesom=${MESH_DIR_fesom:-${POOL_DIR_fesom}/meshes_default/core}
-				;;
-			GLOB|MR)
-				MESH_DIR_fesom=${MESH_DIR_fesom:-${POOL_DIR_fesom}/meshes_default/glob}
-				;;
-			PI-GRID)
-				MESH_DIR_fesom=${MESH_DIR_fesom:-${POOL_DIR_fesom}/meshes_default/pi-grid}
-				;;
-		esac
-	elif [[ ${fesom_VERSION} = "2.0" ]]; then
-		case $RES_fesom in
-			CORE2)
-				MESH_DIR_fesom=${MESH_DIR_fesom:-${POOL_DIR_fesom}/meshes/mesh_CORE2_final/}
-				;;
-		esac
-	fi
-
-	test_if_set MESH_DIR_fesom
-        # PG: Add trailing slash to MESH_DIR_fesom to avoid missing file errors:
-        MESH_DIR_fesom=${MESH_DIR_fesom}/
-
-#	export CLIMATE_DATA_DIR_fesom=${POOL_DIR_fesom}/hydrography/
-    export CLIMATE_DATA_DIR_fesom=${CLIMATE_DATA_DIR_fesom:-${POOL_DIR_fesom}/hydrography/}
-	export FORCING_DATA_DIR_fesom=${FORCING_DATA_DIR_fesom:-${POOL_DIR_fesom}/forcing/}
-	export INI_DATA_fesom=${POOL_DIR_fesom}/pool-data/
 	export INIECH_fesom=$MESH_DIR_fesom/tarfiles${RES_fesom}/input/echam6
 	export INIJSB_fesom=$MESH_DIR_fesom/tarfiles${RES_fesom}/input/jsbach
-
-        PARENT_EXP_ID_fesom=${INI_PARENT_EXP_ID_fesom:-${PARENT_EXP_ID_esmstyle}}
-        PARENT_EXP_ID_fesom=${PARENT_EXP_ID_fesom:-${EXP_ID}}
-
-
-	if [[ "x$RUN_NUMBER_fesom" = "x1" ]] && [[ "x$LRESUME_fesom" = "x0" ]]; then
-		INI_RESTART_DIR_fesom_protect=/dev/null
-	elif [[ "x$RUN_NUMBER_fesom" = "x1" ]] && [[ "x$LRESUME_fesom" = "x1" ]]; then
-		INI_RESTART_DIR_fesom_protect=${INI_RESTART_DIR_fesom:-${BASE_DIR}/${PARENT_EXP_ID_fesom}/restart/fesom/}
-                PARENT_DATE_fesom=${INI_PARENT_DATE_fesom:-${PARENT_DATE_esmstyle}}
-                echo -e "\t\tPARENT_DATE_fesom_1=${PARENT_DATE_fesom}"
-                echo -e "\t\tINI_RESTART_DIR_fesom_protect=${INI_RESTART_DIR_fesom_protect}"
-	elif [[ ! "x$RUN_NUMBER_fesom" = "x1" ]]; then
-		INI_RESTART_DIR_fesom_protect=${RESTART_DIR_fesom}
-	else
-		echo "PG: This shouldn't happen..."
-	fi
-        # Add trailing slash to INI_RESTART_DIR_fesom_protect to avoid missing file errors:
-        INI_RESTART_DIR_fesom_protect=${INI_RESTART_DIR_fesom_protect}/
 }
 
-fesom_prepare_exe()
-{
-	if [[ "x${RUN_NUMBER_fesom}" = "x1" ]]; then
-		echo "		Taking fesom executable from BIN_DIR_fesom/EXE_fesom=${BIN_DIR_fesom}/${EXE_fesom}"
-	fi
-	add_to ${BIN_DIR_fesom}/${EXE_fesom} ${EXE_fesom}
-}
-
-
-fesom_prepare_restart_in()
-{
-#    set -x
-    	date=${START_DATE_fesom}
-        year=$(${FUNCTION_PATH}/format_date -f4 -- ${date} | cut -f1 -d" ")
-        month=$(${FUNCTION_PATH}/format_date -f4 -- ${date} | cut -f2 -d" ")
-        day=$(${FUNCTION_PATH}/format_date   -f4 -- ${date} | cut -f3 -d" ")
-        monthday=${month}${day}
-
-        N1=$((floor(275 * $month / 9)))
-        N2=$((floor(($month + 9) / 12)))
-        N3=$(((1 + floor(($year - 4 * floor($year / 4) + 2) / 3))))
-        START_LEAP=$N3
-        STARTDOY_fesom=$(($N1 - ($N2 * $N3) + $day - 30))
-        START_dpy=$(${FUNCTION_PATH}/days_in_year -c1 -- ${year})         # How many days has this year
-        echo "START_dpy: ${START_dpy}"
-        unset N1 N2 N3
-
-    	parent_date=${INI_PARENT_DATE_fesom:-${PARENT_DATE_fesom}}
-        echo -e "\t\tINI_PARENT_DATE_fesom=${INI_PARENT_DATE_fesom}"
-        PARENT_YEAR_fesom=$(${FUNCTION_PATH}/format_date -f4 -- ${parent_date} | cut -f1 -d" ")
-        echo -e "\t\tPARENT_YEAR_fesom=${PARENT_YEAR_fesom}"
-        parent_month=$(${FUNCTION_PATH}/format_date -f4 -- ${parent_date} | cut -f2 -d" ")
-        parent_day=$(${FUNCTION_PATH}/format_date   -f4 -- ${parent_date} | cut -f3 -d" ")
-
-        N1=$((floor(275 * $parent_month / 9)))
-        N2=$((floor(($parent_month + 9) / 12)))
-        N3=$(((1 + floor((${PARENT_YEAR_fesom} - 4 * floor(${PARENT_YEAR_fesom} / 4) + 2) / 3))))
-        PARENT_LEAP=N3
-        PARENTDOY_fesom=$(($N1 - ($N2 * $N3) + ${parent_day} - 30))
-        unset N1 N2 N3
-
-    echo -e "\t\t PARENT_DATE_fesom=${PARENT_DATE_fesom}"
-
-	if [[ "x${monthday}"  = "x0101" ]]; then
-		RESTART_YEAR_fesom=$(( YR0_fesom - 1 ))
-	else
-		RESTART_YEAR_fesom=$(( YR0_fesom ))
-	fi
-    RESTART_LEAP=$(((1 + floor((${RESTART_YEAR_fesom} - 4 * floor(${RESTART_YEAR_fesom} / 4) + 2) / 3))))
-
-	if [[ "x${LEAPYEAR_fesom}" = "x1" ]]; then
-        RESTART_dpy=$(${FUNCTION_PATH}/days_in_year -c1 -- ${RESTART_YEAR_fesom})         # How many days has this year
-	else
-	    RESTART_dpy=365
-	fi
-    echo -e "\t\tRESTART_dpy: ${RESTART_dpy}"
-    echo -e "\t\tRESTART_YEAR_fesom: ${RESTART_YEAR_fesom}"
-    echo -e "\t\tSTARTDOY_fesom: ${STARTDOY_fesom}"
-    echo -e "\t\tdate:$date"
-    echo -e "\t\tPARENTDOY_fesom: ${PARENTDOY_fesom}"
-
-
-#	unset date month day monthday
-	if [[ "x${fesom_VERSION}" = "x2.0" ]]; then
-		add_to ${INI_RESTART_DIR_fesom_protect}fesom.${PARENT_YEAR_fesom}.oce.restart.nc fesom.${RESTART_YEAR_fesom}.oce.restart.nc $WF_fesom 
-		add_to ${INI_RESTART_DIR_fesom_protect}fesom.${PARENT_YEAR_fesom}.ice.restart.nc fesom.${RESTART_YEAR_fesom}.ice.restart.nc $WF_fesom 
-	else
-		add_to ${INI_RESTART_DIR_fesom_protect}fesom.${PARENT_YEAR_fesom}.oce.nc  fesom.${RESTART_YEAR_fesom}.oce.nc $WF_fesom
-		add_to ${INI_RESTART_DIR_fesom_protect}fesom.${PARENT_YEAR_fesom}.oce.diag.nc fesom.${RESTART_YEAR_fesom}.oce.diag.nc $WF_fesom
-		add_to ${INI_RESTART_DIR_fesom_protect}fesom.${PARENT_YEAR_fesom}.ice.nc fesom.${RESTART_YEAR_fesom}.ice.nc $WF_fesom
-	fi
-
-	echo "                  Taking fesom climate data from CLIMATE_DATA_DIR_fesom=${CLIMATE_DATA_DIR_fesom}"
-	echo "                  Taking fesom forcing data from FORCING_DATA_DIR_fesom${FORCING_DATA_DIR_fesom}"
-	echo "                  Taking fesom tide forcing data from TIDE_FORCING_DIR_fesom=${TIDE_FORCING_DIR_fesom}"
-	echo "                  Taking fesom restarts from ${INI_RESTART_DIR_fesom_protect}"
-
-# Set fesom.clock
-
-# For initial run (cold start)
-	if [[ "x$RUN_NUMBER_fesom" = "x1" ]] && [[ "x$LRESUME_fesom" = "x0" ]]; then
-		echo "		Initializing fesom.clock for a COLD START"
-	    	if [[ "x${monthday}"  = "x0101" ]]; then
-  			    echo 0.0000000000000 1 ${YR0_INI_fesom} > ${WORK_DIR}/fesom.clock
-        	else
-  			    echo 0.0000000000000 ${STARTDOY_fesom} ${YR0_INI_fesom} > ${WORK_DIR}/fesom.clock
-        	fi
-  		echo 0.0000000000000 ${STARTDOY_fesom} ${YR0_INI_fesom}       >> ${WORK_DIR}/fesom.clock
-	else
-            	echo "          Initializing a new fesom.clock for a RESTART from ${RESTART_YEAR_fesom}"
-	        if [[ "x${monthday}"  = "x0101" ]]; then
-                	echo $((86400-${TIME_STEP_fesom})) ${RESTART_dpy} ${RESTART_YEAR_fesom} > ${WORK_DIR}/fesom.clock
-                	echo 0.0000000000000 1 ${YR0_fesom}       >> ${WORK_DIR}/fesom.clock
-            	else
-                	echo $((86400-${TIME_STEP_fesom})) $((${STARTDOY_fesom}-1)) ${RESTART_YEAR_fesom} > ${WORK_DIR}/fesom.clock
-                	echo 86400.0000000000 $((${STARTDOY_fesom}-1)) ${YR0_fesom}       >> ${WORK_DIR}/fesom.clock
-            	fi
-	fi
-}
 
 fesom_modify_config()
 {
@@ -302,31 +21,8 @@ fesom_modify_config()
 
 	if [[ "x$setup_name" = "xfesom_standalone" ]]; then
 		general_replace_namelist_value namelist.config paths ForcingDataPath \'${FORCING_DATA_DIR_fesom}\'
-		if ! [[ ${fesom_VERSION} = "2.0" ]]; then
-		general_replace_namelist_value namelist.oce boundary restore_s_surf 1.929e-06           # As discussed with Tido Semmler and Dima on 24.8.2018
-		fi
-		if [[ "x${LEAPYEAR_fesom}" = "x1" ]]; then
-            general_replace_namelist_value namelist.config calendar include_fleapyear ".true."
-	    else
-	        general_replace_namelist_value namelist.config calendar include_fleapyear ".false."
-		fi
 
         ASFORCING_fesom=${ASFORCING_fesom:-"CORE2"} # add for future option with different forcings
-		if [[ ${fesom_VERSION} = "2.0" ]]; then
-			    general_replace_namelist_value namelist.forcing nam_sbc nm_xwind_file \'"${FORCING_DATA_DIR_fesom}/u_10."\'
-			    general_replace_namelist_value namelist.forcing nam_sbc nm_ywind_file \'"${FORCING_DATA_DIR_fesom}/v_10."\'
-			    general_replace_namelist_value namelist.forcing nam_sbc nm_humi_file  \'"${FORCING_DATA_DIR_fesom}/q_10."\'
-			    general_replace_namelist_value namelist.forcing nam_sbc nm_qsr_file   \'"${FORCING_DATA_DIR_fesom}/ncar_rad."\'
-			    general_replace_namelist_value namelist.forcing nam_sbc nm_qlw_file   \'"${FORCING_DATA_DIR_fesom}/ncar_rad."\'
-			    general_replace_namelist_value namelist.forcing nam_sbc nm_tair_file  \'"${FORCING_DATA_DIR_fesom}/t_10."\'
-			    general_replace_namelist_value namelist.forcing nam_sbc nm_prec_file  \'"${FORCING_DATA_DIR_fesom}/ncar_precip."\'
-			    general_replace_namelist_value namelist.forcing nam_sbc nm_snow_file  \'"${FORCING_DATA_DIR_fesom}/ncar_precip."\'
-			    general_replace_namelist_value namelist.forcing nam_sbc nm_mslp_file  \'"${FORCING_DATA_DIR_fesom}/slp."\'
-			    general_replace_namelist_value namelist.forcing nam_sbc nm_runoff_file   \'"${FORCING_DATA_DIR_fesom}/runoff.nc"\'
-			    general_replace_namelist_value namelist.forcing nam_sbc nm_sss_data_file \'"${FORCING_DATA_DIR_fesom}/PHC2_salx.nc"\'
-      		else
-			echo "          Forcing namelist nam_sbc is not changed for fesom 1.4"
-		fi	
 	else
 		general_remove_namelist_value namelist.config paths ForcingDataPath
 	fi
@@ -349,15 +45,6 @@ fesom_modify_config()
 		STARTYEAR_fesom=${YR0_INI_fesom}
 	fi
 
-	general_replace_namelist_value namelist.config timestep step_per_day $STEPS_PER_DAY_fesom
-	general_replace_namelist_value namelist.config paths MeshPath \'${MESH_DIR_fesom}\'
-	general_replace_namelist_value namelist.config paths OpbndPath \'${OPBND_DIR_fesom}\'
-	general_replace_namelist_value namelist.config paths ClimateDataPath \'${CLIMATE_DATA_DIR_fesom}\'
-	general_replace_namelist_value namelist.config paths TideForcingPath \'${TIDE_FORCING_DIR_fesom}\'
-	general_replace_namelist_value namelist.config paths ResultPath \'${WORK_DIR}\'
-	general_replace_namelist_value namelist.config timestep run_length ${RESTART_fesom}
-	general_replace_namelist_value namelist.config timestep run_length_unit ${RESTART_UNIT_fesom}
-
 	if [[ "x${LRESUME_fesom}" = "x1" ]] && [[ "x$RUN_NUMBER_fesom" = "x1" ]]; then
 		general_replace_namelist_value namelist.config clockinit yearnew ${PARENT_YEAR_fesom}
         elif [[ "x${LRESUME_fesom}" = "x0" ]]; then 
@@ -367,18 +54,6 @@ fesom_modify_config()
 		general_replace_namelist_value namelist.config clockinit daynew ${PARENTDOY_fesom}
 		general_replace_namelist_value namelist.config clockinit yearnew ${PARENT_YEAR_fesom}
 	fi
-
-	general_replace_namelist_value namelist.config inout restartflag ${RESTART_FLAG_fesom}
-	general_replace_namelist_value namelist.config inout output_length ${RESTART_fesom}
-	general_replace_namelist_value namelist.config inout output_length_unit ${RESTART_UNIT_fesom}
-
-	if [[ ${fesom_VERSION} = "1.4" ]]; then
-		general_remove_namelist_value namelist.config inout restart_length		
-		general_remove_namelist_value namelist.config inout restart_length_unit	
-    	else
-    		general_replace_namelist_value namelist.config inout restart_length ${RESTART_fesom}
-	    	general_replace_namelist_value namelist.config inout restart_length_unit ${RESTART_UNIT_fesom}
-    	fi
 
 }
 

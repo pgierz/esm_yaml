@@ -1,0 +1,218 @@
+# FESOM YAML CONFIGURATION FILE
+#
+
+model: fesom
+branch: master
+version: "2.0"
+
+
+further_reading:
+        - fesom-${version}.yaml
+
+
+restart:
+        rate: "12"
+        unit: "m"
+        first: 12
+        flag: "last"
+time_step: 1800
+resolution: CORE2
+
+mesh_rotated: false
+old_mesh_format: false
+with_part_format: false
+time_dimension: "time"
+
+model_dir: "${esm_master_dir}/fesom-${version}/"
+bin_dir: "${setup_dir}/bin"
+climate_data_dir: "${pool_dir}/hydrography/"
+forcing_data_dir: "${pool_dir}/forcing/"
+ini_data_dir: "${pool_dir}/pool-data/"
+namelist_dir: "${esm_runscripts_dir}/namelists/fesom2"                        
+
+steps_per_day: "$(( 86400 / ${time_step} ))"
+restart_date: "$(( ${start_date} - ${time_step} ))"
+
+
+
+
+executable: fvom.x
+leapyear: 0
+choose_resolution:
+        CORE2:
+                nx: 126858
+                mesh_dir: "${pool_dir}/meshes/mesh_CORE2_final/"
+        GLOB:
+                nx: 830305
+
+
+choose_version:
+        1.4:
+                executable: fesom
+                choose_resolution:
+                        CORE2:
+                                nx: 126859
+                                mesh_dir: "${pool_dir}/meshes_default/core/"
+                        GLOB:
+                                nx: 830305
+                                mesh_dir: "${pool_dir}/meshes_default/glob/"
+                        REF87K:
+                                nx: 86803
+                                mesh_dir: "${pool_dir}/meshes/mesh_ref87k/"
+                        REF:
+                                nx: 43943
+                                mesh_dir: "${pool_dir}/meshes/mesh_ref/"
+                        BOLD:
+                                nx: 1306775
+                                mesh_dir: "${pool_dir}/meshes_default/bold/"
+                        fArc:
+                                nx: 638387
+                        PI-GRID:
+                                nx: 3140
+                                mesh_dir: "${pool_dir}/meshes_default/pi-grid/"
+                        CAVCORE2:
+                                nx: 72411
+                restart_in_files:
+                        oce_diag: oce_diag
+                restart_in_in_workdir:
+                        oce_restart: fesom.${restart_date.year}.oce.nc
+                        ice_restart: fesom.${restart_date.year}.ice.nc
+                restart_in_in_sources:
+                        oce_restart: fesom.${parent_date.year}.oce.nc
+                        ice_restart: fesom.${parent_date.year}.ice.nc
+                remove_from_namelist_changes:
+                        namelist.forcing:
+                                namsbc:
+                                        - nm_xwind_file
+                                        - nm_ywind_file
+                                        - nm_humi_file
+                                        - nm_qsr_file
+                                        - nm_qlw_file
+                                        - nm_tair_file
+                                        - nm_prec_file
+                                        - nm_snow_file
+                                        - nm_mslp_file
+                                        - nm_runoff_file
+                                        - nm_sss_data_file
+                namelist_changes:
+                        namelist.config:
+                                inout:
+                                        restart_length: "remove_from_namelist"
+                                        restart_length_unit: "remove_from_namelist"
+                        namelist.oce:
+                                boundary:
+                                        restore_s_surf: "1.929e-06"
+                namelist_dir: "${esm_runscripts_dir}/namelists/fesom"                        
+                remove_from_config_files:
+                        - namelist.io
+
+
+namelist_changes:
+        namelist.config:
+                calendar:
+                        include_fleapyear: ".${leapyear}."
+                paths:
+                        ForcingDataPath: "${forcing_data_dir}"
+                        MeshPath: "${mesh_dir}"
+                        OpbndPath: "${opbnd_dir}"
+                        ClimateDataPath: "${climate_data_dir}"
+                        TideForcingPath: "${tide_forcing_dir}"
+                        ResultPath: "${work_dir}"
+                timestep:
+                        step_per_day: "${steps_per_day}"
+                        run_length: "${restart.rate}"
+                        run_length_unit: "${restart.unit}"
+                inout: 
+                        restartflag: "${restart.flag}"
+                        output_length: "${restart.rate}"
+                        restart_length: "${restart.rate"
+                        restart_length_unit: "${restart.unit}"
+        namelist.forcing:
+                namsbc:
+                        nm_xwind_file: "${forcing_data_dir}/u_10."
+                        nm_ywind_file: "${forcing_data_dir}/v_10."
+                        nm_humi_file: "${forcing_data_dir}/q_10."
+                        nm_qsr_file: "${forcing_data_dir}/ncar_rad."
+                        nm_qlw_file: "${forcing_data_dir}/ncar_rad."
+                        nm_tair_file: "${forcing_data_dir}/t_10."
+                        nm_prec_file: "${forcing_data_dir}/ncar_precip."
+                        nm_snow_file: "${forcing_data_dir}/ncar_precip."
+                        nm_mslp_file: "${forcing_data_dir}/slp."
+                        nm_runoff_file: "${forcing_data_dir}/runoff.nc"
+                        nm_sss_data_file: "${forcing_data_dir}/PHC2_salx.nc"
+
+
+choose_lresume:
+        false:                                
+                config_create:
+                        fesom.clock:
+                                - "<--append-- 0.0000000000000 ${initial_date.doy} ${initial_date.year}"  
+                                - "<--append-- 0.0000000000000 ${initial_date.doy} ${initial_date.year}"
+        true:   
+                lasttime: "$(( 86400 - ${time_step} ))"
+                starttime: "86400.0000000000"
+                startday: "$(( ${start_date.doy} - 1 ))"
+                choose_startday.doy:
+                        1:
+                                starttime: "0.0000000000000"
+                                startday: "1"
+                config_create:
+                        fesom.clock: 
+                                - "<--append-- ${lasttime} ${restart_date.doy} ${restart_date.year}"
+                                - "<--append-- ${starttime} ${startday} ${start_date.year}"     
+
+
+
+config_files:
+        config: namelist.config
+        forcing: namelist.forcing
+        ice:    namelist.ice
+        oce:    namelist.oce
+        io:     namelist.io
+
+config_sources:
+        config: "${namelist_dir}/namelist.config"
+        forcing: "${namelist_dir}/namelist.forcing"
+        ice:    "${namelist_dir}/namelist.ice"
+        oce:    "${namelist_dir}/namelist.oce"
+        io:     "${namelist_dir}/namelist.io"
+
+config_in_work:
+        config: namelist.config
+        forcing: namelist.forcing
+        ice:    namelist.ice
+        oce:    namelist.oce
+        io:     namelist.io
+
+
+output_files:
+        [[streams --> STREAM]]_[[write_output_dates --> WHEN]]: [[streams --> STREAM]]_[[write_output_dates --> WHEN]]
+        [[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2: [[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2
+
+output_targets:
+        [[streams --> STREAM]]_[[write_output_dates --> WHEN]]: ${expid}_STREAM_fesom_WHEN.nc
+        [[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2: ${expid}_STREAM.fesom.WHEN<--year--.nc
+
+output_in_work:
+        [[streams --> STREAM]]_[[write_output_dates --> WHEN]]: STREAM_fesom_WHEN.nc
+        [[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2: STREAM.fesom.WHEN<--year--.nc
+
+restart_out_files:
+
+
+restart_in_files:
+        oce_restart: oce_restart
+        ice_restart: ice_restart
+
+restart_in_in_workdir:
+        oce_restart: fesom.${restart_date.year}.oce.restart.nc
+        ice_restart: fesom.${restart_date.year}.ice.restart.nc
+        oce_diag: fesom.${restart_date.year}.oce.diag.nc
+
+restart_in_sources:
+        oce_restart: fesom.${parent_date.year}.oce.restart.nc
+        ice_restart: fesom.${parent_date.year}.ice.restart.nc
+        oce_diag: fesom.${parent_date.year}.oce.diag.nc
+
+
+

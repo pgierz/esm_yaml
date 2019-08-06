@@ -78,46 +78,99 @@ def yaml_file_to_dict(filepath):
     )
 
 
-def pprint_config(config_dict):
+def pprint_config(config):
+    """
+    Prints the dictionary given to the stdout in a nicely formatted YAML style.
+
+    Parameters
+    ----------
+    config : dict
+        The configuration to print
+
+    Returns
+    -------
+    None
+    """
     yaml.Dumper.ignore_aliases = lambda *args: True
-    print(yaml.dump(config_dict, default_flow_style=False))
+    print(yaml.dump(config, default_flow_style=False))
 
 
 def attach_to_config_and_reduce_keyword(
-    config_to_read_from, config_to_write_to, full_keyword, reduced_keyword="included_files", level_to_write_to = None,
+    config_to_read_from,
+    config_to_write_to,
+    full_keyword,
+    reduced_keyword="included_files",
+    level_to_write_to=None,
 ):
     """
     Attaches a new dictionary to the config, and registers it as the value of
     ``reduced_keyword``.
 
+    Parameters
+    ----------
+    config_to_read_from : dict
+        The configuration dictionary from which information is read from. The
+        keyword from which additional YAML files are read from should be on the
+        top level of this dictionary.
+    config_to_write_to : dict
+        The dictionary where the contents of
+        ``config_to_read_from[full_keyword]`` is written in.
+    full_keyword : 
+        The keyword where contents are extracted from
+    reduced_keyword :
+        The keyword where the contents of ``config_to_read_from[full_keyword]``
+        are written to
+    level_to_write_to : 
+        If this is specified, the attached entries are written here instead of
+        in the top level of ``config_to_write_to``. Note that only one level
+        down is currently supported.
+
     The purpose behind this is to have a chapter in config "include_submodels"
     = ["echam", "fesom"], which would then find the "echam.yaml" and
     "fesom.yaml" configs, and attach them to "config" under config[submodels],
-    and the entire config for e.g. echam would show up in config[echam]
+    and the entire config for e.g. echam would show up in config[echam
+
+    Since ``config_to_read_from`` and ``config_to_write_to`` are ``dict``
+    objects, they are modified **in place**. Note also that the entry
+    ``config_to_read_from[full_keyword]`` is deleted at the end of the routine.
+
+    If the entry in ``config_to_read_from[full_keyword]`` is a list, each item
+    in that list is split into two parts: ``model`` and ``model_part``. For example:
+
+    >>> # Assuming: config_to_read_from[full_keyword] = ['echam.datasets', 'echam.restart.streams']
+    >>> model, model_part = 'echam', 'datasets' # first part
+    >>> model, model_part = 'echam', 'restart.streams' # second part
+
+    The first part, in the example ``echam`` is used to determine where to look
+    for new YAML files. Then, a yaml file corresponding to a file called
+    ``echam.datasets.yaml`` is loaded, and attached to the config.
+
+    Note
+    ----
+    Both ``config_to_read_from`` and ``config_to_write_to`` are modified **in place**!
     """
     if full_keyword in config_to_read_from:
         if level_to_write_to:
-            config_to_write_to[level_to_write_to][reduced_keyword] = config_to_read_from[full_keyword]
+            config_to_write_to[level_to_write_to][
+                reduced_keyword
+            ] = config_to_read_from[full_keyword]
         else:
             config_to_write_to[reduced_keyword] = config_to_read_from[full_keyword]
         # FIXME: Does this only need to work for lists?
         if isinstance(config_to_read_from[full_keyword], list):
             for item in config_to_read_from[full_keyword]:
                 # Suffix fix, this could be smarter:
-                model, model_part = (
-                    item.split(".")[0],
-                    ".".join(item.split(".")[1:]),
-                )
+                model, model_part = (item.split(".")[0], ".".join(item.split(".")[1:]))
                 logger.debug("Attaching: %s for %s", model_part, model)
                 #
-                tmp_config = yaml_file_to_dict(
-                    FUNCTION_PATH + "/" + model + "/" + item
-                )
+                tmp_config = yaml_file_to_dict(FUNCTION_PATH + "/" + model + "/" + item)
                 config_to_write_to[tmp_config["model"]] = tmp_config
                 # config[item] = yaml_file_to_dict(loadable_item)
                 for attachment in CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE:
                     logger.debug("Attaching: %s", attachment)
-                    attach_to_config_and_remove(config_to_write_to[tmp_config["model"]], attachment)
+                    attach_to_config_and_remove(
+                        config_to_write_to[tmp_config["model"]], attachment
+                    )
     del config_to_read_from[full_keyword]
 
 
@@ -161,125 +214,31 @@ def attach_to_config_and_remove(config, attach_key):
         del config[attach_key]
 
 
-def flatten_bottom_up(dictionary):
-    """
-    Flattens a nested dictionary, keeping the innermost values for repeated keys.
+def priority_merge_dicts(first_config, second_config, priority="first"):
+    """Given two dictionaries, merge them together preserving either first or last entries.
 
     Parameters
     ----------
-    dictionary : dict
-        The dictionary to flatten
+    first_config : dict
+    second_config : dict
+    priority : str
+        One of "first" or "second". Specifies which dictionary should be given
+        priority when merging.
 
     Returns
     -------
-    A new, flattened dictionary.
-
-    Examples
-    --------
-    >>> example_dict = {
-    ...     'top_level': {
-    ...             'sounds': {
-    ...                 'dog': 'bark',
-    ...                 'bear': 'growl',
-    ...                 'cat': 'meow',
-    ...                 'lion': 'roar',
-    ...                 },
-    ...             'actions': {
-    ...                 'fish': 'swim',
-    ...                 'bird': 'fly',
-    ...                 'a': {
-    ...                     'dog': 'whine',
-    ...                     'fish': 'bubbles',
-    ...                     'cat': 'purr',
-    ...                     }
-    ...                 },
-    ...             'places': {
-    ...                 'animals': {
-    ...                     'bird': 'sky',
-    ...                     'fish': 'ocean',
-    ...                     'cat': 'indoors',
-    ...                     'lion': 'zoo'
-    ...                     }
-    ...                 }
-    ...             }
-    ...     }
-    >>> flatten_bottom_up(example_dict)
-    {'dog': 'whine', 'bear': 'growl', 'cat': 'indoors', 'lion': 'zoo', 'fish': 'ocean', 'bird': 'sky'}
+    merged : dict
+        A dictionary containing all keys, with duplicate entries reverting to
+        the dictionary given in "priority". The merge occurs across all levels.
     """
-    output = dict()
-    for k, v in dictionary.items():
-        if isinstance(v, dict):
-            output.update(flatten_bottom_up(v))
-        else:
-            output[k] = v
-    return output
-
-
-def flatten_top_down(dictionary):
-    """
-    Flattens a nested dictionary, keeping the outermost values for repeated keys
-
-    Parameters
-    ----------
-    dictionary : dict
-        The dictionary to flatten
-
-    Returns
-    -------
-    A new, flattened dictionary.
-
-    Examples
-    --------
-    >>> example_dict = {
-    ...     'top_level': {
-    ...             'sounds': {
-    ...                 'dog': 'bark',
-    ...                 'bear': 'growl',
-    ...                 'cat': 'meow',
-    ...                 'lion': 'roar',
-    ...                 },
-    ...             'actions': {
-    ...                 'fish': 'swim',
-    ...                 'bird': 'fly',
-    ...                 'a': {
-    ...                     'dog': 'whine',
-    ...                     'fish': 'bubbles',
-    ...                     'cat': 'purr',
-    ...                     }
-    ...                 },
-    ...             'places': {
-    ...                 'animals': {
-    ...                     'bird': 'sky',
-    ...                     'fish': 'ocean',
-    ...                     'cat': 'indoors',
-    ...                     'lion': 'zoo'
-    ...                     }
-    ...                 }
-    ...             }
-    ...     }
-    >>> flatten_top_down(example_dict)
-    {'dog': 'bark', 'bear': 'growl', 'cat': 'meow', 'lion': 'roar', 'fish': 'swim', 'bird': 'fly'}
-    """
-    output = dict()
-    for k, v in dictionary.items():
-        if isinstance(v, dict):
-            inner_dict = flatten_top_down(v)
-            for inner_k, inner_v in inner_dict.items():
-                if inner_k not in output:
-                    output[inner_k] = inner_v
-        elif k not in output:
-            output[k] = v
-    return output
-
-
-def priority_merge_dicts(first_config, second_config, priority='first'):
-    """Given two dictionaries, merge them together preserving either first or last entries"""
-    if priority == 'first':
+    if priority == "first":
         merged_dictionary = first_config
         to_merge = second_config
-    else:    
+    elif priority == "second":
         merged_dictionary = second_config
         to_merge = first_config
+    else:
+        raise TypeError("Please use 'first' or 'second' for the priority!")
     for key in merged_dictionary:
         if key in to_merge:
             to_merge[key].update(merged_dictionary[key])
@@ -287,17 +246,25 @@ def priority_merge_dicts(first_config, second_config, priority='first'):
             to_merge[key] = merged_dictionary[key]
         merged_value = merged_dictionary[key]
         to_merge_value = to_merge[key]
-        
-            
-    
     return merged_dictionary
-
 
 
 def merge_dicts(*dict_args):
     """
     Given any number of dicts, shallow copy and merge into a new dict,
     precedence goes to key value pairs in latter dicts.
+
+    Note that this function only merges the first level. For deeper merging,
+    use ``priority_merge_dicts``.
+
+    Parameters
+    ----------
+    *dict_args
+        Any number of dictionaries to merge together
+
+    Returns
+    -------
+    A merged dictionary (shallow).
     """
     result = {}
     for dictionary in dict_args:
@@ -359,7 +326,7 @@ def find_value_for_nested_key(mapping, key_of_interest, tree=[]):
         for leaf in tree:
             mapping = mapping[leaf]
         else:
-            tree=[None]
+            tree = [None]
     for leaf in reversed(tree):
         logging.debug("Looking in bottommost leaf %s", leaf)
         for key, value in mapping.items():
@@ -368,11 +335,28 @@ def find_value_for_nested_key(mapping, key_of_interest, tree=[]):
         if leaf:
             find_value_in_nested_key(original_mapping, key_of_interest, tree[:-1])
     warnings.warn("Couldn't find value for key %s" % key_of_interest)
-    #raise KeyError("Couldn't find value for key %s", key_of_interest)
+    # raise KeyError("Couldn't find value for key %s", key_of_interest)
+
 
 # def deep_update(dict_original, dict_new):
 
+
 def list_all_keys_starting_with_choose(mapping):
+    """
+    Given a ``mapping`` (e.g. a ``dict``-type object), list all keys that start
+    with ``"choose_"`` on any level of the nested dictionary.
+
+    Parameters
+    ----------
+    mapping : dict
+        The dictionary to search through for keys starting with ``"choose_"``
+
+    Returns
+    -------
+    all_chooses : dict
+        A dictionary containing all key, value pairs starting with
+        ``"choose_"``.
+    """
     all_chooses = {}
     mappings = [mapping]
     while mappings:
@@ -382,47 +366,112 @@ def list_all_keys_starting_with_choose(mapping):
         except AttributeError:
             continue
         for key, value in items:
-            if isinstance(key, str) and key.startswith("choose"):
+            if isinstance(key, str) and key.startswith("choose_"):
                 all_chooses[key] = value
             if isinstance(value, dict):
                 mappings.append(value)
     return all_chooses
 
 
-def determine_set_variables_in_choose_block(mapping, valid_model_names, model_name=[]):
+def determine_set_variables_in_choose_block(config, valid_model_names, model_name=[]):
+    """
+    Given a config, figures out which variables are resolved in a choose block.
+
+    In order to avoid cyclic dependencies, it is necessary to figure out which
+    variables are set in which choose block. This function recurses over all
+    key/value pairs of a configuration, and for any key which is a model name,
+    it determines which variables are set in it's ``choose_`` blocks. Tuples of
+    ``(model_name, var_name)`` are appended to a list, which is returned with
+    all it's duplicates removed.
+
+    Parameters
+    ----------
+    config : dict
+    valid_model_names : list
+    model_name : list
+
+    Returns
+    -------
+    set_variables : set
+        A set of tuples of model_name and corresponding variable that are
+        determined in ``config``
+    """
     set_variables = []
-    all_chooses = list_all_keys_starting_with_choose(mapping)
+    # BUG: all_chooses is not used?
+    all_chooses = list_all_keys_starting_with_choose(config)
     logging.debug("valid_model_names=%s", valid_model_names)
-    for k, v in mapping.items():
+    for k, v in config.items():
         if isinstance(k, str) and k in valid_model_names:
             logging.debug(k)
             model_name = k
-        if isinstance(v, dict): # and isinstance(k, str) and k.startswith("choose_"):
-            set_variables += determine_set_variables_in_choose_block(v, valid_model_names, model_name)
+        if isinstance(v, dict):  # and isinstance(k, str) and k.startswith("choose_"):
             # Go in further
+            set_variables += determine_set_variables_in_choose_block(
+                v, valid_model_names, model_name
+            )
         else:
             var_name = k
             if not model_name:
-                model_name='setup'
+                model_name = "setup"
             set_variables.append((model_name, var_name))
     return set(set_variables)
 
+
 def find_one_independent_choose(all_set_variables):
+    """
+    Given a dictionary of ``all_set_variables``, which comes out of the
+    function ``determine_set_variables_in_choose_block``, gives a list of
+    task/variable dependencies to resolve in order to figure out the variable.
+
+    Parameters
+    ----------
+    all_set_variables : dict
+
+    Returns
+    -------
+    task_list : list
+        A list of tuples comprising ``(model_name, var_name)`` in order to
+        resolve one ``choose_`` block. This list is built in such a way that
+        the beginning of the list provides dependencies for later on in the
+        list.
+    """
     task_list = []
     # task_list=['choose_partition', 'choose_jobtype']
     for key in all_set_variables:
         value = all_set_variables[key]
         for choose_keyword, set_vars in value.items():
-        #choose_keyword="choose_partition"
-        #set_vars=value[choose_keyword]
+            # choose_keyword="choose_partition"
+            # set_vars=value[choose_keyword]
             task_list.append((key, choose_keyword))
-            task_list = add_more_important_tasks(choose_keyword, all_set_variables, task_list)
+            task_list = add_more_important_tasks(
+                choose_keyword, all_set_variables, task_list
+            )
             logging.debug(task_list)
             return task_list
 
 
-        
 def add_more_important_tasks(choose_keyword, all_set_variables, task_list):
+    """
+    Determines dependencies of a choose keyword.
+
+    Parameters
+    ----------
+    choose_keyword : str
+        The keyword, starting with choose, which is looked through to check if
+        there are any dependencies that must be resolved first to correctly
+        resolve this one.
+    all_set_variables : dict
+        All variables that can be set
+    task_list : list
+        A list in the order in which tasks must be resolved for
+        ``choose_keyword`` to make sense.
+
+    Returns
+    -------
+    task_list
+        A list of choices which must be made in order for choose_keyword to
+        make sense.
+    """
     logging.debug("Incoming task list %s", task_list)
     keyword = choose_keyword.replace("choose_", "")
     logging.debug("Keyword = %s", keyword)
@@ -430,21 +479,26 @@ def add_more_important_tasks(choose_keyword, all_set_variables, task_list):
         for choose_thing in all_set_variables[model]:
             logging.debug("Choose_thing = %s", choose_thing)
             for (host, keyword_that_is_set) in all_set_variables[model][choose_thing]:
-                logging.debug("Host = %s, keyword_that_is_set=%s", host, keyword_that_is_set)
+                logging.debug(
+                    "Host = %s, keyword_that_is_set=%s", host, keyword_that_is_set
+                )
                 if keyword_that_is_set == keyword:
                     if (model, choose_thing) not in task_list:
                         task_list.insert(0, (model, choose_thing))
-                        add_more_important_tasks(choose_thing, all_set_variables, task_list)
+                        add_more_important_tasks(
+                            choose_thing, all_set_variables, task_list
+                        )
                         return task_list
                     else:
                         raise KeyError("Opps cyclic dependency: %s" % task_list)
     return task_list
 
+
 def make_choices_new(tree, right, full_config):
     """
-    Replaces keys starting with "choose_" with an appropriate choice.
+    Replaces keys starting with ``"choose_"`` with an appropriate choice.
 
-    If any key in the right hand side starts with "choose_", the full
+    If any key in the right hand side starts with ``"choose_"``, the full
     configuration is searched for a resolution of this choice. The right hand
     side is then appropriately updated.
 
@@ -459,10 +513,12 @@ def make_choices_new(tree, right, full_config):
 
     Returns
     -------
-
+    dict :
+        A dictionary with the last part of ``tree`` and an updated version of
+        the ``right`` dictionary in which choices have been performed.
     """
     logger.debug("Tree=%s, right=%s", tree, right)
-    #logging.debug("Full config I am choosing in=%s", full_config)
+    # logging.debug("Full config I am choosing in=%s", full_config)
     if not tree[-1]:
         tree = tree[:-1]
     if isinstance(right, dict):
@@ -839,16 +895,18 @@ def do_math_in_entry(entry, lhs):
     return entry.strip()
 
 
-date_marker = "THIS_IS_A_DATE_JKLJKLJKL"
+date_marker = ">>>THIS_IS_A_DATE<<<"
 
 
 def mark_dates(entry, lhs, config):
+    """Adds the ``date_marker`` to any entry who's key ends with ``"date"``"""
     if isinstance(lhs, str) and lhs.endswith("date"):
         entry = str(entry) + date_marker
     return entry
 
 
 def unmark_dates(entry, lhs, config):
+    """Removes the ``date_marker`` to any entry who's entry contains the ``date_marker``."""
     if isinstance(entry, str) and date_marker in entry:
         entry = entry.replace(date_marker, "")
     return entry
@@ -864,9 +922,9 @@ class GeneralConfig(dict):
         for attachment in CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE:
             attach_to_config_and_remove(self.config, attachment)
         self._config_init()
-        #for k, v in self.config.items():
+        # for k, v in self.config.items():
         #    self.__setitem__(k, v)
-        #del self.config
+        # del self.config
 
     def _config_init(self):
         raise NotImplementedError(
@@ -892,58 +950,85 @@ class ConfigSetup(GeneralConfig):
         logger.info("setup config is being updated with setup_relevant_configs")
         if "standalone_model" in self.config:
             setup_config = setup_relevant_configs
-            setup_config['standalone'] = True
+            setup_config["standalone"] = True
             model_config = {}
-            model_config[self.config['model']] = self.config
+            model_config[self.config["model"]] = self.config
             attach_to_config_and_reduce_keyword(
-                model_config[self.config['model']], model_config, "include_submodels", "submodels", self.config['model']
+                model_config[self.config["model"]],
+                model_config,
+                "include_submodels",
+                "submodels",
+                self.config["model"],
             )
             del self.config
         else:
             setup_config = merge_dicts(self.config, setup_relevant_configs)
-            model_config={}
-            attach_to_config_and_reduce_keyword(setup_config, model_config, "include_models", "models")
+            model_config = {}
+            attach_to_config_and_reduce_keyword(
+                setup_config, model_config, "include_models", "models"
+            )
             for model in model_config["models"]:
                 logger.info("Updating dictionary for ", model)
                 tmp_config = ConfigComponent(model)
                 model_config[model] = merge_dicts(tmp_config, model_config[model])
-        
+
         valid_setup_names = list(setup_config)
         valid_model_names = list(model_config)
-        
+
         logging.debug("Valid Setup Names = %s", valid_setup_names)
         logging.debug("Valid Model Names = %s", valid_model_names)
-        
+
         all_set_variables = {}
         for setup_name in valid_setup_names:
             all_set_variables[setup_name] = {}
-            for choose_key, choose_block in list_all_keys_starting_with_choose(setup_config[setup_name]).items():
+            for choose_key, choose_block in list_all_keys_starting_with_choose(
+                setup_config[setup_name]
+            ).items():
                 logging.debug("%s %s %s", setup_name, choose_key, choose_block)
-                all_set_variables[setup_name][choose_key] = determine_set_variables_in_choose_block(
-                choose_block, valid_setup_names, model_name=setup_name)
-        logging.debug("all_setup_variables %s", all_set_variables)
-        
-        
+                all_set_variables[setup_name][
+                    choose_key
+                ] = determine_set_variables_in_choose_block(
+                    choose_block, valid_setup_names, model_name=setup_name
+                )
+
         for model_name in valid_model_names:
             all_set_variables[model_name] = {}
-            for choose_key, choose_block in list_all_keys_starting_with_choose(model_config[model_name]).items():
-                all_set_variables[model_name][choose_key] = determine_set_variables_in_choose_block(
+            for choose_key, choose_block in list_all_keys_starting_with_choose(
+                model_config[model_name]
+            ).items():
+                all_set_variables[model_name][
+                    choose_key
+                ] = determine_set_variables_in_choose_block(
                     choose_block, valid_model_names, model_name=model_name
                 )
-                
-        
+
         self.model_config = model_config
         self.setup_config = setup_config
         self.user_config = {}  # TODO read runscript to dict
-        self.config = priority_merge_dicts(self.user_config, self.setup_config, priority='first')
-        self.config = priority_merge_dicts(self.config, self.model_config, priority='first')
-                
+        self.config = priority_merge_dicts(
+            self.user_config, self.setup_config, priority="first"
+        )
+        self.config = priority_merge_dicts(
+            self.config, self.model_config, priority="first"
+        )
+
         self.all_set_variables = all_set_variables
-        
+
+        for components_with_set_variables in self.all_set_variables:
+            logging.debug(
+                "The simulation component %s has to set:"
+                % components_with_set_variables
+            )
+            for set_variable in self.all_set_variables[components_with_set_variables]:
+                logging.debug("A variable to be set is %s", set_variable)
+
+        task_list = find_one_independent_choose(all_set_variables)
+
+        logging.debug("The task list is: %s", task_list)
         # all_relevant_choose_keys = find_all_choose_keys()
         # recursive_run_function_new(
         #    [], self.config, "mappings", make_choices_new, self.config
-        #)
+        # )
         # recursive_run_function_lhs(
         #   self.config, mark_dates, self.config["model"], self.config
         # )

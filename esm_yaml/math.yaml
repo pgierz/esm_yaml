@@ -1,0 +1,2 @@
+section:
+        subsection: a_string_that_has_math_$((1+1))_inside_it

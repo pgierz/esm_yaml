@@ -210,7 +210,7 @@ choose_start_date.year:
                         namelist.echam:        
                                 dynctl:
                                         enstdif: "${disturbance}"
-                                        
+
 choose_co2:
         *:
                 namelist_changes:

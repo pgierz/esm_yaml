@@ -47,5 +47,6 @@ choose_submitted:
                         - centoslibs
 
 
+submitted: true
 accounting: false
 hyper_flag: "" # No hyperthreading on ollie

@@ -1,6 +1,6 @@
 # ECHAM YAML DEFAULT CONFIGURATION FILE
 
-model: jsbach
+model: test_jsbach
 repository: https://gitlab.dkrz.de/modular_esm/echam6
 domain: vegetation
 
@@ -34,6 +34,23 @@ versions:
                 forcings:
                         lctlib: "@MODEL_DIR@/echam-6.3.04p1/lctlib_nlct21.def"
         
+
+choose_resolution:
+        T31:
+                bla: blubb
+        T63:
+                bla: auch blubb
+
+choose_exotic:
+        true:
+                test_echam:
+                        blu: blue
+        false:
+                test_echam:
+                        bli: blo
+
+
+
 scenarios:
         PI-CTRL:
                 forcings:

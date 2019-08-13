@@ -1,0 +1,7 @@
+model: echam
+#forcing_files:
+#        sst: pisst
+forcing_sources:
+        sst: /tmp/dummyfile
+forcing_in_work:
+        sst: lala

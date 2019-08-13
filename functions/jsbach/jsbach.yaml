@@ -137,25 +137,25 @@ streams:
 ym_dates:
         - "[[write_output_dates-->WHEN]]<--year--WHEN<--month--.WHEN<--day--"  # not so sure
 
-restart_in_files:
-        "[[streams-->STREAM]]": "STREAM"
+          #restart_in_files:
+          #"[[streams-->STREAM]]": "STREAM"
 
-restart_in_sources:
+restart_sources:
         "[[streams-->STREAM]]":
                 - "restart_${expid}_STREAM_${prev_date}.nc"
                 - "restart_${expid}_${prev_date}_STREAM.nc"
 
-restart_in_in_workdir:        
+restart_in_workdir:        
         "[[streams-->STREAM]]": "restart_${expid}_STREAM.nc"
 
-restart_out_files:
-        "[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]": "STREAM_WHEN"
+        #restart_out_files:
+        #"[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]": "STREAM_WHEN"
 
-restart_out_targets:
-        "[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]": "restart_${expid}_STREAM_WHEN.nc"
+restart_targets:
+        "[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]_out": "restart_${expid}_STREAM_WHEN.nc"
 
-restart_out_in_workdir:
-        "[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]": "restart_${expid}_STREAM_WHEN.nc"
+restart_in_workdir:
+        "[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]_out": "restart_${expid}_STREAM_WHEN.nc"
 
 output_targets:
         "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": ${expid}_echam6_STREAM_WHEN.grb
@@ -167,10 +167,10 @@ output_in_workdir:
         "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": ${expid}_WHEN_STREAM.codes
         "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": ${expid}_WHEN_STREAM.nc
 
-output_files:
-        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": STREAM_WHEN_grd
-        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": STREAM_WHEN_codes
-        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": STREAM_WHEN_nc
+        #output_files:
+        #"[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": STREAM_WHEN_grd
+        #"[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": STREAM_WHEN_codes
+        #"[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": STREAM_WHEN_nc
 
 further_reading:
         - jsbach.inherit.yaml

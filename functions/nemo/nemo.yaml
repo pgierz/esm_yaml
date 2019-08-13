@@ -40,12 +40,10 @@ newtimestep_formatted: "<--format(%08d)-- ${newstep}"
 
 
 
-restart_in_files:
+restart_files:
         restart_in: ${expid}_${timestep_formatted}_restart_${prev_date}
         restart_in_ice: ${expid}_${timestep_formatted}_restart_ice_${prev_date}
         restart_in_tracer: ${expid}_${timestep_formatted}_restart_trc_${prev_date}
-
-restart_out_files:
         restart_out: ${expid}_${newtimestep_formatted}_restart_${end_date}
         restart_out_ice: ${expid}_${newtimestep_formatted}_restart_ice_${end_date}
         restart_out_tracer: ${expid}_${newtimestep_formatted}_restart_trc_${end_date}
@@ -233,16 +231,14 @@ config_in_work:
         namelist_top_cfg: namelist_cfg
 
 input_in_work:
-        bathy_meter: bathy_meter.nc
-        coordinates: coordinates.nc
+        #bathy_meter: bathy_meter.nc
+        #coordinates: coordinates.nc
         Ice_init: Ice_initialization.nc 
 
-restart_in_in_work:
+restart_in_work:
         restart_in: ${expid}_${timestep_formatted}_restart_${prev_date}_*.nc
         restart_in_ice: ${expid}_${timestep_formatted}_restart_ice_${prev_date}_*.nc
         restart_in_tracer: ${expid}_${timestep_formatted}_restart_tracer_${prev_date}_*.nc
-
-restart_out_in_work:
         restart_out: ${expid}_${newtimestep_formatted}_restart_${end_date}_*.nc
         restart_out_ice: ${expid}_${newtimestep_formatted}_restart_ice_${end_date}_*.nc
         restart_out_tracer: ${expid}_${newtimestep_formatted}_restart_trc_${end_date}_*.nc

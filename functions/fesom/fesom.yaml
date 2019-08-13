@@ -163,12 +163,12 @@ choose_lresume:
 
 
 
-config_files:
-        config: namelist.config
-        forcing: namelist.forcing
-        ice:    namelist.ice
-        oce:    namelist.oce
-        io:     namelist.io
+                                  #config_files:
+                                  #config: namelist.config
+                                  #forcing: namelist.forcing
+                                  #ice:    namelist.ice
+                                  #oce:    namelist.oce
+                                  #io:     namelist.io
 
 config_sources:
         config: "${namelist_dir}/namelist.config"
@@ -177,17 +177,17 @@ config_sources:
         oce:    "${namelist_dir}/namelist.oce"
         io:     "${namelist_dir}/namelist.io"
 
-config_in_work:
-        config: namelist.config
-        forcing: namelist.forcing
-        ice:    namelist.ice
-        oce:    namelist.oce
-        io:     namelist.io
+        #config_in_work:
+        #config: namelist.config
+        #forcing: namelist.forcing
+        #ice:    namelist.ice
+        #oce:    namelist.oce
+        #io:     namelist.io
 
 
-output_files:
-        [[streams --> STREAM]]_[[write_output_dates --> WHEN]]: [[streams --> STREAM]]_[[write_output_dates --> WHEN]]
-        [[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2: [[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2
+        #output_files:
+        #[[streams --> STREAM]]_[[write_output_dates --> WHEN]]: [[streams --> STREAM]]_[[write_output_dates --> WHEN]]
+        #[[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2: [[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2
 
 output_targets:
         [[streams --> STREAM]]_[[write_output_dates --> WHEN]]: ${expid}_STREAM_fesom_WHEN.nc
@@ -197,22 +197,24 @@ output_in_work:
         [[streams --> STREAM]]_[[write_output_dates --> WHEN]]: STREAM_fesom_WHEN.nc
         [[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2: STREAM.fesom.WHEN<--year--.nc
 
-restart_out_files:
 
+        #restart_files:
+        #oce_restart: oce_restart
+        #ice_restart: ice_restart
 
-restart_in_files:
-        oce_restart: oce_restart
-        ice_restart: ice_restart
+        #restart_in_workdir:
+        #oce_restart: fesom.${restart_date.year}.oce.restart.nc
+        #ice_restart: fesom.${restart_date.year}.ice.restart.nc
+        #oce_diag: fesom.${restart_date.year}.oce.diag.nc
 
-restart_in_in_workdir:
-        oce_restart: fesom.${restart_date.year}.oce.restart.nc
-        ice_restart: fesom.${restart_date.year}.ice.restart.nc
-        oce_diag: fesom.${restart_date.year}.oce.diag.nc
-
-restart_in_sources:
+restart_sources:
         oce_restart: fesom.${parent_date.year}.oce.restart.nc
         ice_restart: fesom.${parent_date.year}.ice.restart.nc
         oce_diag: fesom.${parent_date.year}.oce.diag.nc
 
+restart_targets:
+        oce_restart: fesom.${end_date.year}.oce.restart.nc
+        ice_restart: fesom.${end_date.year}.ice.restart.nc
+        oce_diag: fesom.${end_date.year}.oce.diag.nc
 
 

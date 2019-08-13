@@ -28,30 +28,30 @@ choose_lresume:
 
 ini_restart_dir: "${pool_dir}/MPIESM/restart/dev/${parent_exp_id}/restart/jsbach"
 
-input_files :
-        hdpara: hdpara
-        rmp_hd: rmp_hd        
+#input_files :
+#        hdpara: hdpara
+#        rmp_hd: rmp_hd        
         
 input_in_workdir:
-        hdpara: "hdpara.nc"
+        #hdpara: "hdpara.nc"
         rmp_hd: "rmp_hd.nc"
-        hdstart: "hdstart.nc"
+        #hdstart: "hdstart.nc"
 
 input_sources:
         hdpara: "${input_dir}/hdpara.nc"
         rmp_hd: "${input_dir}/rmp_${echam.resolution}_to_hd.nc"
         hdstart: "${input_dir}/hdstart.nc"
        
-restart_in_in_workdir:
+restart_in_workdir:
         hdrestart: hdrestart.nc
 
-restart_in_sources:
+restart_sources:
         hdrestart: 
                 - restart_${parent_expid}_hd_${parent_date}.nc
                 - hdrestart.nc
 
-restart_out_in_workdir:                  
-        hdrestart: restart_${parent_expid}_hd_${end_date}.nc
+restart_targets:
+        hd_stream: restart_${parent_expid}_hd_${end_date}.nc
 
 log_in_workdir:
         outflow: hd_outflow_*.log # DIBA muss noch rausfinden was * in diesem Fall ist

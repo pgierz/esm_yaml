@@ -342,7 +342,7 @@ def find_value_for_nested_key(mapping, key_of_interest, tree=[]):
 # def deep_update(dict_original, dict_new):
 
 
-def list_all_keys_starting_with_choose(mapping):
+def list_all_keys_starting_with_choose(mapping, model_name):
     """
     Given a ``mapping`` (e.g. a ``dict``-type object), list all keys that start
     with ``"choose_"`` on any level of the nested dictionary.
@@ -354,11 +354,12 @@ def list_all_keys_starting_with_choose(mapping):
 
     Returns
     -------
-    all_chooses : dict
+    all_chooses : list
+        A list of tuples for ....
         A dictionary containing all key, value pairs starting with
         ``"choose_"``.
     """
-    all_chooses = {}
+    all_chooses = []
     mappings = [mapping]
     while mappings:
         mapping = mappings.pop()
@@ -368,7 +369,9 @@ def list_all_keys_starting_with_choose(mapping):
             continue
         for key, value in items:
             if isinstance(key, str) and key.startswith("choose_"):
-                all_chooses[key] = value
+                if not "." in key:
+                    key = "choose_" + model_name + "." + key.split("choose_")[-1]
+                all_chooses.append((key, value))
             if isinstance(value, dict):
                 mappings.append(value)
     return all_chooses
@@ -393,13 +396,11 @@ def determine_set_variables_in_choose_block(config, valid_model_names, model_nam
 
     Returns
     -------
-    set_variables : set
-        A set of tuples of model_name and corresponding variable that are
+    set_variables : list
+        A list of tuples of model_name and corresponding variable that are
         determined in ``config``
     """
     set_variables = []
-    # BUG: all_chooses is not used?
-    all_chooses = list_all_keys_starting_with_choose(config)
     logging.debug("valid_model_names=%s", valid_model_names)
     for k, v in config.items():
         if isinstance(k, str) and k in valid_model_names:
@@ -415,7 +416,7 @@ def determine_set_variables_in_choose_block(config, valid_model_names, model_nam
             if not model_name:
                 model_name = "setup"
             set_variables.append((model_name, var_name))
-    return set(set_variables)
+    return set_variables
 
 
 def find_one_independent_choose(all_set_variables):
@@ -1060,6 +1061,8 @@ class ConfigSetup(GeneralConfig):
         setup_relevant_configs = {
             "computer": yaml_file_to_dict(determine_computer_from_hostname())
         }
+        # Add the fake "model" name to the computer:
+        setup_relevant_configs["computer"]["model"] = "computer"
         logger.info("setup config is being updated with setup_relevant_configs")
         if "standalone_model" in self.config:
             setup_config = setup_relevant_configs
@@ -1094,9 +1097,12 @@ class ConfigSetup(GeneralConfig):
         all_set_variables = {}
         for setup_name in valid_setup_names:
             all_set_variables[setup_name] = {}
+            logging.debug(
+                list_all_keys_starting_with_choose(setup_config[setup_name], setup_name)
+            )
             for choose_key, choose_block in list_all_keys_starting_with_choose(
-                setup_config[setup_name]
-            ).items():
+                setup_config[setup_name], setup_name
+            ):
                 logging.debug("%s %s %s", setup_name, choose_key, choose_block)
                 all_set_variables[setup_name][
                     choose_key
@@ -1107,8 +1113,8 @@ class ConfigSetup(GeneralConfig):
         for model_name in valid_model_names:
             all_set_variables[model_name] = {}
             for choose_key, choose_block in list_all_keys_starting_with_choose(
-                model_config[model_name]
-            ).items():
+                model_config[model_name], model_name
+            ):
                 all_set_variables[model_name][
                     choose_key
                 ] = determine_set_variables_in_choose_block(
@@ -1136,8 +1142,25 @@ class ConfigSetup(GeneralConfig):
                 logging.debug("A variable to be set is %s", set_variable)
 
         task_list = find_one_independent_choose(all_set_variables)
-
         logging.debug("The task list is: %s", task_list)
+
+        # for model_name in valid_model_names:
+        #    all_set_variables[model_name] = {}
+        #    for choose_key, choose_block in list_all_keys_starting_with_choose(model_config[model_name]).items():
+        #        logging.debug("%s %s %s", setup_name, choose_key, choose_block)
+        #        all_set_variables[model_name][choose_key]['set_vars'] = determine_set_variables_in_choose_block(
+        #            choose_block, valid_model_names, model_name=model_name
+        #        all_set_variables[model_name][choose_key]['source_model']=determine_source_model(choose_key, model_name, valid_setup_names, valid_model_names)
+        #        )
+        logging.debug("all_setup_variables %s", all_set_variables)
+
+        set_variables = all_set_variables
+        while True:
+            indy_choose = find_one_independent_choose(set_variables)
+            resolve_choose(indy_choose)
+            set_variables.remove(indy_choose)
+            if not set_variables:
+                break
         # all_relevant_choose_keys = find_all_choose_keys()
         # recursive_run_function_new(
         #    [], self.config, "mappings", make_choices_new, self.config

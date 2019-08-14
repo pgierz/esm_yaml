@@ -1161,7 +1161,10 @@ def determine_computer_from_hostname():
 
 
 # NOTE: This whole function is just way too weird for me...
-def do_math_in_entry(entry, lhs):
+def do_math_in_entry(tree, rhs, config):
+    if not tree[-1]:
+        tree = tree[:-1]
+    entry = rhs
     entry = " " + str(entry) + " "
     while "$((" in entry:
         math, after_math = entry.split("))", 1)
@@ -1193,15 +1196,24 @@ def do_math_in_entry(entry, lhs):
 date_marker = ">>>THIS_IS_A_DATE<<<"
 
 
-def mark_dates(entry, lhs, config):
+def mark_dates(tree, rhs, config):
     """Adds the ``date_marker`` to any entry who's key ends with ``"date"``"""
+    if not tree[-1]:
+        tree = tree[:-1]
+    lhs = tree[-1]
+    entry = rhs
+    logging.debug(lhs)
     if isinstance(lhs, str) and lhs.endswith("date"):
         entry = str(entry) + date_marker
     return entry
 
 
-def unmark_dates(entry, lhs, config):
+def unmark_dates(tree, rhs, config):
     """Removes the ``date_marker`` to any entry who's entry contains the ``date_marker``."""
+    if not tree[-1]:
+        tree = tree[:-1]
+    lhs = tree[-1]
+    entry = rhs
     if isinstance(entry, str) and date_marker in entry:
         entry = entry.replace(date_marker, "")
     return entry
@@ -1489,22 +1501,17 @@ class ConfigSetup(GeneralConfig):
         logging.debug("After priority merge:")
         pprint_config(self.config)
 
-        # recursive_run_function_lhs(
-        #    self.config, mark_dates, self.config["model"], self.config
-        # )
+        recursive_run_function_new([], self.config, "atomic", mark_dates, self.config)
 
         recursive_run_function_new(
             [], self.config, "atomic", find_variable, self.config
         )
 
-        # recursive_run_function_lhs(
-        #    self.config, find_variable, self.config["model"], self.config
-        # )
-        # recursive_run_function_lhs(self.config, do_math_in_entry, self.config["model"])
+        recursive_run_function_new(
+            [], self.config, "atomic", do_math_in_entry, self.config
+        )
 
-        # recursive_run_function_lhs(
-        #    self.config, unmark_dates, self.config["model"], self.config
-        # )
+        recursive_run_function_new([], self.config, "atomic", unmark_dates, self.config)
 
         recursive_run_function_new(
             [], self.config, "always", list_to_multikey_lhs, self.config

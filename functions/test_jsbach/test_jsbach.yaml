@@ -25,6 +25,11 @@ dynamic_vegetations:
         FALSE:
                 DYNVEG: "_no_dynveg"
 
+
+
+add_forcings_in_workdir:
+        "plant_types": "sunflowers"
+
 executable: NONE #component model of echam, internally coupled
 
 versions:
@@ -35,18 +40,27 @@ versions:
                         lctlib: "@MODEL_DIR@/echam-6.3.04p1/lctlib_nlct21.def"
         
 
-choose_resolution:
+choose_test_echam.resolution:
         T31:
                 bla: blubb
         T63:
                 bla: auch blubb
 
+remove_test_echam.inputs_in_workdir:
+        - jansurf
+
+test_echam: 
+        remove_inputs_in_workdir:
+                - janspec
+        add_inputs_in_workdir:
+                "lake_file": "lalala"
+exotic: false
 choose_exotic:
         true:
-                test_echam:
+                add_test_echam:
                         blu: blue
         false:
-                test_echam:
+                add_test_echam:
                         bli: blo
 
 

@@ -232,22 +232,268 @@ def priority_merge_dicts(first_config, second_config, priority="first"):
         A dictionary containing all keys, with duplicate entries reverting to
         the dictionary given in "priority". The merge occurs across all levels.
     """
-    if priority == "first":
+    if priority == "second":
         merged_dictionary = first_config
         to_merge = second_config
-    elif priority == "second":
+    elif priority == "first":
         merged_dictionary = second_config
         to_merge = first_config
     else:
         raise TypeError("Please use 'first' or 'second' for the priority!")
-    for key in merged_dictionary:
-        if key in to_merge:
-            to_merge[key].update(merged_dictionary[key])
+    for key in to_merge:
+        if key in merged_dictionary:
+            merged_dictionary[key].update(to_merge[key])
         else:
-            to_merge[key] = merged_dictionary[key]
-        merged_value = merged_dictionary[key]
-        to_merge_value = to_merge[key]
+            merged_dictionary[key] = to_merge[key]
+
     return merged_dictionary
+
+
+def cross_update_models(model_config, all_model_names):
+    for target_model_name in all_model_names:
+        for source_model_name in all_model_names:
+            while target_model_name in model_config[source_model_name]:
+                logging.debug(
+                    "Updating %s from info of %s", target_model_name, source_model_name
+                )
+                logging.debug(
+                    "Info to be sent: %s",
+                    model_config[source_model_name][target_model_name],
+                )
+                model_config[target_model_name].update(
+                    model_config[source_model_name][target_model_name]
+                )
+                logging.debug(
+                    "Deleting info %s from %s", target_model_name, source_model_name
+                )
+                del model_config[source_model_name][target_model_name]
+
+
+def update_models_from_setup(
+    setup_config, all_setup_names, model_config, all_model_names
+):
+    for target_model_name in all_model_names:
+        for source_setup_name in all_setup_names:
+            while target_model_name in setup_config[source_setup_name]:
+                model_config[target_model_name].update(
+                    setup_config[source_setup_name][target_model_name]
+                )
+                del setup_config[source_setup_name][target_model_name]
+
+
+def find_remove_entries_in_config(mapping, model_name):
+    all_removes = []
+    mappings = [mapping]
+    while mappings:
+        mapping = mappings.pop()
+        try:
+            items = mapping.items()
+        except AttributeError:
+            continue
+        for key, value in items:
+            if isinstance(key, str) and key.startswith("remove_"):
+                if not "." in key:
+                    key = "remove_" + model_name + "." + key.split("remove_")[-1]
+                all_removes.append((key, value))
+            if isinstance(value, dict):
+                mappings.append(value)
+    # all_removes = [(remove_echam.forcing_files, [sst, sic,])]
+    # NOTE: Not Allowed: all_removes = [(remove_echam.forcing_files, sst)]
+    return all_removes
+
+
+def remove_entry_from_chapter(
+    remove_chapter,
+    remove_entries,
+    model_to_remove_from,
+    model_with_remove_statement,
+    model_config,
+    setup_config,
+):
+    if not isinstance(remove_entries, list):
+        raise TypeError("Please put all entries to remove as a list")
+    if model_to_remove_from in model_config:
+        for entry in remove_entries:
+            del model_config[model_to_remove_from][remove_chapter.split(".")[-1]][entry]
+    elif model_to_remove_from in setup_config:
+        for entry in remove_entries:
+            del setup_config[model_to_remove_from][remove_chapter.split(".")[-1]][entry]
+    if model_with_remove_statement in model_config:
+        del model_config[model_with_remove_statement][
+            remove_chapter.replace(model_with_remove_statement + ".", "")
+        ]
+    elif model_with_remove_statement in setup_config:
+        del setup_config[model_with_remove_statement][
+            remove_chapter.replace(model_with_remove_statement + ".", "")
+        ]
+
+
+def deep_update(
+    chapter, entries, target_model, source_model, model_config, setup_config
+):
+    if target_model in model_config:
+        target_config = model_config
+    else:
+        target_config = setup_config
+
+    # Could be prettier:
+    # target_config = model_config if target_model in model_config else setup_config
+    # source_model = model_config if source_model in model_config else setup_config
+
+    if source_model in model_config:
+        source_config = model_config
+    else:
+        source_config = setup_config
+    if chapter in source_config[source_model]:
+        source_chapter = chapter
+    else:
+        source_chapter = chapter.replace(target_model + ".", "")
+
+    if "remove_" in chapter:
+        remove_entry_from_chapter(
+            chapter, entries, target_model, source_model, model_config, setup_config
+        )
+    elif "add_" in chapter:
+        add_entry_to_chapter(
+            chapter, entries, target_model, source_model, model_config, setup_config
+        )
+    else:
+        logging.debug(target_model)
+        logging.debug(chapter)
+        logging.debug(entries)
+        target_config[target_model].update({chapter: entries})
+
+
+def remove_entries_from_chapter_in_config(
+    model_config, valid_model_names, setup_config, valid_setup_names
+):
+    for model_names, config in zip(
+        [valid_model_names, valid_setup_names], [model_config, setup_config]
+    ):
+        for model in model_names:
+            logging.debug(model)
+            all_removes_for_model = find_remove_entries_in_config(config[model], model)
+            for remove_chapter, remove_entries in all_removes_for_model:
+                model_to_remove_from = remove_chapter.split(".")[0].replace(
+                    "remove_", ""
+                )
+                remove_entry_from_chapter(
+                    remove_chapter,
+                    remove_entries,
+                    model_to_remove_from,
+                    model,
+                    model_config,
+                    setup_config,
+                )
+
+
+def find_add_entries_in_config(mapping, model_name):
+    all_adds = []
+    mappings = [mapping]
+    while mappings:
+        mapping = mappings.pop()
+        try:
+            items = mapping.items()
+        except AttributeError:
+            continue
+        for key, value in items:
+            if isinstance(key, str) and key.startswith("add_"):
+                if not "." in key:
+                    key = "add_" + model_name + "." + key.split("add_")[-1]
+                all_adds.append((key, value))
+            if isinstance(value, dict):
+                mappings.append(value)
+    # all_adds = [(add_echam.forcing_files, [sst, sic,])]
+    # NOTE: Not Allowed: all_adds = [(add_echam.forcing_files, sst)]
+    return all_adds
+
+
+def add_entry_to_chapter(
+    add_chapter,
+    add_entries,
+    model_to_add_to,
+    model_with_add_statement,
+    model_config,
+    setup_config,
+):
+
+    if model_to_add_to in model_config:
+        target_config = model_config
+    else:
+        target_config = setup_config
+    if model_with_add_statement in model_config:
+        source_config = model_config
+    else:
+        cource_config = setup_config
+
+    logging.debug(model_to_add_to)
+    logging.debug(add_chapter)
+    if add_chapter in source_config[model_with_add_statement]:
+        source_chapter = add_chapter
+    else:
+        source_chapter = add_chapter.replace(model_to_add_to + ".", "")
+
+    # If the desired chapter doesn't exist yet, just put it there
+    logging.debug(model_to_add_to)
+    logging.debug(add_chapter)
+    if not target_config[model_to_add_to][
+        add_chapter.split(".")[-1].replace("add_", "")
+    ]:
+        target_config[model_to_add_to][
+            add_chapter.split(".")[-1].replace("add_", "")
+        ] = source_config[model_with_add_statement][source_chapter]
+    else:
+        if not type(
+            target_config[model_to_add_to][
+                add_chapter.split(".")[-1].replace("add_", "")
+            ]
+        ) == type(add_entries):
+            raise TypeError("Something is wrong")
+        else:
+            if isinstance(
+                target_config[model_to_add_to][
+                    add_chapter.split(".")[-1].replace("add_", "")
+                ],
+                list,
+            ):
+                method = "append"
+            elif isinstance(
+                target_config[model_to_add_to][
+                    add_chapter.split(".")[-1].replace("add_", "")
+                ],
+                dict,
+            ):
+                method = "update"
+            getattr(
+                target_config[model_to_add_to][
+                    add_chapter.split(".")[-1].replace("add_", "")
+                ],
+                method,
+            )(add_entries)
+    logging.debug(model_with_add_statement)
+    logging.debug(source_chapter)
+    # del source_config[model_with_add_statement][source_chapter.replace("add_", "")]
+
+
+def add_entries_to_chapter_in_config(
+    model_config, valid_model_names, setup_config, valid_setup_names
+):
+    for model_names, config in zip(
+        [valid_model_names, valid_setup_names], [model_config, setup_config]
+    ):
+        for model in model_names:
+            logging.debug(model)
+            all_adds_for_model = find_add_entries_in_config(config[model], model)
+            for add_chapter, add_entries in all_adds_for_model:
+                model_to_add_to = add_chapter.split(".")[0].replace("add_", "")
+                add_entry_to_chapter(
+                    add_chapter,
+                    add_entries,
+                    model_to_add_to,
+                    model,
+                    model_config,
+                    setup_config,
+                )
 
 
 def merge_dicts(*dict_args):
@@ -322,6 +568,7 @@ def find_value_for_nested_key(mapping, key_of_interest, tree=[]):
     """
     original_mapping = mapping
     logger.debug("Looking for key %s", key_of_interest)
+    logging.debug("Looking in %s", mapping)
     logger.debug("Using tree %s", tree)
     if tree:
         for leaf in tree:
@@ -449,7 +696,57 @@ def find_one_independent_choose(all_set_variables):
                 choose_keyword, all_set_variables, task_list
             )
             logging.debug(task_list)
-            return task_list
+            return task_list[0]
+
+
+def resolve_choose(model_with_choose, choose_key, setup_config, model_config):
+    if model_with_choose in setup_config:
+        config_to_replace_in = setup_config
+    elif model_with_choose in model_config:
+        config_to_replace_in = model_config
+    else:
+        raise KeyError("Something is horribly wrong")
+    model_with_choose_key = choose_key.replace("choose_", "").split(".")[0]
+    if model_with_choose_key in setup_config:
+        config_to_search_in = setup_config
+    elif model_with_choose_key in model_config:
+        config_to_search_in = model_config
+    else:
+        raise KeyError("Something else is horribly wrong")
+
+    model_name, key = choose_key.replace("choose_", "").split(".")
+    pprint_config(config_to_replace_in)
+    choice = config_to_search_in[model_name][key]
+
+    logging.debug(model_with_choose)
+    logging.debug(choice)
+
+    if choose_key in config_to_replace_in[model_with_choose]:
+        logging.debug("Case A")
+        key = choose_key
+    else:
+        logging.debug("Case B")
+        key = choose_key.replace(model_name + ".", "")
+
+    for update_key, update_value in config_to_replace_in[model_with_choose][key][
+        choice
+    ].items():
+        deep_update(
+            update_key,
+            update_value,
+            model_with_choose,
+            model_with_choose,
+            model_config,
+            setup_config,
+        )
+
+    logging.debug("key=%s", key)
+
+    #    config_to_replace_in[model_with_choose].update(
+    #        config_to_replace_in[model_with_choose][key][choice]
+    #    )
+
+    del config_to_replace_in[model_with_choose][key]
 
 
 def add_more_important_tasks(choose_keyword, all_set_variables, task_list):
@@ -666,21 +963,9 @@ def recursive_get(config_to_search, config_elements):
         ``actually_recursive_get``, which is needed to pop off standalone model
         configurations.
     """
+    logging.debug("Incoming config elements: %s", config_elements)
     # NOTE(PG) I really don't like the logic in this function... :-( It'd be
     # much cleaner if this one and actually_recursive_get could be combined...
-    if config_to_search["model"] == config_elements[0] or config_elements[0] == "setup":
-        # Throw away the first thing:
-        logger.debug("Throwing away the first part of config_elements")
-        logger.debug("Before: %s", config_elements)
-        config_elements.pop(0)
-        logger.debug("After: %s", config_elements)
-    return actually_recursive_get(config_to_search, config_elements)
-
-
-def actually_recursive_get(config_to_search, config_elements):
-    """
-    See the documentation for ``recursive_get``.
-    """
     this_config = config_elements.pop(0)
 
     logger.debug("this_config=%s", this_config)
@@ -689,7 +974,7 @@ def actually_recursive_get(config_to_search, config_elements):
     if not result:
         raise ValueError("Couldn't find an answer for:", config_elements)
     if config_elements:
-        return actually_recursive_get(result, config_elements)
+        return recursive_get(result, config_elements)
     return result
 
 
@@ -717,20 +1002,28 @@ def find_variable(tree, rhs, full_config):
 
 def actually_find_variable(tree, rhs, full_config):
     config_elements = rhs.split(".")
-    if config_elements[0] in ["setup"]:
-        del config_elements[0]
-    elif config_elements[0] in [
-        "computer",
-        full_config["model"],
-        full_config["submodels"],
-    ]:
-        pass
-    else:
-        try:
-            raw_str = tree[0] + "." + rhs
-            return actually_find_variable(tree, raw_str, full_config)
-        except:
-            pass
+    valid_names = (
+        full_config["setup"]["valid_model_names"]
+        + full_config["setup"]["valid_setup_names"]
+    )
+    logging.debug(valid_names)
+    if config_elements[0] not in valid_names:
+        config_elements.insert(0, tree[0])
+
+    # if config_elements[0] in ["setup"]:
+    #     del config_elements[0]
+    # elif config_elements[0] in [
+    #     "computer",
+    #     full_config["model"],
+    #     full_config["submodels"],
+    # ]:
+    #     pass
+    # else:
+    #     try:
+    #         raw_str = tree[0] + "." + rhs
+    #         return actually_find_variable(tree, raw_str, full_config)
+    #     except:
+    #         pass
     try:
         var_result = recursive_get(full_config, config_elements)
         return var_result
@@ -739,18 +1032,17 @@ def actually_find_variable(tree, rhs, full_config):
 
 
 def list_to_multikey_lhs(tree, rhs, config_to_search):
-    print(80 * ":-)")
-    print("tree=", tree)
-    print("rhs=", rhs)
+    logging.debug("tree=%s", tree)
+    logging.debug("rhs=%s", rhs)
     if tree:
         lhs = tree[-1]
         list_fence = "[["
         list_end = "]]"
-        print("Running list_to_multikey_lhs")
-        print("lhs=", lhs)
-        print(type(lhs))
-        print("rhs=", rhs)
-        print(type(rhs))
+        logging.debug("Running list_to_multikey_lhs")
+        logging.debug("lhs=%s", lhs)
+        logging.debug(type(lhs))
+        logging.debug("rhs=%s", rhs)
+        logging.debug(type(rhs))
         if isinstance(lhs, str) and lhs:
             if list_fence in lhs:
                 return_dict = {}
@@ -758,7 +1050,9 @@ def list_to_multikey_lhs(tree, rhs, config_to_search):
                 actual_list, new_raw = rest.split(list_end, 1)
                 key_in_list, value_in_list = actual_list.split("-->", 1)
                 key_elements = key_in_list.split(".")
-                entries_of_key = recursive_get(config_to_search, key_elements)
+                entries_of_key = actually_find_variable(
+                    tree, key_in_list, config_to_search
+                )
                 if isinstance(rhs, str):
                     return_dict2 = {
                         lhs.replace("[[" + actual_list + "]]", key).replace(
@@ -787,9 +1081,9 @@ def list_to_multikey_lhs(tree, rhs, config_to_search):
                         )
                 else:
                     return_dict = return_dict2
-                print("About to return:", return_dict)
+                logging.debug("About to return: %s", return_dict)
                 return return_dict
-            print("About to return:", {lhs: rhs})
+            logging.debug("About to return: %s", {lhs: rhs})
             return {lhs: rhs}
         if isinstance(rhs, str) and list_fence in rhs:
             rhs_list = []
@@ -797,7 +1091,7 @@ def list_to_multikey_lhs(tree, rhs, config_to_search):
             actual_list, new_raw = rest.split(list_end, 1)
             key_in_list, value_in_list = actual_list.split("-->", 1)
             key_elements = key_in_list.split(".")
-            entries_of_key = recursive_get(config_to_search, key_elements)
+            entries_of_key = actually_find_variable(tree, key_in_list, config_to_search)
             for entry in entries_of_key:
                 rhs_list.append(
                     rhs.replace("[[" + actual_list + "]]", entry).replace(
@@ -810,8 +1104,7 @@ def list_to_multikey_lhs(tree, rhs, config_to_search):
                     out_list += list_to_multikey_lhs(
                         tree + [None], rhs_listitem, config_to_search
                     )
-                    print(80 * "$")
-                    print(out_list)
+                    logging.debug(out_list)
                 rhs_list = out_list
             return rhs_list
     return rhs
@@ -947,7 +1240,7 @@ class SimulationSetup(object):
         self.config = ConfigSetup(name)
         pprint_config(self.config)
         components = []
-        for component in self.config["submodels"]:
+        for component in self.config["setup"]["valid_model_names"]:
             components.append(SimulationComponent(self.config[component]))
 
 
@@ -1066,7 +1359,9 @@ class ConfigSetup(GeneralConfig):
         logger.info("setup config is being updated with setup_relevant_configs")
         if "standalone_model" in self.config:
             setup_config = setup_relevant_configs
-            setup_config["standalone"] = True
+            if "setup" not in setup_config:
+                setup_config["setup"] = {}
+            setup_config["setup"].update({"standalone": True})
             model_config = {}
             model_config[self.config["model"]] = self.config
             attach_to_config_and_reduce_keyword(
@@ -1090,6 +1385,9 @@ class ConfigSetup(GeneralConfig):
 
         valid_setup_names = list(setup_config)
         valid_model_names = list(model_config)
+
+        setup_config["setup"]["valid_setup_names"] = valid_setup_names
+        setup_config["setup"]["valid_model_names"] = valid_model_names
 
         logging.debug("Valid Setup Names = %s", valid_setup_names)
         logging.debug("Valid Model Names = %s", valid_model_names)
@@ -1121,16 +1419,6 @@ class ConfigSetup(GeneralConfig):
                     choose_block, valid_model_names, model_name=model_name
                 )
 
-        self.model_config = model_config
-        self.setup_config = setup_config
-        self.user_config = {}  # TODO read runscript to dict
-        self.config = priority_merge_dicts(
-            self.user_config, self.setup_config, priority="first"
-        )
-        self.config = priority_merge_dicts(
-            self.config, self.model_config, priority="first"
-        )
-
         self.all_set_variables = all_set_variables
 
         for components_with_set_variables in self.all_set_variables:
@@ -1155,38 +1443,72 @@ class ConfigSetup(GeneralConfig):
         logging.debug("all_setup_variables %s", all_set_variables)
 
         set_variables = all_set_variables
+        logging.debug(set_variables)
         while True:
-            indy_choose = find_one_independent_choose(set_variables)
-            resolve_choose(indy_choose)
-            set_variables.remove(indy_choose)
+            model_with_choose, choose_key = find_one_independent_choose(set_variables)
+
+            resolve_choose(model_with_choose, choose_key, setup_config, model_config)
+            del set_variables[model_with_choose][choose_key]
+            for key in list(set_variables):
+                if not set_variables[key]:
+                    del set_variables[key]
+            logging.debug("Remaining set_variables=%s", set_variables)
             if not set_variables:
                 break
-        # all_relevant_choose_keys = find_all_choose_keys()
-        # recursive_run_function_new(
-        #    [], self.config, "mappings", make_choices_new, self.config
-        # )
+
+        cross_update_models(model_config, valid_model_names)
+        update_models_from_setup(
+            setup_config, valid_setup_names, model_config, valid_model_names
+        )
+
+        logging.debug("Setup after cross update:")
+        pprint_config(setup_config)
+        logging.debug("Model after cross update:")
+        pprint_config(model_config)
+
+        add_entries_to_chapter_in_config(
+            model_config, valid_model_names, setup_config, valid_setup_names
+        )
+        remove_entries_from_chapter_in_config(
+            model_config, valid_model_names, setup_config, valid_setup_names
+        )
+
+        logging.debug("Setup before priority merge:")
+        pprint_config(setup_config)
+        logging.debug("Model before priority merge:")
+        pprint_config(model_config)
+        self.model_config = model_config
+        self.setup_config = setup_config
+        self.user_config = {}  # TODO read runscript to dict
+        self.config = priority_merge_dicts(
+            self.user_config, self.setup_config, priority="first"
+        )
+        self.config = priority_merge_dicts(
+            self.config, self.model_config, priority="first"
+        )
+        logging.debug("After priority merge:")
+        pprint_config(self.config)
+
         # recursive_run_function_lhs(
-        #   self.config, mark_dates, self.config["model"], self.config
+        #    self.config, mark_dates, self.config["model"], self.config
         # )
 
-        # recursive_run_function_new(
-        #        [], self.config, "atomic",
-        #        find_variable, self.config
-        #        )
+        recursive_run_function_new(
+            [], self.config, "atomic", find_variable, self.config
+        )
 
         # recursive_run_function_lhs(
-        #   self.config, find_variable, self.config["model"], self.config
+        #    self.config, find_variable, self.config["model"], self.config
         # )
         # recursive_run_function_lhs(self.config, do_math_in_entry, self.config["model"])
 
         # recursive_run_function_lhs(
-        #   self.config, unmark_dates, self.config["model"], self.config
+        #    self.config, unmark_dates, self.config["model"], self.config
         # )
 
-        # recursive_run_function_new(
-        #   [], self.config, "always",
-        #   list_to_multikey_lhs, self.config,
-        # )
+        recursive_run_function_new(
+            [], self.config, "always", list_to_multikey_lhs, self.config
+        )
 
 
 class ConfigComponent(GeneralConfig):

@@ -31,7 +31,7 @@ choose_version:
 input_parent_date: 22941231 
 input_parent_exp_id: khw0030
 
-input_dir: "${computer.pool_directories.pool}/ECHAM6/input/${echam.dataset}"
+input_dir: "${computer.pool_directories.pool}/ECHAM6/input/${test_echam.dataset}"
 ini_restart_dir: "${computer.pool_directories.pool}/MPIESM/restart/dev/${input_parent_exp_id}/restart/echam6"
 
 
@@ -43,7 +43,7 @@ choose_resolution:
                 Timestep: 450
                 _nx: 192
                 _ny: 96
-                choose_cores_per_node:
+                choose_computer.cores_per_node:
                         24:
                                 nproca: 24
                                 nprocb: 18
@@ -86,7 +86,8 @@ scenarios:
                         aerofarir: piaerofarir
                         ozone: piozone
 
-ADJ_INPUT_DIR: "${input_dir}/${echam.resolution}"
+ADJ_INPUT_DIR: "${input_dir}/${test_echam.resolution}"
+
 
 
 inputs_in_workdir:
@@ -112,18 +113,17 @@ fesom:
         mesh_dir: /some/var
 
 test_chapter:
-        something: ${echam.resolution}
+        something: ${test_echam.resolution}
         something2: ${resolution}
-        something_else: ${jsbach.domain}
-        something_else2: ${setup.resolution}
+        something_else: ${test_jsbach.domain}
 
 my_date: 20010101
 increment_date: '00010101'
-my_next_date: $(( ${echam.my_date} + ${echam.increment_date} ))
-my_previous_date: $(( ${echam.my_date} - ${echam.increment_date} ))
+my_next_date: $(( ${test_echam.my_date} + ${test_echam.increment_date} ))
+my_previous_date: $(( ${test_echam.my_date} - ${test_echam.increment_date} ))
 
 date_test:
-        file1: ${echam.model}_restart_${echam.my_next_date}
+        file1: ${test_echam.model}_restart_${test_echam.my_next_date}
 
 
 
@@ -146,7 +146,7 @@ numbers:
         - drei
 
 restart_in_files:
-        "[[A.levelAecham-->LEV]]_[[streams-->STREAM]]_[[numbers-->NUMBERS]]": LEV_${echam.model}_STREAM_${echam.my_next_date}_NUMBERS
+        "[[A.levelAecham-->LEV]]_[[streams-->STREAM]]_[[numbers-->NUMBERS]]": LEV_${test_echam.model}_STREAM_${test_echam.my_next_date}_NUMBERS
 
 
 z_example_numbers:

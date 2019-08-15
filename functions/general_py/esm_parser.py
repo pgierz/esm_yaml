@@ -44,6 +44,7 @@ standard_library.install_aliases()
 
 
 CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE = ["further_reading"]
+DATE_MARKER = ">>>THIS_IS_A_DATE<<<"
 FUNCTION_PATH = os.path.dirname(__file__) + "/../"
 YAML_AUTO_EXTENSIONS = ["", ".yml", ".yaml", ".YML", ".YAML"]
 
@@ -281,6 +282,42 @@ def update_models_from_setup(
                 del setup_config[source_setup_name][target_model_name]
 
 
+def deep_update(
+    chapter, entries, target_model, source_model, model_config, setup_config
+):
+    if target_model in model_config:
+        target_config = model_config
+    else:
+        target_config = setup_config
+
+    # Could be prettier:
+    # target_config = model_config if target_model in model_config else setup_config
+    # source_model = model_config if source_model in model_config else setup_config
+
+    if source_model in model_config:
+        source_config = model_config
+    else:
+        source_config = setup_config
+    if chapter in source_config[source_model]:
+        source_chapter = chapter
+    else:
+        source_chapter = chapter.replace(target_model + ".", "")
+
+    if "remove_" in chapter:
+        remove_entry_from_chapter(
+            chapter, entries, target_model, source_model, model_config, setup_config
+        )
+    elif "add_" in chapter:
+        add_entry_to_chapter(
+            chapter, entries, target_model, source_model, model_config, setup_config
+        )
+    else:
+        logging.debug(target_model)
+        logging.debug(chapter)
+        logging.debug(entries)
+        target_config[target_model].update({chapter: entries})
+
+
 def find_remove_entries_in_config(mapping, model_name):
     all_removes = []
     mappings = [mapping]
@@ -326,42 +363,6 @@ def remove_entry_from_chapter(
         del setup_config[model_with_remove_statement][
             remove_chapter.replace(model_with_remove_statement + ".", "")
         ]
-
-
-def deep_update(
-    chapter, entries, target_model, source_model, model_config, setup_config
-):
-    if target_model in model_config:
-        target_config = model_config
-    else:
-        target_config = setup_config
-
-    # Could be prettier:
-    # target_config = model_config if target_model in model_config else setup_config
-    # source_model = model_config if source_model in model_config else setup_config
-
-    if source_model in model_config:
-        source_config = model_config
-    else:
-        source_config = setup_config
-    if chapter in source_config[source_model]:
-        source_chapter = chapter
-    else:
-        source_chapter = chapter.replace(target_model + ".", "")
-
-    if "remove_" in chapter:
-        remove_entry_from_chapter(
-            chapter, entries, target_model, source_model, model_config, setup_config
-        )
-    elif "add_" in chapter:
-        add_entry_to_chapter(
-            chapter, entries, target_model, source_model, model_config, setup_config
-        )
-    else:
-        logging.debug(target_model)
-        logging.debug(chapter)
-        logging.debug(entries)
-        target_config[target_model].update({chapter: entries})
 
 
 def remove_entries_from_chapter_in_config(
@@ -586,9 +587,6 @@ def find_value_for_nested_key(mapping, key_of_interest, tree=[]):
     # raise KeyError("Couldn't find value for key %s", key_of_interest)
 
 
-# def deep_update(dict_original, dict_new):
-
-
 def list_all_keys_starting_with_choose(mapping, model_name):
     """
     Given a ``mapping`` (e.g. a ``dict``-type object), list all keys that start
@@ -793,74 +791,11 @@ def add_more_important_tasks(choose_keyword, all_set_variables, task_list):
     return task_list
 
 
-def make_choices_new(tree, right, full_config):
-    """
-    Replaces keys starting with ``"choose_"`` with an appropriate choice.
-
-    If any key in the right hand side starts with ``"choose_"``, the full
-    configuration is searched for a resolution of this choice. The right hand
-    side is then appropriately updated.
-
-    Parameters
-    ----------
-    tree : list
-        The list of addresses up to this point
-    right : dict
-        An object that needs to be updated with a choice
-    full_config :
-        The entire configuration to search through
-
-    Returns
-    -------
-    dict :
-        A dictionary with the last part of ``tree`` and an updated version of
-        the ``right`` dictionary in which choices have been performed.
-    """
-    logger.debug("Tree=%s, right=%s", tree, right)
-    # logging.debug("Full config I am choosing in=%s", full_config)
-    if not tree[-1]:
-        tree = tree[:-1]
-    if isinstance(right, dict):
-        for key in list(right):
-            if isinstance(key, str) and key.startswith("choose_"):
-                logger.debug("Choosing key: %s", key)
-                available_choices = right[key]
-                del right[key]
-                choice = find_value_for_nested_key(
-                    full_config, key.replace("choose_", ""), tree
-                )
-                if available_choices:
-                    logger.debug("Available choices: %s", available_choices)
-                    logger.debug("Choice: %s", choice)
-                    logger.debug("Updating right with %s", available_choices[choice])
-                    right.update(available_choices[choice])
-    return {tree[-1]: right}
-
-
-def recursive_run_function_lhs(right, func, left, *args, **kwargs):
-    """ Recursively runs func on all nested dicts """
-
-    if isinstance(right, list):
-        for index, item in enumerate(right):
-            new_item = recursive_run_function_lhs(item, func, None, *args, **kwargs)
-            right[index] = new_item
-    elif isinstance(right, dict):
-        keys = list(right)
-        for key in keys:
-            value = right[key]
-            right[key] = recursive_run_function_lhs(value, func, key, *args, **kwargs)
-    # BUG: What about str and tuple? We only specifically handle list and dict
-    # here, is that OK?
-    else:
-        right = func(right, left, *args, **kwargs)
-        # raise TypeError("Needs str, list, or dict")
-    return right
-
-
-def recursive_run_function_new(tree, right, level, func, *args, **kwargs):
+def recursive_run_function(tree, right, level, func, *args, **kwargs):
     """ Recursively runs func on all nested dicts.
 
-    Tree is a list starting at the top of the config dictionary, where it will be labeled "top"
+    Tree is a list starting at the top of the config dictionary, where it will
+    be labeled "top"
 
     Parameters
     ----------
@@ -871,7 +806,9 @@ def recursive_run_function_new(tree, right, level, func, *args, **kwargs):
     level : str, one of "mappings", "atomic", "always"
         When to perform func
     func : callable
-        An function to perform on all levels where the type of ``right`` is in ``level``.
+        An function to perform on all levels where the type of ``right`` is in
+        ``level``. See the Notes for how this function's call signature should
+        look.
     *args :
         Passed to func
     **kwargs :
@@ -880,6 +817,16 @@ def recursive_run_function_new(tree, right, level, func, *args, **kwargs):
     Returns
     -------
     right
+
+    Notes
+    -----
+    The ``func`` argument must be a callable (i.e. a function) and **must**
+    have a call signature of the following form:
+
+    .. python::
+
+        def func(tree, right, *args, **kwargs(
+
     """
     logging.debug("Top of function")
     logging.debug("tree=%s", tree)
@@ -891,8 +838,6 @@ def recursive_run_function_new(tree, right, level, func, *args, **kwargs):
         do_func_for = [str, dict, list, int, float, bool]
     else:
         do_func_for = []
-
-    # def func(tree, right, *args, **kwargs):
 
     logger.debug("right is a %s!", type(right))
     if type(right) in do_func_for:
@@ -924,7 +869,7 @@ def recursive_run_function_new(tree, right, level, func, *args, **kwargs):
 
     if isinstance(right, list):
         for index, item in enumerate(right):
-            new_item = recursive_run_function_new(
+            new_item = recursive_run_function(
                 tree + [None], item, level, func, *args, **kwargs
             )
             right[index] = new_item
@@ -932,7 +877,7 @@ def recursive_run_function_new(tree, right, level, func, *args, **kwargs):
         keys = list(right)
         for key in keys:
             value = right[key]
-            right[key] = recursive_run_function_new(
+            right[key] = recursive_run_function(
                 tree + [key], value, level, func, *args, **kwargs
             )
     return right
@@ -964,8 +909,6 @@ def recursive_get(config_to_search, config_elements):
         configurations.
     """
     logging.debug("Incoming config elements: %s", config_elements)
-    # NOTE(PG) I really don't like the logic in this function... :-( It'd be
-    # much cleaner if this one and actually_recursive_get could be combined...
     this_config = config_elements.pop(0)
 
     logger.debug("this_config=%s", this_config)
@@ -1010,20 +953,6 @@ def actually_find_variable(tree, rhs, full_config):
     if config_elements[0] not in valid_names:
         config_elements.insert(0, tree[0])
 
-    # if config_elements[0] in ["setup"]:
-    #     del config_elements[0]
-    # elif config_elements[0] in [
-    #     "computer",
-    #     full_config["model"],
-    #     full_config["submodels"],
-    # ]:
-    #     pass
-    # else:
-    #     try:
-    #         raw_str = tree[0] + "." + rhs
-    #         return actually_find_variable(tree, raw_str, full_config)
-    #     except:
-    #         pass
     try:
         var_result = recursive_get(full_config, config_elements)
         return var_result
@@ -1110,28 +1039,6 @@ def list_to_multikey_lhs(tree, rhs, config_to_search):
     return rhs
 
 
-def pass_down(config, key):
-    """
-    Passes attributes downwards.
-    """
-    for thing_below in config[key]:
-        this_thing = config[thing_below]
-        this_thing.setdefault("inherited_attrs", {})
-        this_thing.setdefault("progenitor_attrs", {})
-        popped_thing_below = config.pop(thing_below)
-        for k, v in config.items():
-            # This next part is still a bit confusing, but it looks like it
-            # works...?
-            if k not in config[key] and k not in this_thing and k != key:
-                logger.debug("Passing %s=%s down to %s", k, v, thing_below)
-                # this_thing["inherited_attrs"][k] = v  # if k not in config[key]
-                this_thing[k] = v  # PG: I'm not 100% sure here, but it seems to work?
-            else:
-                logger.debug("%s already has an attribute %s", thing_below, k)
-                # this_thing["progenitor_attrs"][k] = [v]
-        config[thing_below] = popped_thing_below
-
-
 def determine_computer_from_hostname():
     """
     Determines which yaml config file is needed for this computer
@@ -1174,7 +1081,7 @@ def do_math_in_entry(tree, rhs, config):
         math = math[::-1]
         before_math = before_math[::-1]
         ## Now we want to actually do math
-        if date_marker in math:
+        if DATE_MARKER in math:
             all_dates = []
             steps = math.split(" ")
             # Remove emtpy strings from the list
@@ -1185,7 +1092,7 @@ def do_math_in_entry(tree, rhs, config):
                 if step in ["+", "-"]:
                     math = math + step
                 else:
-                    all_dates.append(Date(step.replace(date_marker, "")))
+                    all_dates.append(Date(step.replace(DATE_MARKER, "")))
                     math = math + "all_dates[" + str(index) + "]"
                     index += 1
         result = str(eval(math))
@@ -1193,29 +1100,26 @@ def do_math_in_entry(tree, rhs, config):
     return entry.strip()
 
 
-date_marker = ">>>THIS_IS_A_DATE<<<"
-
-
 def mark_dates(tree, rhs, config):
-    """Adds the ``date_marker`` to any entry who's key ends with ``"date"``"""
+    """Adds the ``DATE_MARKER`` to any entry who's key ends with ``"date"``"""
     if not tree[-1]:
         tree = tree[:-1]
     lhs = tree[-1]
     entry = rhs
     logging.debug(lhs)
     if isinstance(lhs, str) and lhs.endswith("date"):
-        entry = str(entry) + date_marker
+        entry = str(entry) + DATE_MARKER
     return entry
 
 
 def unmark_dates(tree, rhs, config):
-    """Removes the ``date_marker`` to any entry who's entry contains the ``date_marker``."""
+    """Removes the ``DATE_MARKER`` to any entry who's entry contains the ``DATE_MARKER``."""
     if not tree[-1]:
         tree = tree[:-1]
     lhs = tree[-1]
     entry = rhs
-    if isinstance(entry, str) and date_marker in entry:
-        entry = entry.replace(date_marker, "")
+    if isinstance(entry, str) and DATE_MARKER in entry:
+        entry = entry.replace(DATE_MARKER, "")
     return entry
 
 
@@ -1501,19 +1405,15 @@ class ConfigSetup(GeneralConfig):
         logging.debug("After priority merge:")
         pprint_config(self.config)
 
-        recursive_run_function_new([], self.config, "atomic", mark_dates, self.config)
+        recursive_run_function([], self.config, "atomic", mark_dates, self.config)
 
-        recursive_run_function_new(
-            [], self.config, "atomic", find_variable, self.config
-        )
+        recursive_run_function([], self.config, "atomic", find_variable, self.config)
 
-        recursive_run_function_new(
-            [], self.config, "atomic", do_math_in_entry, self.config
-        )
+        recursive_run_function([], self.config, "atomic", do_math_in_entry, self.config)
 
-        recursive_run_function_new([], self.config, "atomic", unmark_dates, self.config)
+        recursive_run_function([], self.config, "atomic", unmark_dates, self.config)
 
-        recursive_run_function_new(
+        recursive_run_function(
             [], self.config, "always", list_to_multikey_lhs, self.config
         )
 

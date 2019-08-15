@@ -80,7 +80,7 @@ def yaml_file_to_dict(filepath):
     )
 
 
-def pprint_config(config):
+def pprint_config(config):  # pragma: no cover
     """
     Prints the dictionary given to the stdout in a nicely formatted YAML style.
 
@@ -161,18 +161,21 @@ def attach_to_config_and_reduce_keyword(
         # FIXME: Does this only need to work for lists?
         if isinstance(config_to_read_from[full_keyword], list):
             for item in config_to_read_from[full_keyword]:
-                # Suffix fix, this could be smarter:
                 model, model_part = (item.split(".")[0], ".".join(item.split(".")[1:]))
-                logger.debug("Attaching: %s for %s", model_part, model)
-                #
+
+                logger.debug("Reading %s", FUNCTION_PATH + "/" + model + "/" + item)
                 tmp_config = yaml_file_to_dict(FUNCTION_PATH + "/" + model + "/" + item)
+
+                logger.debug("Attaching: %s for %s", model_part, model)
                 config_to_write_to[tmp_config["model"]] = tmp_config
-                # config[item] = yaml_file_to_dict(loadable_item)
+
                 for attachment in CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE:
                     logger.debug("Attaching: %s", attachment)
                     attach_to_config_and_remove(
                         config_to_write_to[tmp_config["model"]], attachment
                     )
+        else:
+            raise TypeError("The entries in %s must be a list!!" % full_keyword)
     del config_to_read_from[full_keyword]
 
 
@@ -1427,7 +1430,7 @@ class ConfigComponent(GeneralConfig):
         )
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
 
     import argparse
 

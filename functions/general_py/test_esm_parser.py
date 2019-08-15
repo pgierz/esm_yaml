@@ -1,151 +1,155 @@
-import unittest
+"""
+Tests for the ESM-Config YAML Parser
+"""
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+
+from builtins import open
+from future import standard_library
+
+standard_library.install_aliases()
+
 import logging
-import coloredlogs
-
-FORMAT = (
-    "[%(asctime)s,%(msecs)03d:%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
-)
-
-coloredlogs.install(fmt=FORMAT, level=logging.DEBUG)
-
+import os
+import unittest
 
 import esm_parser
 
 
 class TestParserFuncs(unittest.TestCase):
-    def test_make_choices(self):
-        input_dict = {
-            "hostnames": {
-                "login": "ollie[01]",
-                "compute": "prod-[0-9]{3}",
-                "mini": "mini",
-            },
-            "nodetypes": ["login", "compute", "fat", "mini"],
-            "batch_system": "slurm",
-            "operating_system": {"linux": "centos"},
-            "jobtype": "compute",
-            "choose_jobtype": {
-                "post": {"partition": "smp"},
-                "compute": {"partition": "mpp"},
-            },
-            "choose_partition": {
-                "mpp": {"cores_per_node": 36},
-                "smp": {"cores_per_node": 1},
-            },
-            "logical_cpus_per_core": 1,
-            "threads_per_core": 1,
-            "pool_directories": {
-                "pool": "/work/ollie/pool",
-                "projects": "/work/ollie/projects",
-            },
-            "cores_per_node": 888,
-            "choose_submitted": {True: {"modules_needed": ["centoslibs"]}},
-            "submitted": True,
-            "accounting": False,
-            "hyper_flag": "",
-        }
+    def test_yaml_file_to_dict(self):
+        """Tests extension expansion and loading of YAML documents"""
+        document = """
+        model: PISM
+        nest:
+            Domains:
+                - nhem
+                - shem
+                - gris
+                - something
+            Resolutions:
+                - big
+                - small
+        """
 
-        output_dict = {
-            "hostnames": {
-                "login": "ollie[01]",
-                "compute": "prod-[0-9]{3}",
-                "mini": "mini",
-            },
-            "nodetypes": ["login", "compute", "fat", "mini"],
-            "batch_system": "slurm",
-            "operating_system": {"linux": "centos"},
-            "jobtype": "compute",
-            "partition": "mpp",
-            "cores_per_node": 36,
-            "logical_cpus_per_core": 1,
-            "threads_per_core": 1,
-            "pool_directories": {
-                "pool": "/work/ollie/pool",
-                "projects": "/work/ollie/projects",
-            },
-            "modules_needed": ["centoslibs"],
-            "submitted": True,
-            "accounting": False,
-            "hyper_flag": "",
-        }
+        for valid_extension in esm_parser.YAML_AUTO_EXTENSIONS:
+            with open("test" + valid_extension, "w") as test_file:
+                test_file.write(document)
+            result = esm_parser.yaml_file_to_dict("test")
+            try:
+                self.assertIsInstance(result, dict)
+            finally:
+                os.remove("test" + valid_extension)
+        with open("test.hjkl", "w") as bad_test_file:
+            bad_test_file.write(document)
+        try:
+            self.assertRaises(FileNotFoundError, esm_parser.yaml_file_to_dict, "test")
+        finally:
+            os.remove("test.hjkl")
 
-        answer = esm_parser.make_choices_new(
-            ["computer"],
-            input_dict,
-            {"model": "some_model", "setup": "some_setup", "computer": input_dict},
+    def test_attach_to_config_and_remove(self):
+        test_dict = {"further_reading": "more"}
+        document = """
+        something_more:
+            - lala
+            - tutu
+            - tata
+        """
+        with open("more.yaml", "w") as further_reading:
+            further_reading.write(document)
+        try:
+            esm_parser.attach_to_config_and_remove(test_dict, "further_reading")
+            self.assertNotIn("further_reading", test_dict)
+            self.assertIn("something_more", test_dict)
+        finally:
+            os.remove("more.yaml")
+
+    def test_attach_to_config_and_reduce_keyword_typeerror(self):
+        config_to_read_from = {"model": "Earth", "include_files": "satellites"}
+        config_to_write_to = {}
+        full_keyword = "include_files"
+
+        self.assertRaises(
+            TypeError,
+            esm_parser.attach_to_config_and_reduce_keyword,
+            config_to_read_from,
+            config_to_write_to,
+            full_keyword,
         )
-        print(answer)
-        self.assertEqual(output_dict, answer)
 
-    def test_make_choices_nested(self):
-        input_dict = {
-            "model": "some_model",
-            "setup": "some_setup",
-            "computer": {
-                "hostnames": {
-                    "login": "ollie[01]",
-                    "compute": "prod-[0-9]{3}",
-                    "mini": "mini",
-                },
-                "nodetypes": ["login", "compute", "fat", "mini"],
-                "batch_system": "slurm",
-                "operating_system": {"linux": "centos"},
-                "jobtype": "compute",
-                "choose_jobtype": {
-                    "post": {"partition": "smp"},
-                    "compute": {"partition": "mpp"},
-                },
-                "choose_partition": {
-                    "mpp": {"cores_per_node": 36},
-                    "smp": {"cores_per_node": 1},
-                },
-                "logical_cpus_per_core": 1,
-                "threads_per_core": 1,
-                "pool_directories": {
-                    "pool": "/work/ollie/pool",
-                    "projects": "/work/ollie/projects",
-                },
-                "cores_per_node": 888,
-                "choose_submitted": {True: {"modules_needed": ["centoslibs"]}},
-                "submitted": True,
-                "accounting": False,
-                "hyper_flag": "",
-            },
-            "doodad": {"choose_cores_per_node": {"36": {"thing"}}},
+    def test_attach_to_config_and_reduce_keyword_nolevel(self):
+        config_to_read_from = {
+            "model": "Earth",
+            "added_stuff": ["test_echam.satellites"],
         }
+        config_to_write_to = {}
+        full_keyword = "added_stuff"
 
-        output_dict = {
-            "model": "some_model",
-            "setup": "some_setup",
-            "computer": {
-                "hostnames": {
-                    "login": "ollie[01]",
-                    "compute": "prod-[0-9]{3}",
-                    "mini": "mini",
-                },
-                "nodetypes": ["login", "compute", "fat", "mini"],
-                "batch_system": "slurm",
-                "operating_system": {"linux": "centos"},
-                "jobtype": "compute",
-                "partition": "mpp",
-                "cores_per_node": 36,
-                "logical_cpus_per_core": 1,
-                "threads_per_core": 1,
-                "pool_directories": {
-                    "pool": "/work/ollie/pool",
-                    "projects": "/work/ollie/projects",
-                },
-                "modules_needed": ["centoslibs"],
-                "submitted": True,
-                "accounting": False,
-                "hyper_flag": "",
-            },
-            "doodad": "thing",
+        echam_satellites = """
+        model: Luna
+        description: 'The Moon'
+        """
+        with open(
+            esm_parser.FUNCTION_PATH + "/test_echam/test_echam.satellites.yaml", "w"
+        ) as test_yaml:
+            test_yaml.write(echam_satellites)
+
+        try:
+            esm_parser.attach_to_config_and_reduce_keyword(
+                config_to_read_from,
+                config_to_write_to,
+                full_keyword,
+                reduced_keyword="files",
+            )
+            expected_answer = {
+                "files": ["test_echam.satellites"],
+                "Luna": {"model": "Luna", "description": "The Moon"},
+            }
+            self.assertEqual(config_to_write_to, expected_answer)
+        finally:
+            os.remove(
+                esm_parser.FUNCTION_PATH + "/test_echam/test_echam.satellites.yaml"
+            )
+
+    def test_attach_to_config_and_reduce_keyword_level(self):
+        config_to_read_from = {
+            "model": "Earth",
+            "added_stuff": ["test_echam.satellites"],
         }
+        config_to_write_to = {"levelA": {}}
+        full_keyword = "added_stuff"
 
-        answer = esm_parser.make_choices_new(["computer"], input_dict, input_dict)
-        self.maxDiff = None
-        self.assertEqual(output_dict, answer)
+        echam_satellites = """
+        model: Luna
+        description: 'The Moon'
+        """
+        with open(
+            esm_parser.FUNCTION_PATH + "/test_echam/test_echam.satellites.yaml", "w"
+        ) as test_yaml:
+            test_yaml.write(echam_satellites)
+
+        try:
+            esm_parser.attach_to_config_and_reduce_keyword(
+                config_to_read_from,
+                config_to_write_to,
+                full_keyword,
+                reduced_keyword="files",
+                level_to_write_to="levelA",
+            )
+            expected_answer = {
+                "levelA": {"files": ["test_echam.satellites"]},
+                "Luna": {"model": "Luna", "description": "The Moon"},
+            }
+            self.assertEqual(config_to_write_to, expected_answer)
+        finally:
+            os.remove(
+                esm_parser.FUNCTION_PATH + "/test_echam/test_echam.satellites.yaml"
+            )
+
+    def teste_attach_to_config_and_remove(self):
+        pass  # TODO
 
 
 if __name__ == "__main__":

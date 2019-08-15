@@ -24,6 +24,8 @@ from builtins import super
 from future import standard_library
 from pprint import pformat
 
+standard_library.install_aliases()
+
 # Date class
 from esm_calendar import Date
 
@@ -31,7 +33,9 @@ from esm_calendar import Date
 import coloredlogs
 import yaml
 
+# Logger and related constants
 logger = logging.getLogger("root")
+DEBUG_MODE = logger.level == logging.DEBUG
 FORMAT = (
     "[%(asctime)s,%(msecs)03d:%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
 )
@@ -40,9 +44,7 @@ f_handler.setFormatter(FORMAT)
 logger.addHandler(f_handler)
 
 
-standard_library.install_aliases()
-
-
+# Module Constants:
 CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE = ["further_reading"]
 DATE_MARKER = ">>>THIS_IS_A_DATE<<<"
 FUNCTION_PATH = os.path.dirname(__file__) + "/../"
@@ -716,7 +718,8 @@ def resolve_choose(model_with_choose, choose_key, setup_config, model_config):
         raise KeyError("Something else is horribly wrong")
 
     model_name, key = choose_key.replace("choose_", "").split(".")
-    pprint_config(config_to_replace_in)
+    if DEBUG_MODE:
+        pprint_config(config_to_replace_in)
     choice = config_to_search_in[model_name][key]
 
     logging.debug(model_with_choose)
@@ -1157,7 +1160,8 @@ class ConfigTest(GeneralConfig):
 class SimulationSetup(object):
     def __init__(self, name):
         self.config = ConfigSetup(name)
-        pprint_config(self.config)
+        if DEBUG_MODE:
+            pprint_config(self.config)
         components = []
         for component in self.config["setup"]["valid_model_names"]:
             components.append(SimulationComponent(self.config[component]))
@@ -1381,9 +1385,11 @@ class ConfigSetup(GeneralConfig):
         )
 
         logging.debug("Setup after cross update:")
-        pprint_config(setup_config)
+        if DEBUG_MODE:
+            pprint_config(setup_config)
         logging.debug("Model after cross update:")
-        pprint_config(model_config)
+        if DEBUG_MODE:
+            pprint_config(model_config)
 
         add_entries_to_chapter_in_config(
             model_config, valid_model_names, setup_config, valid_setup_names
@@ -1393,9 +1399,12 @@ class ConfigSetup(GeneralConfig):
         )
 
         logging.debug("Setup before priority merge:")
-        pprint_config(setup_config)
+        if DEBUG_MODE:
+            pprint_config(setup_config)
         logging.debug("Model before priority merge:")
-        pprint_config(model_config)
+        if DEBUG_MODE:
+            pprint_config(model_config)
+
         self.model_config = model_config
         self.setup_config = setup_config
         self.user_config = {}  # TODO read runscript to dict
@@ -1406,7 +1415,8 @@ class ConfigSetup(GeneralConfig):
             self.config, self.model_config, priority="first"
         )
         logging.debug("After priority merge:")
-        pprint_config(self.config)
+        if DEBUG_MODE:
+            pprint_config(self.config)
 
         recursive_run_function([], self.config, "atomic", mark_dates, self.config)
 
@@ -1471,5 +1481,6 @@ if __name__ == "__main__":  # pragma: no cover
 
     if ARGS.setup:
         SETUP = SimulationSetup(ARGS.setup)
-        yaml.Dumper.ignore_aliases = lambda *args: True
-        print(yaml.dump(SETUP.config, default_flow_style=False))
+        print("-" * 80)
+        print("FINAL OUTPUT")
+        pprint_config(SETUP.config)

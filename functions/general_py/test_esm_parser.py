@@ -148,8 +148,66 @@ class TestParserFuncs(unittest.TestCase):
                 esm_parser.FUNCTION_PATH + "/test_echam/test_echam.satellites.yaml"
             )
 
-    def teste_attach_to_config_and_remove(self):
-        pass  # TODO
+    def test_attach_to_config_and_remove_list(self):
+        document = """
+        further_reading:
+            - test_echam.some_file
+        """
+        some_file = """
+        stuff: things
+        """
+        try:
+            for f, c in zip(
+                [
+                    "../test_echam/example_test_echam.yaml",
+                    "../test_echam/test_echam.some_file.yaml",
+                ],
+                [document, some_file],
+            ):
+                with open(f, "w") as test_file:
+                    test_file.write(c)
+            config = esm_parser.yaml_file_to_dict(
+                "../test_echam/example_test_echam.yaml"
+            )
+            esm_parser.attach_to_config_and_remove(config, "further_reading")
+            expected_answer = {"stuff": "things"}
+            self.assertEqual(config, expected_answer)
+        finally:
+            for f in [
+                "../test_echam/example_test_echam.yaml",
+                "../test_echam/test_echam.some_file.yaml",
+            ]:
+                os.remove(f)
+
+    def test_attach_to_config_and_remove_simple(self):
+        document = """
+        further_reading: test_echam.some_file
+        """
+        some_file = """
+        stuff: things
+        """
+        try:
+            for f, c in zip(
+                [
+                    "../test_echam/example_test_echam.yaml",
+                    "../test_echam/test_echam.some_file.yaml",
+                ],
+                [document, some_file],
+            ):
+                with open(f, "w") as test_file:
+                    test_file.write(c)
+            config = esm_parser.yaml_file_to_dict(
+                "../test_echam/example_test_echam.yaml"
+            )
+            esm_parser.attach_to_config_and_remove(config, "further_reading")
+            expected_answer = {"stuff": "things"}
+            self.assertEqual(config, expected_answer)
+        finally:
+            for f in [
+                "../test_echam/example_test_echam.yaml",
+                "../test_echam/test_echam.some_file.yaml",
+            ]:
+                os.remove(f)
 
 
 if __name__ == "__main__":

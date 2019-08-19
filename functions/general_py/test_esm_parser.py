@@ -49,23 +49,6 @@ class TestParserFuncs(unittest.TestCase):
         finally:
             os.remove("test.hjkl")
 
-    def test_attach_to_config_and_remove(self):
-        test_dict = {"further_reading": "more"}
-        document = """
-        something_more:
-            - lala
-            - tutu
-            - tata
-        """
-        with open("more.yaml", "w") as further_reading:
-            further_reading.write(document)
-        try:
-            esm_parser.attach_to_config_and_remove(test_dict, "further_reading")
-            self.assertNotIn("further_reading", test_dict)
-            self.assertIn("something_more", test_dict)
-        finally:
-            os.remove("more.yaml")
-
     def test_attach_to_config_and_reduce_keyword_typeerror(self):
         config_to_read_from = {"model": "Earth", "include_files": "satellites"}
         config_to_write_to = {}

@@ -214,7 +214,13 @@ def attach_to_config_and_remove(config, attach_key):
                 )
                 config.update(attachable_config)
         elif isinstance(attach_value, str):
-            attachable_config = yaml_file_to_dict(attach_value)
+            model, model_part = (
+                attach_value.split(".")[0],
+                ".".join(attach_value.split(".")[1:]),
+            )
+            attachable_config = yaml_file_to_dict(
+                FUNCTION_PATH + "/" + model + "/" + attach_value
+            )
             config.update(attachable_config)
         else:
             raise TypeError("%s needs to have values of type list or str!" % attach_key)

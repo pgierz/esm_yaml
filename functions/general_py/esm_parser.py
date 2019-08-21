@@ -24,6 +24,8 @@ from builtins import super
 from future import standard_library
 from pprint import pformat
 
+standard_library.install_aliases()
+
 # Date class
 from esm_calendar import Date
 
@@ -31,7 +33,9 @@ from esm_calendar import Date
 import coloredlogs
 import yaml
 
+# Logger and related constants
 logger = logging.getLogger("root")
+DEBUG_MODE = logger.level == logging.DEBUG
 FORMAT = (
     "[%(asctime)s,%(msecs)03d:%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
 )
@@ -40,9 +44,7 @@ f_handler.setFormatter(FORMAT)
 logger.addHandler(f_handler)
 
 
-standard_library.install_aliases()
-
-
+# Module Constants:
 CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE = ["further_reading"]
 DATE_MARKER = ">>>THIS_IS_A_DATE<<<"
 FUNCTION_PATH = os.path.dirname(__file__) + "/../"
@@ -80,7 +82,7 @@ def yaml_file_to_dict(filepath):
     )
 
 
-def pprint_config(config):
+def pprint_config(config):  # pragma: no cover
     """
     Prints the dictionary given to the stdout in a nicely formatted YAML style.
 
@@ -161,18 +163,21 @@ def attach_to_config_and_reduce_keyword(
         # FIXME: Does this only need to work for lists?
         if isinstance(config_to_read_from[full_keyword], list):
             for item in config_to_read_from[full_keyword]:
-                # Suffix fix, this could be smarter:
                 model, model_part = (item.split(".")[0], ".".join(item.split(".")[1:]))
-                logger.debug("Attaching: %s for %s", model_part, model)
-                #
+
+                logger.debug("Reading %s", FUNCTION_PATH + "/" + model + "/" + item)
                 tmp_config = yaml_file_to_dict(FUNCTION_PATH + "/" + model + "/" + item)
+
+                logger.debug("Attaching: %s for %s", model_part, model)
                 config_to_write_to[tmp_config["model"]] = tmp_config
-                # config[item] = yaml_file_to_dict(loadable_item)
+
                 for attachment in CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE:
                     logger.debug("Attaching: %s", attachment)
                     attach_to_config_and_remove(
                         config_to_write_to[tmp_config["model"]], attachment
                     )
+        else:
+            raise TypeError("The entries in %s must be a list!!" % full_keyword)
     del config_to_read_from[full_keyword]
 
 
@@ -209,7 +214,13 @@ def attach_to_config_and_remove(config, attach_key):
                 )
                 config.update(attachable_config)
         elif isinstance(attach_value, str):
-            attachable_config = yaml_file_to_dict(attach_value)
+            model, model_part = (
+                attach_value.split(".")[0],
+                ".".join(attach_value.split(".")[1:]),
+            )
+            attachable_config = yaml_file_to_dict(
+                FUNCTION_PATH + "/" + model + "/" + attach_value
+            )
             config.update(attachable_config)
         else:
             raise TypeError("%s needs to have values of type list or str!" % attach_key)
@@ -713,7 +724,8 @@ def resolve_choose(model_with_choose, choose_key, setup_config, model_config):
         raise KeyError("Something else is horribly wrong")
 
     model_name, key = choose_key.replace("choose_", "").split(".")
-    pprint_config(config_to_replace_in)
+    if DEBUG_MODE:
+        pprint_config(config_to_replace_in)
     choice = config_to_search_in[model_name][key]
 
     logging.debug(model_with_choose)
@@ -1154,7 +1166,8 @@ class ConfigTest(GeneralConfig):
 class SimulationSetup(object):
     def __init__(self, name):
         self.config = ConfigSetup(name)
-        pprint_config(self.config)
+        if DEBUG_MODE:
+            pprint_config(self.config)
         components = []
         for component in self.config["setup"]["valid_model_names"]:
             components.append(SimulationComponent(self.config[component]))
@@ -1378,9 +1391,11 @@ class ConfigSetup(GeneralConfig):
         )
 
         logging.debug("Setup after cross update:")
-        pprint_config(setup_config)
+        if DEBUG_MODE:
+            pprint_config(setup_config)
         logging.debug("Model after cross update:")
-        pprint_config(model_config)
+        if DEBUG_MODE:
+            pprint_config(model_config)
 
         add_entries_to_chapter_in_config(
             model_config, valid_model_names, setup_config, valid_setup_names
@@ -1390,9 +1405,12 @@ class ConfigSetup(GeneralConfig):
         )
 
         logging.debug("Setup before priority merge:")
-        pprint_config(setup_config)
+        if DEBUG_MODE:
+            pprint_config(setup_config)
         logging.debug("Model before priority merge:")
-        pprint_config(model_config)
+        if DEBUG_MODE:
+            pprint_config(model_config)
+
         self.model_config = model_config
         self.setup_config = setup_config
         self.user_config = {}  # TODO read runscript to dict
@@ -1403,7 +1421,8 @@ class ConfigSetup(GeneralConfig):
             self.config, self.model_config, priority="first"
         )
         logging.debug("After priority merge:")
-        pprint_config(self.config)
+        if DEBUG_MODE:
+            pprint_config(self.config)
 
         recursive_run_function([], self.config, "atomic", mark_dates, self.config)
 
@@ -1427,7 +1446,7 @@ class ConfigComponent(GeneralConfig):
         )
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
 
     import argparse
 
@@ -1468,5 +1487,6 @@ if __name__ == "__main__":
 
     if ARGS.setup:
         SETUP = SimulationSetup(ARGS.setup)
-        yaml.Dumper.ignore_aliases = lambda *args: True
-        print(yaml.dump(SETUP.config, default_flow_style=False))
+        print("-" * 80)
+        print("FINAL OUTPUT")
+        pprint_config(SETUP.config)

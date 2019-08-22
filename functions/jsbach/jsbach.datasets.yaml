@@ -3,14 +3,14 @@ dynveg_file_ending: "_dynveg"
 
 
 forcing_sources:
-        "jsbach_1850": "${adj_input_dir}/jsbach_${echam.resolution}${echam.ocean_resolution}_11tiles_5layers_1850${dynveg_file_ending}.nc" 
-        "jsbach_1976": "${adj_input_dir}/jsbach_${echam.resolution}${echam.ocean_resolution}_11tiles_5layers_1850${dynveg_file_ending}.nc" 
+        "jsbach_1850": "${adj_input_dir}/jsbach_${echam.resolution}${echam.ocean_resolution}_11tiles_5layers_1850${dynveg_file_ending}.nc"
+        "jsbach_1976": "${adj_input_dir}/jsbach_${echam.resolution}${echam.ocean_resolution}_11tiles_5layers_1850${dynveg_file_ending}.nc"
         "LU_1850": "${input_dir}/${echam.resolution}/New_Hampshire_LCC/${hist_fold}/LUH_harvest_${echam.resolution}_1850.nc"
         "LU_1950": "${input_dir}/${echam.resolution}/New_Hampshire_LCC/${hist_fold}/LUH_harvest_${echam.resolution}_1950.nc"
-        "LU_HIST": 
-                "${input_dir}/${echam.resolution}/New_Hampshire_LCC/${hist_fold}/LUH_harvest_${echam.resolution}_1850.nc"
+        "LU_HIST":
+                "${input_dir}/${echam.resolution}/New_Hampshire_LCC/${hist_fold}/LUH_harvest_${echam.resolution}_1850.nc":
                         to: 1850
-                "${input_dir}/${echam.resolution}/New_Hampshire_LCC/${hist_fold}/LUH_harvest_${echam.resolution}_@YEAR@.nc"
+                "${input_dir}/${echam.resolution}/New_Hampshire_LCC/${hist_fold}/LUH_harvest_${echam.resolution}_@YEAR@.nc":
                         from: 1851
         "cover_fract_HIST":
                "${adj_input_dir}/jsbach_${echam.resolution}${echam.ocean_resolution}_11tiles_1850.nc":
@@ -21,33 +21,33 @@ forcing_sources:
 
 
 choose_dataset:
-        r0007: 
+        r0007:
                 "hist_fold": "hist"
                 "dynveg_file_ending": ""
                 forcing_sources:
-                        "LU_RCP26":                
-                                "${input_dir}/${echam.resolution}/New_Hampshire_LCC/${hist_fold}/LUH_harvest_${echam.resolution}_1850.nc"
+                        "LU_RCP26":
+                                "${input_dir}/${echam.resolution}/New_Hampshire_LCC/${hist_fold}/LUH_harvest_${echam.resolution}_1850.nc":
                                         to: 1850
-                                "${input_dir}/${echam.resolution}/New_Hampshire_LCC/${hist_fold}/LUH_harvest_${echam.resolution}_@YEAR@.nc"
+                                "${input_dir}/${echam.resolution}/New_Hampshire_LCC/${hist_fold}/LUH_harvest_${echam.resolution}_@YEAR@.nc":
                                         from: 1851
                                         to: 2014
-                                "${input_dir}/${echam.resolution}/New_Hampshire_LCC/rcp26/LUH_harvest_${echam.resolution}_rcp26_@YEAR@.nc"
+                                "${input_dir}/${echam.resolution}/New_Hampshire_LCC/rcp26/LUH_harvest_${echam.resolution}_rcp26_@YEAR@.nc":
                                         from: 2015
-                        "LU_RCP45":                
-                                "${input_dir}/${echam.resolution}/New_Hampshire_LCC/${hist_fold}/LUH_harvest_${echam.resolution}_1850.nc"
+                        "LU_RCP45":
+                                "${input_dir}/${echam.resolution}/New_Hampshire_LCC/${hist_fold}/LUH_harvest_${echam.resolution}_1850.nc":
                                         to: 1850
-                                "${input_dir}/${echam.resolution}/New_Hampshire_LCC/${hist_fold}/LUH_harvest_${echam.resolution}_@YEAR@.nc"
+                                "${input_dir}/${echam.resolution}/New_Hampshire_LCC/${hist_fold}/LUH_harvest_${echam.resolution}_@YEAR@.nc":
                                         from: 1851
                                         to: 2014
-                                "${input_dir}/${echam.resolution}/New_Hampshire_LCC/rcp45/LUH_harvest_${echam.resolution}_rcp45_@YEAR@.nc"
+                                "${input_dir}/${echam.resolution}/New_Hampshire_LCC/rcp45/LUH_harvest_${echam.resolution}_rcp45_@YEAR@.nc":
                                         from: 2015
-                        "LU_RCP85":                
-                                "${input_dir}/${echam.resolution}/New_Hampshire_LCC/${hist_fold}/LUH_harvest_${echam.resolution}_1850.nc"
+                        "LU_RCP85":
+                                "${input_dir}/${echam.resolution}/New_Hampshire_LCC/${hist_fold}/LUH_harvest_${echam.resolution}_1850.nc":
                                         to: 1850
-                                "${input_dir}/${echam.resolution}/New_Hampshire_LCC/${hist_fold}/LUH_harvest_${echam.resolution}_@YEAR@.nc"
+                                "${input_dir}/${echam.resolution}/New_Hampshire_LCC/${hist_fold}/LUH_harvest_${echam.resolution}_@YEAR@.nc":
                                         from: 1851
                                         to: 2014
-                                "${input_dir}/${echam.resolution}/New_Hampshire_LCC/rcp85/LUH_harvest_${echam.resolution}_rcp85_@YEAR@.nc"
+                                "${input_dir}/${echam.resolution}/New_Hampshire_LCC/rcp85/LUH_harvest_${echam.resolution}_rcp85_@YEAR@.nc":
                                         from: 2015
         r0010:
                 forcing_sources:

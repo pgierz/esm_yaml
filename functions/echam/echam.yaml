@@ -29,6 +29,8 @@ yr_perp_off: false
 transient_advance_forcing: false
 ocean_resolution: 'GR15'
 disturbance: "1.000001"
+lresume: false
+
 
 parent_date: 22941231
 parent_expid: khw0030

@@ -345,6 +345,26 @@ def update_models_from_setup(
                 del setup_config[source_setup_name][target_model_name]
 
 
+def dict_merge(dct, merge_dct):
+    """ Recursive dict merge. Inspired by :meth:``dict.update()``, instead of
+    updating only top-level keys, dict_merge recurses down into dicts nested
+    to an arbitrary depth, updating keys. The ``merge_dct`` is merged into
+    ``dct``.
+    :param dct: dict onto which the merge is executed
+    :param merge_dct: dct merged into dct
+    :return: None
+    """
+    for k, v in merge_dct.items():
+        if (
+            k in dct
+            and isinstance(dct[k], dict)
+            and isinstance(merge_dct[k], collections.Mapping)
+        ):
+            dict_merge(dct[k], merge_dct[k])
+        else:
+            dct[k] = merge_dct[k]
+
+
 def deep_update(
     chapter, entries, target_model, source_model, model_config, setup_config
 ):
@@ -375,10 +395,7 @@ def deep_update(
             chapter, entries, target_model, source_model, model_config, setup_config
         )
     else:
-        logging.debug(target_model)
-        logging.debug(chapter)
-        logging.debug(entries)
-        target_config[target_model].update({chapter: entries})
+        dict_merge(target_config[target_model], {chapter: entries})
 
 
 def find_remove_entries_in_config(mapping, model_name):

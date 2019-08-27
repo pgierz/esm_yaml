@@ -1054,7 +1054,7 @@ def find_variable(tree, rhs, full_config, white_or_black_list, isblacklist):
                     str(var_result),
                     str(more_rest),
                 )
-                logger.debug("Will return:", ok_part + var_result + more_rest)
+                logger.debug("Will return: %s", ok_part + var_result + more_rest)
                 return ok_part + var_result + more_rest
     return raw_str
 
@@ -1523,24 +1523,19 @@ class ConfigSetup(GeneralConfig):
         logging.debug("After priority merge:")
         pprint_config(self.config)
 
-        if False:
-            recursive_run_function([], self.config, "atomic", mark_dates, self.config)
-            recursive_run_function(
-                [],
-                self.config,
-                "atomic",
-                find_variable,
-                self.config,
-                gray_list,
-                isblacklist=True,
-            )
-            recursive_run_function(
-                [], self.config, "atomic", do_math_in_entry, self.config
-            )
-            recursive_run_function([], self.config, "atomic", unmark_dates, self.config)
-            recursive_run_function(
-                [], self.config, "always", list_to_multikey, self.config
-            )
+        recursive_run_function([], self.config, "atomic", mark_dates, self.config)
+        recursive_run_function(
+            [],
+            self.config,
+            "atomic",
+            find_variable,
+            self.config,
+            gray_list,
+            isblacklist=True,
+        )
+        recursive_run_function([], self.config, "atomic", do_math_in_entry, self.config)
+        recursive_run_function([], self.config, "atomic", unmark_dates, self.config)
+        recursive_run_function([], self.config, "always", list_to_multikey, self.config)
 
 
 class ConfigComponent(GeneralConfig):

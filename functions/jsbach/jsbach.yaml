@@ -18,6 +18,8 @@ pool_dir: "${computer.pool_directories.pool}/JSBACH"
 input_dir: "${pool_dir}/ECHAM6/input/${dataset}"
 adj_input_dir: "${input_dir}/${resolution}"
 
+dynamic_vegetations: True
+
 choose_dynamic_vegetations: 
         true:
                 dynveg: "_dynveg"
@@ -30,7 +32,7 @@ dataset: r0009
 forcing_sources:
         lctlib: "${model_dir}/lctlib_nlct21.def"
 
-choose_versions:
+choose_version:
         3.20:
                 dataset: r0010               
                 forcings:
@@ -54,35 +56,35 @@ choose_scenario:
                 forcings:
                         jsbach: jsbach_1850
                         LU: LU_1850
-                        choose_versions:
+                        choose_version:
                                 3.20:
                                         Ndepo: Ndepo_1850
         1850:
                 forcings:
                         jsbach: jsbach_1850
                         LU: LU_1850
-                        choose_versions:
+                        choose_version:
                                 3.20:
                                         Ndepo: Ndepo_1850
         PALEO:
                 forcings:
                         jsbach: jsbach_1850
                         LU: LU_1850
-                        choose_versions:
+                        choose_version:
                                 3.20:
                                         Ndepo: Ndepo_1850
         4CO2:
                 forcings:
                         jsbach: jsbach_1850
                         LU: LU_1850
-                        choose_versions:
+                        choose_version:
                                 3.20:
                                         Ndepo: Ndepo_1850
         1percCO2:
                 forcings:
                         jsbach: jsbach_1850
                         LU: LU_1850
-                        choose_versions:
+                        choose_version:
                                 3.20:
                                         Ndepo: Ndepo_1850
         RCP26:

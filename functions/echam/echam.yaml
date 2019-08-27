@@ -1,4 +1,4 @@
-# ECHAM YAML DEFAULT CONFIGURATION FILE
+# ECHAM YAML DEFAULT CONFIGURATION FILE:
 
 model: echam
 repository: https://gitlab.dkrz.de/modular_esm/echam6
@@ -34,7 +34,7 @@ lresume: false
 
 parent_date: 22941231
 parent_expid: khw0030
-parent_dir: "${pool_dir}/MPIESM/restart/dev/${input_parent_exp_id}/restart/echam6"
+parent_dir: "${pool_dir}/MPIESM/restart/dev/${parent_expid}/restart/echam6"
 
 pseudo_start_date: ${start_date}
 pseudo_end_date: ${next_date}
@@ -51,24 +51,24 @@ restart:
 
 # default directories
 
-model_dir: "${esm_master_dir}/echam-${version}"
-bin_dir: "${setup.model_dir}/bin"
+model_dir: "${general.BASE_DIR}/echam-${version}"
+bin_dir: "${setup.MODEL_DIR}/bin"
 pool_dir: "${computer.pool_directories.pool}/ECHAM6"
 input_dir: "${pool_dir}/ECHAM6/input/${dataset}"
 adj_input_dir: "${input_dir}/${resolution}"
 forcing_dir: "${input_dir}/${resolution}"
 greenhouse_dir: "${pool_dir}/ECHAM6"
-namelist_dir: "${esm_master_dir}/esm_runscripts/namelists/echam/${version}/${scenario}"
+namelist_dir: "${general.BASE_DIR}/esm_runscripts/namelists/echam/${version}/${scenario}"
 
 # choices
 
 choose_resolution:
         T63:
                 levels: "L47"
-                Timestep: 450
+                time_step: 450
                 _nx: 192
                 _ny: 96
-                choose_cores_per_node:
+                choose_computer.cores_per_node:
                         24:
                                 nproca: 24
                                 nprocb: 18
@@ -77,12 +77,12 @@ choose_resolution:
                                 nprocb: 18
         T31:
                 levels: "L19"
-                Timestep: 450
+                time_step: 450
                 _nx: 96
                 _ny: 48
         T127:
                 levels: "L47"
-                Timestep: 200
+                time_step: 200
                 _nx: 384
                 _ny: 192
 
@@ -213,41 +213,41 @@ choose_start_date.year:
                                 dynctl:
                                         enstdif: "${disturbance}"
 
-choose_co2:
+choose_CO2:
         '*':
                 namelist_changes:
                         namelist.echam:
                                 radctl:
                                         co2vmr: "${co2}"
 
-choose_ch4:
+choose_CH4:
         '*':
                 namelist_changes:
                         namelist.echam:
                                 radctl:
                                         ch4vmr: "${ch4}"
-choose_n2o:
+choose_N2O:
         '*':
                 namelist_changes:
                         namelist.echam:
                                 radctl:
                                         c2ovmr: "${n2o}"
 
-choose_cecc:
+choose_CECC:
         '*':
                 yr_perp_off: true
                 namelist_changes:
                         namelist.echam:
                                 radctl:
                                         cecc: "${cecc}"
-choose_cobld:
+choose_COBLD:
         '*':
                 yr_perp_off: true
                 namelist_changes:
                         namelist.echam:
                                 radctl:
                                         cobld: "${cobld}"
-choose_clonp:
+choose_CLONP:
         '*':
                 yr_perp_off: true
                 namelist_changes:

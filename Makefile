@@ -1,4 +1,4 @@
 default:
 
 %:
-	python esm-master.py "$@"
+	python functions/general_py/esm_master.py "$@"

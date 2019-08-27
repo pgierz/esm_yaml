@@ -77,13 +77,9 @@ from pprint import pformat
 
 standard_library.install_aliases()
 
-# NOTE: For documentation, we need to distinguish how to import Date
-# For more info, see: https://stackoverflow.com/questions/11536764/how-to-fix-attempted-relative-import-in-non-package-even-with-init-py
 # Date class
-if __package__ is None:
-    from esm_calendar import Date
-else:
-    from .esm_calendar import Date
+from esm_calendar import Date
+
 # Third-Party Imports
 import coloredlogs
 import yaml
@@ -654,7 +650,7 @@ def find_value_for_nested_key(mapping, key_of_interest, tree=[]):
     # raise KeyError("Couldn't find value for key %s", key_of_interest)
 
 
-def list_all_keys_starting_with_choose(mapping, model_name):
+def list_all_keys_starting_with_choose(mapping, model_name, ignore_list):
     """
     Given a ``mapping`` (e.g. a ``dict``-type object), list all keys that start
     with ``"choose_"`` on any level of the nested dictionary.
@@ -664,6 +660,8 @@ def list_all_keys_starting_with_choose(mapping, model_name):
     mapping : dict
         The dictionary to search through for keys starting with ``"choose_"``
 
+    model_name : str
+    ignore_list : list
     Returns
     -------
     all_chooses : list
@@ -680,9 +678,16 @@ def list_all_keys_starting_with_choose(mapping, model_name):
         except AttributeError:
             continue
         for key, value in items:
-            if isinstance(key, str) and key.startswith("choose_"):
+            if (
+                isinstance(key, str)
+                and key.startswith("choose_")
+                and key not in ignore_list  # TODO: with regex
+            ):
                 if not "." in key:
+                    old_key = key
                     key = "choose_" + model_name + "." + key.split("choose_")[-1]
+                    del mapping[old_key]
+                    mapping[key] = value
                 all_chooses.append((key, value))
             if isinstance(value, dict):
                 mappings.append(value)
@@ -764,55 +769,71 @@ def find_one_independent_choose(all_set_variables):
             return task_list[0]
 
 
-def resolve_choose(model_with_choose, choose_key, setup_config, model_config):
+def resolve_choose(
+    model_with_choose, choose_key, setup_config, model_config, user_config
+):
+    logging.debug("Top of resolve choose")
     if model_with_choose in setup_config:
         config_to_replace_in = setup_config
     elif model_with_choose in model_config:
         config_to_replace_in = model_config
     else:
         raise KeyError("Something is horribly wrong")
-    model_with_choose_key = choose_key.replace("choose_", "").split(".")[0]
-    if model_with_choose_key in setup_config:
-        config_to_search_in = setup_config
-    elif model_with_choose_key in model_config:
+    model_name, key = choose_key.replace("choose_", "").split(".")
+
+    config_to_search_in = {}
+
+    if model_name in model_config:
         config_to_search_in = model_config
-    else:
+
+    if model_name in setup_config:
+        if key in setup_config[model_name]:
+            config_to_search_in = setup_config
+
+    if model_name in user_config:
+        if key in user_config[model_name]:
+            config_to_search_in = user_config
+
+    if not config_to_search_in:
         raise KeyError("Something else is horribly wrong")
 
-    model_name, key = choose_key.replace("choose_", "").split(".")
-    if DEBUG_MODE:
-        pprint_config(config_to_replace_in)
-    choice = config_to_search_in[model_name][key]
+    if key in config_to_search_in[model_name]:
+        choice = config_to_search_in[model_name][key]
+        logging.debug(model_with_choose)
+        logging.debug(choice)
 
-    logging.debug(model_with_choose)
-    logging.debug(choice)
+        if choice in config_to_replace_in[model_with_choose][choose_key]:
+            for update_key, update_value in config_to_replace_in[model_with_choose][
+                choose_key
+            ][choice].items():
+                deep_update(
+                    update_key,
+                    update_value,
+                    model_with_choose,
+                    model_with_choose,
+                    model_config,
+                    setup_config,
+                )
 
-    if choose_key in config_to_replace_in[model_with_choose]:
-        logging.debug("Case A")
-        key = choose_key
-    else:
-        logging.debug("Case B")
-        key = choose_key.replace(model_name + ".", "")
-
-    for update_key, update_value in config_to_replace_in[model_with_choose][key][
-        choice
-    ].items():
-        deep_update(
-            update_key,
-            update_value,
-            model_with_choose,
-            model_with_choose,
-            model_config,
-            setup_config,
-        )
-
-    logging.debug("key=%s", key)
-
-    #    config_to_replace_in[model_with_choose].update(
-    #        config_to_replace_in[model_with_choose][key][choice]
-    #    )
-
-    del config_to_replace_in[model_with_choose][key]
+        elif "*" in config_to_replace_in[model_with_choose][choose_key]:
+            logging.debug("Found a * case!")
+            for update_key, update_value in config_to_replace_in[model_with_choose][
+                choose_key
+            ]["*"].items():
+                deep_update(
+                    update_key,
+                    update_value,
+                    model_with_choose,
+                    model_with_choose,
+                    model_config,
+                    setup_config,
+                )
+        else:
+            logging.warning("Choice %s could not be resolved", choice)
+        logging.debug("key=%s", key)
+    elif "*" not in config_to_replace_in[model_with_choose][choose_key]:
+        raise KeyError("Key %s was not defined", key)
+    del config_to_replace_in[model_with_choose][choose_key]
 
 
 def add_more_important_tasks(choose_keyword, all_set_variables, task_list):
@@ -837,16 +858,16 @@ def add_more_important_tasks(choose_keyword, all_set_variables, task_list):
         A list of choices which must be made in order for choose_keyword to
         make sense.
     """
-    logging.debug("Incoming task list %s", task_list)
+    # logging.debug("Incoming task list %s", task_list)
     keyword = choose_keyword.replace("choose_", "")
-    logging.debug("Keyword = %s", keyword)
+    # logging.debug("Keyword = %s", keyword)
     for model in all_set_variables:
         for choose_thing in all_set_variables[model]:
             logging.debug("Choose_thing = %s", choose_thing)
             for (host, keyword_that_is_set) in all_set_variables[model][choose_thing]:
-                logging.debug(
-                    "Host = %s, keyword_that_is_set=%s", host, keyword_that_is_set
-                )
+                # logging.debug(
+                #    "Host = %s, keyword_that_is_set=%s", host, keyword_that_is_set
+                # )
                 if keyword_that_is_set == keyword:
                     if (model, choose_thing) not in task_list:
                         task_list.insert(0, (model, choose_thing))
@@ -989,25 +1010,35 @@ def recursive_get(config_to_search, config_elements):
     return result
 
 
-def find_variable(tree, rhs, full_config):
+def determine_regex_list_match(test_str, regex_list):
+    result = []
+    for regex in regex_list:
+        result.append(regex.match(test_str))
+    return any(result)
+
+
+def find_variable(tree, rhs, full_config, white_or_black_list, isblacklist):
     raw_str = rhs
     if isinstance(raw_str, str) and "${" in raw_str:
         ok_part, rest = raw_str.split("${", 1)
         var, new_raw = rest.split("}", 1)
-        var_result = actually_find_variable(tree, var, full_config)
-        if var_result:
-            if new_raw:
-                more_rest = find_variable(tree, new_raw, full_config)
-            else:
-                more_rest = ""
-            # Make sure everything is a string:
-            ok_part, var_result, more_rest = (
-                str(ok_part),
-                str(var_result),
-                str(more_rest),
-            )
-            logger.debug("Will return:", ok_part + var_result + more_rest)
-            return ok_part + var_result + more_rest
+        if (var in white_or_black_list) != isblacklist:
+            var_result = actually_find_variable(tree, var, full_config)
+            if var_result:
+                if new_raw:
+                    more_rest = find_variable(
+                        tree, new_raw, full_config, white_or_black_list, isblacklist
+                    )
+                else:
+                    more_rest = ""
+                # Make sure everything is a string:
+                ok_part, var_result, more_rest = (
+                    str(ok_part),
+                    str(var_result),
+                    str(more_rest),
+                )
+                logger.debug("Will return:", ok_part + var_result + more_rest)
+                return ok_part + var_result + more_rest
     return raw_str
 
 
@@ -1197,13 +1228,14 @@ def unmark_dates(tree, rhs, config):
 
 
 class SimulationSetup(object):
-    def __init__(self, name):
-        self.config = ConfigSetup(name)
+    def __init__(self, name, user_config):
+        self.config = ConfigSetup(name, user_config)
         if DEBUG_MODE:
             pprint_config(self.config)
         components = []
         for component in self.config["setup"]["valid_model_names"]:
             components.append(SimulationComponent(self.config[component]))
+        del user_config
 
 
 class SimulationComponent(object):
@@ -1314,18 +1346,21 @@ class SimulationComponent(object):
 class GeneralConfig(dict):
     """ All configs do this! """
 
-    def __init__(self, path):
+    def __init__(self, path, user_config):
         super().__init__()
-        config_path = FUNCTION_PATH + "/" + path + "/" + path
+        if os.path.isfile(path):
+            config_path = path
+        else:
+            config_path = FUNCTION_PATH + "/" + path + "/" + path
         self.config = yaml_file_to_dict(config_path)
         for attachment in CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE:
             attach_to_config_and_remove(self.config, attachment)
-        self._config_init()
+        self._config_init(user_config)
         for k, v in self.config.items():
             self.__setitem__(k, v)
         del self.config
 
-    def _config_init(self):
+    def _config_init(self, user_config):
         raise NotImplementedError(
             "Subclasses of GeneralConfig must define a _config_init!"
         )
@@ -1334,7 +1369,7 @@ class GeneralConfig(dict):
 class ConfigSetup(GeneralConfig):
     """ Config Class for Setups """
 
-    def _config_init(self):
+    def _config_init(self, user_config):
         setup_relevant_configs = {
             "computer": yaml_file_to_dict(determine_computer_from_hostname())
         }
@@ -1367,6 +1402,7 @@ class ConfigSetup(GeneralConfig):
                 tmp_config = ConfigComponent(model)
                 model_config[model] = merge_dicts(tmp_config, model_config[model])
 
+        setup_config["general"] = {}
         setup_config["setup"]["valid_setup_names"] = valid_setup_names = list(
             setup_config
         )
@@ -1377,13 +1413,25 @@ class ConfigSetup(GeneralConfig):
         logging.debug("Valid Model Names = %s", valid_model_names)
 
         all_set_variables = {}
+
+        gray_list = [
+            "choose_start_date.year",
+            "choose_lresume",
+            "choose_start_date",
+            "start_date",
+            "next_date",
+        ]
+        # TODO: gray_list = [re.compile("%r" % entry) for entry in gray_list]
+
         for setup_name in valid_setup_names:
             all_set_variables[setup_name] = {}
             logging.debug(
-                list_all_keys_starting_with_choose(setup_config[setup_name], setup_name)
+                list_all_keys_starting_with_choose(
+                    setup_config[setup_name], setup_name, gray_list
+                )
             )
             for choose_key, choose_block in list_all_keys_starting_with_choose(
-                setup_config[setup_name], setup_name
+                setup_config[setup_name], setup_name, gray_list
             ):
                 logging.debug("%s %s %s", setup_name, choose_key, choose_block)
                 all_set_variables[setup_name][
@@ -1395,7 +1443,7 @@ class ConfigSetup(GeneralConfig):
         for model_name in valid_model_names:
             all_set_variables[model_name] = {}
             for choose_key, choose_block in list_all_keys_starting_with_choose(
-                model_config[model_name], model_name
+                model_config[model_name], model_name, gray_list
             ):
                 all_set_variables[model_name][
                     choose_key
@@ -1417,7 +1465,9 @@ class ConfigSetup(GeneralConfig):
             )
             logging.debug("The task list is: %s", task_list)
             logging.debug("all_set_variables: %s", all_set_variables)
-            resolve_choose(model_with_choose, choose_key, setup_config, model_config)
+            resolve_choose(
+                model_with_choose, choose_key, setup_config, model_config, user_config
+            )
             del all_set_variables[model_with_choose][choose_key]
             for key in list(all_set_variables):
                 if not all_set_variables[key]:
@@ -1446,30 +1496,34 @@ class ConfigSetup(GeneralConfig):
         )
 
         logging.debug("Setup before priority merge:")
-        if DEBUG_MODE:
-            pprint_config(setup_config)
+        pprint_config(setup_config)
         logging.debug("Model before priority merge:")
-        if DEBUG_MODE:
-            pprint_config(model_config)
+        pprint_config(model_config)
 
-        self.model_config = model_config
-        self.setup_config = setup_config
-        self.user_config = {}  # TODO read runscript to dict
-        self.config = priority_merge_dicts(
-            self.user_config, self.setup_config, priority="first"
-        )
-        self.config = priority_merge_dicts(
-            self.config, self.model_config, priority="first"
-        )
+        self.config = priority_merge_dicts(user_config, setup_config, priority="first")
+        self.config = priority_merge_dicts(self.config, model_config, priority="first")
+
         logging.debug("After priority merge:")
-        if DEBUG_MODE:
-            pprint_config(self.config)
+        pprint_config(self.config)
 
-        recursive_run_function([], self.config, "atomic", mark_dates, self.config)
-        recursive_run_function([], self.config, "atomic", find_variable, self.config)
-        recursive_run_function([], self.config, "atomic", do_math_in_entry, self.config)
-        recursive_run_function([], self.config, "atomic", unmark_dates, self.config)
-        recursive_run_function([], self.config, "always", list_to_multikey, self.config)
+        if False:
+            recursive_run_function([], self.config, "atomic", mark_dates, self.config)
+            recursive_run_function(
+                [],
+                self.config,
+                "atomic",
+                find_variable,
+                self.config,
+                gray_list,
+                isblacklist=True,
+            )
+            recursive_run_function(
+                [], self.config, "atomic", do_math_in_entry, self.config
+            )
+            recursive_run_function([], self.config, "atomic", unmark_dates, self.config)
+            recursive_run_function(
+                [], self.config, "always", list_to_multikey, self.config
+            )
 
 
 class ConfigComponent(GeneralConfig):
@@ -1481,7 +1535,7 @@ class ConfigComponent(GeneralConfig):
         )
 
 
-class ShellscriptToUserConfig(object):
+class ShellscriptToUserConfig(dict):
     def __init__(self, runscript_path):
         self.runscript_path = runscript_path
 
@@ -1489,7 +1543,7 @@ class ShellscriptToUserConfig(object):
             # Delete the lines containing
             all_lines = runscript_file.readlines()
         hashbang = all_lines[0]
-        bad_lines = ("load_all_functions", "general_do_it_all", "#", "set")
+        bad_lines = ("load_all_functions", "general_do_it_all", "#", "set ")
         good_lines = [
             line.strip() for line in all_lines if not line.startswith(bad_lines)
         ]
@@ -1573,9 +1627,8 @@ class ShellscriptToUserConfig(object):
         logging.debug("Diffs after removing: %s", diffs)
         pprint_config(user_config)
 
-        # for k, v in self.config.items():
-        #    self.__setitem__(k, v)
-        # del self.config
+        for k, v in user_config.items():
+            self.__setitem__(k, v)
 
 
 if __name__ == "__main__":  # pragma: no cover
@@ -1602,7 +1655,7 @@ if __name__ == "__main__":  # pragma: no cover
             dest="loglevel",
             const=logging.INFO,
         )
-        parser.add_argument("setup", default=None)
+        parser.add_argument("runscript", default=None)
         return parser.parse_args()
 
     # Set up a useful logger
@@ -1617,10 +1670,8 @@ if __name__ == "__main__":  # pragma: no cover
         os.getcwd() + "/" + os.path.dirname(__file__) + "/../",
     )
 
-    # if ARGS.setup:
-    #    SETUP = SimulationSetup(ARGS.setup)
-    #    print("-" * 80)
-    #    print("FINAL OUTPUT")
-    #    pprint_config(SETUP.config)
-
-    Script = ShellscriptToUserConfig("LGM-Control.run")
+    Script = ShellscriptToUserConfig(ARGS.runscript)
+    Setup = SimulationSetup(
+        Script["general"]["setup_name"].replace("_standalone", ""), Script
+    )
+    pprint_config(Setup.config)

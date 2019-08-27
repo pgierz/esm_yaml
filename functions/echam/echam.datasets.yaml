@@ -123,8 +123,3 @@ choose_dataset:
                         "rcp26greenh": "${greenhouse_dir}/greenhouse_rcp26.nc"
                         "rcp45greenh": "${greenhouse_dir}/greenhouse_rcp45.nc"
                         "rcp85greenh": "${greenhouse_dir}/greenhouse_rcp85.nc"
-
-        r0006:
-                - nothing
-        r0007:
-                - nothing

@@ -1,6 +1,56 @@
 #!/usr/bin/env python
 """
-Docs
+=======================================
+``YAML`` Parser for Earth System Models
+=======================================
+
+One core element of the ``esm-tools`` is the description of model
+configurations and experiments with the aid of ``YAML`` files. Beyond the
+standard features of ``YAML``, several specific conventions have been
+implemented to ease the description of your simulations. These conventions are
+described below, and the functions which implement them are documented with
+minimal examples. Internally, after parsing the ``YAML`` files are converted
+into a single Python dictionary.
+
+Parsing takes place by initializing objects which represent either an entire
+setup, ``ConfigSetup``, or a specific component, ``ConfigComponent``. Both of
+these objects base off of ``GeneralConfig``, which is a dictionary subclass
+performing specific parsing steps during the object's creation. The parsing
+steps are presented in the order that they are resolved:
+
+When initializing a ``ConfigSetup`` or ``ConfigComponent``, a name of the
+desired setup or component must be given, e.g. ``"awicm"`` or ``"echam"``. This
+configuration is immediately loaded along with any further configs listed in
+the section "further_reading". Note that this means that **any configuration
+listed in "further_reading" must not contain any variables!!**
+
+Following this step, a method called ``_config_init`` is run for all classes
+based off of ``GeneralConfig``. For components, any entries listed under
+``"include_submodels"`` are attached and registed under a new keyword
+``"submodels"``.
+
+For setups, the next step is to determine the computing host and load the
+appropriate configuration files. Setups divide their configuration into 3
+specific parts:
+
+#. Setup information, contained under ``config['setup']``. This includes, e.g.
+   information regarding a standalone setup, possible coupling, etc.
+#. Model Information, under ``config['model']``. This contains specific
+   information for all models and submodels, such as resolution, input file
+   names, namelists, etc.
+#. User information, under ``config['model']``. The user can specify to
+   override any of the defaults with their own choices.
+
+In the next step, all keys starting with ``"choose_"`` are determined, along
+with any information they set. This is done first for the setup, and then for
+the models. These are filtered to determine an independent choice, and if
+cyclic dependencies occur, an error is raised. All choices are then resolved
+until nothing is left.
+
+
+-------
+
+Specific documentation for classes and functions are given below:
 """
 # Python 2 and 3 version agnostic compatiability:
 from __future__ import print_function
@@ -16,6 +66,7 @@ import os
 import re
 import shutil
 import socket
+import subprocess
 import warnings
 
 from builtins import dict
@@ -26,9 +77,13 @@ from pprint import pformat
 
 standard_library.install_aliases()
 
+# NOTE: For documentation, we need to distinguish how to import Date
+# For more info, see: https://stackoverflow.com/questions/11536764/how-to-fix-attempted-relative-import-in-non-package-even-with-init-py
 # Date class
-from esm_calendar import Date
-
+if __package__ is None:
+    from esm_calendar import Date
+else:
+    from .esm_calendar import Date
 # Third-Party Imports
 import coloredlogs
 import yaml
@@ -129,6 +184,7 @@ def attach_to_config_and_reduce_keyword(
         in the top level of ``config_to_write_to``. Note that only one level
         down is currently supported.
 
+
     The purpose behind this is to have a chapter in config "include_submodels"
     = ["echam", "fesom"], which would then find the "echam.yaml" and
     "fesom.yaml" configs, and attach them to "config" under config[submodels],
@@ -149,8 +205,8 @@ def attach_to_config_and_reduce_keyword(
     for new YAML files. Then, a yaml file corresponding to a file called
     ``echam.datasets.yaml`` is loaded, and attached to the config.
 
-    Note
-    ----
+    Warning
+    -------
     Both ``config_to_read_from`` and ``config_to_write_to`` are modified **in place**!
     """
     if full_keyword in config_to_read_from:
@@ -196,9 +252,9 @@ def attach_to_config_and_remove(config, attach_key):
         A key who's value points to a list of various yaml files to update
         ``config`` with.
 
-    Note
-    ----
-    The ``config`` is modified **in place**!.
+    Warning
+    -------
+    The ``config`` is modified **in place**!
     """
     if attach_key in config:
         attach_value = config[attach_key]
@@ -542,9 +598,9 @@ def del_value_for_nested_key(config, key):
     key : str
         The key to delete.
 
-    Note
-    ----
-    The ``config`` is modified **in place**!.
+    Warning
+    -------
+    The ``config`` is modified **in place**!
     """
     if key in config:
         del config[key]
@@ -830,12 +886,12 @@ def recursive_run_function(tree, right, level, func, *args, **kwargs):
     -------
     right
 
-    Notes
-    -----
+    Note
+    ----
     The ``func`` argument must be a callable (i.e. a function) and **must**
     have a call signature of the following form:
 
-    .. python::
+    .. code::
 
         def func(tree, right, *args, **kwargs(
 
@@ -972,14 +1028,14 @@ def actually_find_variable(tree, rhs, full_config):
         raise ValueError("Sorry: %s not found" % (rhs))
 
 
-def list_to_multikey_lhs(tree, rhs, config_to_search):
+def list_to_multikey(tree, rhs, config_to_search):
     logging.debug("tree=%s", tree)
     logging.debug("rhs=%s", rhs)
     if tree:
         lhs = tree[-1]
         list_fence = "[["
         list_end = "]]"
-        logging.debug("Running list_to_multikey_lhs")
+        logging.debug("Running list_to_multikey")
         logging.debug("lhs=%s", lhs)
         logging.debug(type(lhs))
         logging.debug("rhs=%s", rhs)
@@ -1018,7 +1074,7 @@ def list_to_multikey_lhs(tree, rhs, config_to_search):
                 if list_fence in new_raw:
                     for key, value in return_dict2.items():
                         return_dict.update(
-                            list_to_multikey_lhs(tree + [key], value, config_to_search)
+                            list_to_multikey(tree + [key], value, config_to_search)
                         )
                 else:
                     return_dict = return_dict2
@@ -1042,7 +1098,7 @@ def list_to_multikey_lhs(tree, rhs, config_to_search):
             if list_fence in new_raw:
                 out_list = []
                 for rhs_listitem in rhs_list:
-                    out_list += list_to_multikey_lhs(
+                    out_list += list_to_multikey(
                         tree + [None], rhs_listitem, config_to_search
                     )
                     logging.debug(out_list)
@@ -1054,6 +1110,11 @@ def list_to_multikey_lhs(tree, rhs, config_to_search):
 def determine_computer_from_hostname():
     """
     Determines which yaml config file is needed for this computer
+
+    Notes
+    -----
+    The supercomputer must be registered in the ``all_machines.yaml`` file in
+    order to be found.
 
     Returns
     -------
@@ -1135,34 +1196,6 @@ def unmark_dates(tree, rhs, config):
     return entry
 
 
-class GeneralConfig(dict):
-    """ All configs do this! """
-
-    def __init__(self, path):
-        super().__init__()
-        config_path = FUNCTION_PATH + "/" + path + "/" + path
-        self.config = yaml_file_to_dict(config_path)
-        for attachment in CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE:
-            attach_to_config_and_remove(self.config, attachment)
-        self._config_init()
-        for k, v in self.config.items():
-            self.__setitem__(k, v)
-        del self.config
-
-    def _config_init(self):
-        raise NotImplementedError(
-            "Subclasses of GeneralConfig must define a _config_init!"
-        )
-
-
-class ConfigTest(GeneralConfig):
-    def _config_init(self):
-        setup_relevant_configs = {
-            "computer": yaml_file_to_dict(determine_computer_from_hostname())
-        }
-        self.config = merge_dicts(setup_relevant_configs, self.config)
-
-
 class SimulationSetup(object):
     def __init__(self, name):
         self.config = ConfigSetup(name)
@@ -1183,15 +1216,17 @@ class SimulationComponent(object):
         end_date = "18510101"
 
         self.all_filetypes = [
-            "forcing",
-            "config",
-            "input",
-            "restart",
-            "outdata",
-            "log",
-            "mon",
             "analysis",
             "bin",
+            "config",
+            "couple",
+            "forcing",
+            "input",
+            "log",
+            "mon",
+            "outdata",
+            "restart",
+            "scripts",
             "viz",
         ]
 
@@ -1276,6 +1311,26 @@ class SimulationComponent(object):
                     )
 
 
+class GeneralConfig(dict):
+    """ All configs do this! """
+
+    def __init__(self, path):
+        super().__init__()
+        config_path = FUNCTION_PATH + "/" + path + "/" + path
+        self.config = yaml_file_to_dict(config_path)
+        for attachment in CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE:
+            attach_to_config_and_remove(self.config, attachment)
+        self._config_init()
+        for k, v in self.config.items():
+            self.__setitem__(k, v)
+        del self.config
+
+    def _config_init(self):
+        raise NotImplementedError(
+            "Subclasses of GeneralConfig must define a _config_init!"
+        )
+
+
 class ConfigSetup(GeneralConfig):
     """ Config Class for Setups """
 
@@ -1312,12 +1367,12 @@ class ConfigSetup(GeneralConfig):
                 tmp_config = ConfigComponent(model)
                 model_config[model] = merge_dicts(tmp_config, model_config[model])
 
-        valid_setup_names = list(setup_config)
-        valid_model_names = list(model_config)
-
-        setup_config["setup"]["valid_setup_names"] = valid_setup_names
-        setup_config["setup"]["valid_model_names"] = valid_model_names
-
+        setup_config["setup"]["valid_setup_names"] = valid_setup_names = list(
+            setup_config
+        )
+        setup_config["setup"]["valid_model_names"] = valid_model_names = list(
+            model_config
+        )
         logging.debug("Valid Setup Names = %s", valid_setup_names)
         logging.debug("Valid Model Names = %s", valid_model_names)
 
@@ -1348,41 +1403,27 @@ class ConfigSetup(GeneralConfig):
                     choose_block, valid_model_names, model_name=model_name
                 )
 
-        self.all_set_variables = all_set_variables
+        if DEBUG_MODE:
+            for components_with_set_variables in all_set_variables:
+                logging.debug(
+                    "Simulation component %s has to set:", components_with_set_variables
+                )
+                for set_variable in all_set_variables[components_with_set_variables]:
+                    logging.debug("A variable to be set is %s", set_variable)
 
-        for components_with_set_variables in self.all_set_variables:
-            logging.debug(
-                "The simulation component %s has to set:"
-                % components_with_set_variables
-            )
-            for set_variable in self.all_set_variables[components_with_set_variables]:
-                logging.debug("A variable to be set is %s", set_variable)
-
-        task_list = find_one_independent_choose(all_set_variables)
-        logging.debug("The task list is: %s", task_list)
-
-        # for model_name in valid_model_names:
-        #    all_set_variables[model_name] = {}
-        #    for choose_key, choose_block in list_all_keys_starting_with_choose(model_config[model_name]).items():
-        #        logging.debug("%s %s %s", setup_name, choose_key, choose_block)
-        #        all_set_variables[model_name][choose_key]['set_vars'] = determine_set_variables_in_choose_block(
-        #            choose_block, valid_model_names, model_name=model_name
-        #        all_set_variables[model_name][choose_key]['source_model']=determine_source_model(choose_key, model_name, valid_setup_names, valid_model_names)
-        #        )
-        logging.debug("all_setup_variables %s", all_set_variables)
-
-        set_variables = all_set_variables
-        logging.debug(set_variables)
         while True:
-            model_with_choose, choose_key = find_one_independent_choose(set_variables)
-
+            task_list = model_with_choose, choose_key = find_one_independent_choose(
+                all_set_variables
+            )
+            logging.debug("The task list is: %s", task_list)
+            logging.debug("all_set_variables: %s", all_set_variables)
             resolve_choose(model_with_choose, choose_key, setup_config, model_config)
-            del set_variables[model_with_choose][choose_key]
-            for key in list(set_variables):
-                if not set_variables[key]:
-                    del set_variables[key]
-            logging.debug("Remaining set_variables=%s", set_variables)
-            if not set_variables:
+            del all_set_variables[model_with_choose][choose_key]
+            for key in list(all_set_variables):
+                if not all_set_variables[key]:
+                    del all_set_variables[key]
+            logging.debug("Remaining all_set_variables=%s", all_set_variables)
+            if not all_set_variables:
                 break
 
         cross_update_models(model_config, valid_model_names)
@@ -1425,16 +1466,10 @@ class ConfigSetup(GeneralConfig):
             pprint_config(self.config)
 
         recursive_run_function([], self.config, "atomic", mark_dates, self.config)
-
         recursive_run_function([], self.config, "atomic", find_variable, self.config)
-
         recursive_run_function([], self.config, "atomic", do_math_in_entry, self.config)
-
         recursive_run_function([], self.config, "atomic", unmark_dates, self.config)
-
-        recursive_run_function(
-            [], self.config, "always", list_to_multikey_lhs, self.config
-        )
+        recursive_run_function([], self.config, "always", list_to_multikey, self.config)
 
 
 class ConfigComponent(GeneralConfig):
@@ -1444,6 +1479,103 @@ class ConfigComponent(GeneralConfig):
         attach_to_config_and_reduce_keyword(
             self.config, "include_submodels", "submodels"
         )
+
+
+class ShellscriptToUserConfig(object):
+    def __init__(self, runscript_path):
+        self.runscript_path = runscript_path
+
+        with open(runscript_path) as runscript_file:
+            # Delete the lines containing
+            all_lines = runscript_file.readlines()
+        hashbang = all_lines[0]
+        bad_lines = ("load_all_functions", "general_do_it_all", "#", "set")
+        good_lines = [
+            line.strip() for line in all_lines if not line.startswith(bad_lines)
+        ]
+        good_lines.insert(0, hashbang)
+        good_lines.insert(1, "set -a")
+        # Module commands:
+        module_commands = [line for line in good_lines if "module" in line]
+        # Find index of a command "module purge"
+        if "module purge" in module_commands:
+            index = module_commands[::-1].index("module purge")
+            remaining_module_commands = module_commands[::-1][:index][::-1]
+        else:
+            remaining_module_commands = module_commands
+        module_commands = [l for l in remaining_module_commands if "list" not in l]
+        for module_command in module_commands:
+            os.system(module_command)
+        env_before = os.environ
+        with open("cleaned_runscript", "w") as cleaned_runscript:
+            for line in good_lines:
+                cleaned_runscript.write(line + "\n")
+        pipe1 = subprocess.Popen(
+            ". cleaned_runscript; env", stdout=subprocess.PIPE, shell=True
+        )
+        output = pipe1.communicate()[0].decode("utf-8")
+        env_after = {}
+        for line in output.split("\n"):
+            if line:
+                key, value = line.split("=", 1)
+                if value:
+                    env_after[key] = value
+        os.remove("cleaned_runscript")
+        diffs = list(set(env_after) - set(env_before))
+
+        known_setups_and_models = os.listdir(FUNCTION_PATH)
+        user_config = {}
+        logging.debug(diffs)
+        solved_diffs = []
+        for thisdiff in diffs:
+            print(thisdiff)
+            for sim_thing in known_setups_and_models:
+                # print("Determinging if %s in %s" % (thisdiff, sim_thing))
+                if thisdiff.endswith(sim_thing):
+                    if sim_thing not in user_config:
+                        user_config[sim_thing] = {}
+                    user_config[sim_thing][
+                        thisdiff.replace("_" + sim_thing, "")
+                    ] = env_after[thisdiff]
+                    solved_diffs.append(thisdiff)
+                    break
+                if thisdiff.startswith(sim_thing):
+                    if sim_thing not in user_config:
+                        user_config[sim_thing] = {}
+                    user_config[sim_thing][
+                        thisdiff.replace(sim_thing + "_", "")
+                    ] = env_after[thisdiff]
+                    solved_diffs.append(thisdiff)
+                    break
+        for solved_diff in solved_diffs:
+            diffs.remove(solved_diff)
+
+        solved_diffs = []
+        deprecated_diffs = [
+            "FUNCTION_PATH",
+            "FPATH",
+            "machine_name",
+            "ESM_USE_C_CALENDAR",
+        ]
+        user_config["general"] = {}
+        for diff in diffs:
+            if diff in deprecated_diffs:
+                print(
+                    "You used a discontinued variable: %s. Please reconsider your life choices"
+                    % diff
+                )
+            if diff not in deprecated_diffs:
+                user_config["general"][diff] = env_after[diff]
+                solved_diffs.append(diff)
+
+        for solved_diff in solved_diffs:
+            diffs.remove(solved_diff)
+        logging.debug("Diffs after removing: %s", diffs)
+        pprint_config(user_config)
+
+        # for k, v in self.config.items():
+        #    self.__setitem__(k, v)
+        # del self.config
 
 
 if __name__ == "__main__":  # pragma: no cover
@@ -1485,8 +1617,10 @@ if __name__ == "__main__":  # pragma: no cover
         os.getcwd() + "/" + os.path.dirname(__file__) + "/../",
     )
 
-    if ARGS.setup:
-        SETUP = SimulationSetup(ARGS.setup)
-        print("-" * 80)
-        print("FINAL OUTPUT")
-        pprint_config(SETUP.config)
+    # if ARGS.setup:
+    #    SETUP = SimulationSetup(ARGS.setup)
+    #    print("-" * 80)
+    #    print("FINAL OUTPUT")
+    #    pprint_config(SETUP.config)
+
+    Script = ShellscriptToUserConfig("LGM-Control.run")

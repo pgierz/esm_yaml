@@ -29,8 +29,10 @@ yr_perp_off: false
 transient_advance_forcing: false
 ocean_resolution: 'GR15'
 disturbance: "1.000001"
+lresume: false
 
-parent_date: 22941231 
+
+parent_date: 22941231
 parent_expid: khw0030
 parent_dir: "${pool_dir}/MPIESM/restart/dev/${input_parent_exp_id}/restart/echam6"
 
@@ -43,13 +45,13 @@ steps_in_year_before: $(( ${year_before_length} / ${time_step} - 1 ))
 
 restart:
         frequency: 1
-        unit: "months"        
+        unit: "months"
         firstlast: "last"
 
 
 # default directories
 
-model_dir: "${esm_master_dir}/echam-${version}"                       
+model_dir: "${esm_master_dir}/echam-${version}"
 bin_dir: "${setup.model_dir}/bin"
 pool_dir: "${computer.pool_directories.pool}/ECHAM6"
 input_dir: "${pool_dir}/ECHAM6/input/${dataset}"
@@ -70,9 +72,9 @@ choose_resolution:
                         24:
                                 nproca: 24
                                 nprocb: 18
-                        36:     
+                        36:
                                 nproca: 24
-                                nprocb: 18                                
+                                nprocb: 18
         T31:
                 levels: "L19"
                 Timestep: 450
@@ -87,7 +89,7 @@ choose_resolution:
 choose_version:
         6.304p1:
                 repo_tag: 6.304p1
-                dataset: r0007               
+                dataset: r0007
 
 choose_scenario:
         PI-CTRL:
@@ -98,25 +100,25 @@ choose_scenario:
                         aerofin: piaerofin
                         aerofarir: piaerofarir
                         ozone: piozone
-	PALEO:
-		forcing_files:
+        PALEO:
+                forcing_files:
                         aerocoarse: piaerocoarse
                         aerofin: piaerofin
                         aerofarir: piaerofarir
-			ozone: piozone
-	4CO2:
-		forcing_files:
+                        ozone: piozone
+        4CO2:
+                forcing_files:
                         aerocoarse: piaerocoarse
                         aerofin: piaerofin
                         aerofarir: piaerofarir
-			ozone: piozone
-	1percCO2:
-		forcing_files:
+                        ozone: piozone
+        1percCO2:
+                forcing_files:
                         aerocoarse: piaerocoarse
                         aerofin: piaerofin
                         aerofarir: piaerofarir
-			ozone: piozone
-			greenhouse: 1percCO2greenh
+                        ozone: piozone
+                        greenhouse: 1percCO2greenh
         1850:
                 forcing_files:
                         sst: pisst
@@ -124,78 +126,78 @@ choose_scenario:
                         aerocoarse: piaerocoarse
                         aerofin: piaerofin
                         aerofarir: piaerofarir
-			ozone: 1850ozone
-	1950:
-		forcing_files:
+                        ozone: 1850ozone
+        1950:
+                forcing_files:
                         aerocoarse: piaerocoarse
                         aerofin: piaerofin
                         aerofarir: piaerofarir
-			ozone: 1950ozone
-		input_files:
-			MAC-SP: MAC-SP
+                        ozone: 1950ozone
+                input_files:
+                        MAC-SP: MAC-SP
         HIST:
-		greenhouse_dir: "${forcing_dir}"
+                greenhouse_dir: "${forcing_dir}"
                 forcing_files:
                         aerocoarse: piaerocoarse
                         aerofarir: piaerofarir
                         aerofin: histaerofin
                         sst: amipsst
                         sic: amipsic
-			ozone: histozone
-			greenhouse: histgreenh
+                        ozone: histozone
+                        greenhouse: histgreenh
                         volcanir: histvolcanir
                         volcsw: histvolcsw
                         swflux: histswflux
-		input_files:
-			MAC-SP: MAC-SP
+                input_files:
+                        MAC-SP: MAC-SP
         RCP26:
-		greenhouse_dir: "${forcing_dir}"
-		forcing_files:
+                greenhouse_dir: "${forcing_dir}"
+                forcing_files:
                         aerocoarse: piaerocoarse
                         aerofarir: piaerofarir
                         aerofin: rcp26aerofin
-			ozone: rcp26ozone
-			greenhouse: rcp26greenh
+                        ozone: rcp26ozone
+                        greenhouse: rcp26greenh
                         volcanir: histvolcanir
                         volcsw: histvolcsw
                         swflux: histswflux
-		input_files:
-			MAC-SP: MAC-SP
+                input_files:
+                        MAC-SP: MAC-SP
         RCP45:
-		greenhouse_dir: "${forcing_dir}"
-		forcing_files:
+                greenhouse_dir: "${forcing_dir}"
+                forcing_files:
                         aerocoarse: piaerocoarse
                         aerofarir: piaerofarir
                         aerofin: rcp45aerofin
-			ozone: rcp45ozone
-			greenhouse: rcp45greenh
+                        ozone: rcp45ozone
+                        greenhouse: rcp45greenh
                         volcanir: histvolcanir
                         volcsw: histvolcsw
                         swflux: histswflux
-		input_files:
-			MAC-SP: MAC-SP
+                input_files:
+                        MAC-SP: MAC-SP
         RCP85:
-		greenhouse_dir: "${forcing_dir}"
-		forcing_files:
+                greenhouse_dir: "${forcing_dir}"
+                forcing_files:
                         aerocoarse: piaerocoarse
                         aerofarir: piaerofarir
                         aerofin: rcp85aerofin
-			ozone: rcp85ozone
-			greenhouse: rcp85greenh
+                        ozone: rcp85ozone
+                        greenhouse: rcp85greenh
                         volcanir: histvolcanir
                         volcsw: histvolcsw
                         swflux: histswflux
-		input_files:
-			MAC-SP: MAC-SP
+                input_files:
+                        MAC-SP: MAC-SP
 
 
 choose_lresume:
         false:
                 restart_in_modifications:
-                        [[streams-->STREAM]]: 
+                        "[[streams-->STREAM]]":
                                 - vdate "<--set_dim--" ${start_date}
                                 - fdate "<--set_dim--" ${year_before_date}
-                                - ndate "<--set_dim--" ${steps_in_year_before}  
+                                - ndate "<--set_dim--" ${steps_in_year_before}
         true:
                 # pseudo_start_date: $(( ${start_date} - ${time_step} ))
                 namelist_changes:
@@ -203,50 +205,50 @@ choose_lresume:
                                 runctl:
                                         dt_start: "remove_from_namelist"
 
-        
+
 choose_start_date.year:
-        disturbed_years: 
+        disturbed_years:
                 namelist_changes:
-                        namelist.echam:        
+                        namelist.echam:
                                 dynctl:
                                         enstdif: "${disturbance}"
 
 choose_co2:
-        *:
+        '*':
                 namelist_changes:
                         namelist.echam:
                                 radctl:
                                         co2vmr: "${co2}"
 
 choose_ch4:
-        *:
+        '*':
                 namelist_changes:
                         namelist.echam:
                                 radctl:
                                         ch4vmr: "${ch4}"
 choose_n2o:
-        *:
+        '*':
                 namelist_changes:
                         namelist.echam:
                                 radctl:
                                         c2ovmr: "${n2o}"
 
 choose_cecc:
-        *:
+        '*':
                 yr_perp_off: true
                 namelist_changes:
                         namelist.echam:
                                 radctl:
                                         cecc: "${cecc}"
 choose_cobld:
-        *:
+        '*':
                 yr_perp_off: true
                 namelist_changes:
                         namelist.echam:
                                 radctl:
                                         cobld: "${cobld}"
 choose_clonp:
-        *:
+        '*':
                 yr_perp_off: true
                 namelist_changes:
                         namelist.echam:
@@ -264,8 +266,8 @@ choose_yr_perp_off:
 
 choose_transient_advance_forcing:
         true:
-                [year, co2vmr, ch4vmr, n2ovmr, cecc, cobld, clonp]: "<--grep(${start_date.year})-- ${forcing_table}"
-                                        
+                "[year, co2vmr, ch4vmr, n2ovmr, cecc, cobld, clonp]": "<--grep(${start_date.year})-- ${forcing_table}"
+
 input_in_workdir:
         "cldoptprops": "ECHAM6_CldOptProps.nc"
         "janspec": "unit.23"
@@ -275,7 +277,7 @@ input_in_workdir:
         "tslclim": "unit.92"
         "vgratclim": "unit.91"
         "vltclim": "unit.90"
-	"MAC-SP": "MAC-SP.nc"
+        "MAC-SP": "MAC-SP.nc"
 
 forcing_in_workdir:
         sic: "unit.96"
@@ -284,7 +286,7 @@ forcing_in_workdir:
         aerofin: "aero_fine_@YEAR@.nc"
         aerofarir: "aero_farir_@YEAR@.nc"
         ozone: "ozon@YEAR@"
-	greenhouse: "greenhouse_gases.nc"
+        greenhouse: "greenhouse_gases.nc"
         volcir: "strat_aerosol_ir_@YEAR@.nc"
         volcsw: "strat_aerosol_sw_@YEAR@.nc"
         volcsw: "strat_aerosol_sw_@YEAR@.nc"
@@ -306,7 +308,7 @@ restart_sources:
                 - "restart_${expid}_STREAM_${prev_date}.nc"
                 - "restart_${expid}_${prev_date}_STREAM.nc"
 
-restart_in_workdir:        
+restart_in_workdir:
         "[[streams-->STREAM]]": "restart_${expid}_STREAM.nc"
 
         #restart_out_files:
@@ -336,7 +338,7 @@ output_in_workdir:
 log_files:
         atmout: ${expid}_echam6_atmout_${start_date}_${end_date}
 
-log_in_workdir:        
+log_in_workdir:
         atmout: atmout
 
 namelist_changes:
@@ -353,8 +355,8 @@ namelist_changes:
                 parctl:
                         nproca: "nproca"
                         nprocb: "nprocb"
-                        out_datapath: "'${work_dir}'"        
-                        
+                        out_datapath: "'${work_dir}'"
+
 
 coupling_fields:
         sst_atmo:
@@ -405,19 +407,19 @@ grids:
 errors:
         mo_exception:
                 check_frequency: 300
-                detection_method: "<--grep(mo_exeption.f90)--" ${standard_out}
+                detection_method: "<--grep(mo_exeption.f90)-- ${standard_out}"
                 error_message: |
-!!! DETECTED ERROR !!!
-Problem with echam >> mo_exception.f90 << has occured. Killing your job, sorry.
+                        !!! DETECTED ERROR !!!
+                        Problem with echam >> mo_exception.f90 << has occured. Killing your job, sorry.
                 action_method:
                         - "<--kill_job--"
 
         wind_speed:
                 check_frequency: 300
-                detection_method: "<--grep(wind speed)--" ${standard_out}
+                detection_method: "<--grep(wind speed)-- ${standard_out}"
                 error_message: |
-!!! DETECTED ERROR !!!
-high wind speed was found during your run, applying wind speed fix and resubmitting...
+                        !!! DETECTED ERROR !!!
+                        high wind speed was found during your run, applying wind speed fix and resubmitting...
                 action_method:
                         - "<--repair_job_after_windspeed--"
 

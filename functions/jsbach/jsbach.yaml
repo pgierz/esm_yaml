@@ -41,12 +41,12 @@ choose_version:
                         popdens: popdens
                 choose_dynamic_vegetations: 
                         true:
-                                namelist_dir: "${esm_master_dir}/esm-runscripts/namelists/jsbach/${scenario}/dynveg"
+                                namelist_dir: "${general.esm_master_dir}/esm-runscripts/namelists/jsbach/${scenario}/dynveg"
                         false:
-                                namelist_dir: "${esm_master_dir}/esm-runscripts/namelists/jsbach/${scenario}/no_dynveg"
+                                namelist_dir: "${general.esm_master_dir}/esm-runscripts/namelists/jsbach/${scenario}/no_dynveg"
         3.10:
                 dataset: r0007
-                namelist_dir: "${esm_master_dir}/esm-runscripts/namelists/jsbach/${scenario}/${resolution}"
+                namelist_dir: "${general.esm_master_dir}/esm-runscripts/namelists/jsbach/${scenario}/${resolution}"
 
 forcings:
         LU_trans: LU_trans
@@ -136,39 +136,39 @@ streams:
         - land
 
 
-ym_dates:
-        - "[[write_output_dates-->WHEN]]<--year--WHEN<--month--.WHEN<--day--"  # not so sure
+          #ym_dates:
+          #        - "[[write_output_dates-->WHEN]]<--year--WHEN<--month--.WHEN<--day--"  # not so sure
 
           #restart_in_files:
           #"[[streams-->STREAM]]": "STREAM"
 
 restart_sources:
         "[[streams-->STREAM]]":
-                - "restart_${expid}_STREAM_${prev_date}.nc"
-                - "restart_${expid}_${prev_date}_STREAM.nc"
+                - "restart_${general.expid}_STREAM_${prev_date}.nc"
+                - "restart_${general.expid}_${prev_date}_STREAM.nc"
 
 restart_in_workdir:        
-        "[[streams-->STREAM]]": "restart_${expid}_STREAM.nc"
+        "[[streams-->STREAM]]": "restart_${general.expid}_STREAM.nc"
 
         #restart_out_files:
         #"[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]": "STREAM_WHEN"
 
-restart_targets:
-        "[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]_out": "restart_${expid}_STREAM_WHEN.nc"
-
-restart_in_workdir:
-        "[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]_out": "restart_${expid}_STREAM_WHEN.nc"
-
-output_targets:
-        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": ${expid}_echam6_STREAM_WHEN.grb
-        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": ${expid}_echam6_STREAM.codes
-        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": ${expid}_echam6_STREAM_WHEN.nc
-
-output_in_workdir:
-        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": ${expid}_WHEN_STREAM
-        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": ${expid}_WHEN_STREAM.codes
-        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": ${expid}_WHEN_STREAM.nc
-
+        #restart_targets:
+        #        "[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]_out": "restart_${general.expid}_STREAM_WHEN.nc"
+        #
+        #restart_in_workdir:
+        #        "[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]_out": "restart_${general.expid}_STREAM_WHEN.nc"
+        #
+        #output_targets:
+        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": ${general.expid}_echam6_STREAM_WHEN.grb
+        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": ${general.expid}_echam6_STREAM.codes
+        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": ${general.expid}_echam6_STREAM_WHEN.nc
+        #
+        #output_in_workdir:
+        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": ${general.expid}_WHEN_STREAM
+        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": ${general.expid}_WHEN_STREAM.codes
+        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": ${general.expid}_WHEN_STREAM.nc
+        #
         #output_files:
         #"[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": STREAM_WHEN_grd
         #"[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": STREAM_WHEN_codes

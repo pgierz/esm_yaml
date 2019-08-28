@@ -1,13 +1,13 @@
 #! /bin/ksh -l
 set -e
  
-
+module purge
 
 export FUNCTION_PATH=${HOME}/esm-master/esm-runscripts/functions/all
 export FPATH=$FUNCTION_PATH
 
 machine_name=mistral
-setup_name="echam_standalone"			# mpiesm, pism_mpiesm, echam. mpiom, or pism
+setup_name="awicm0"			# mpiesm, pism_mpiesm, echam. mpiom, or pism
 ACCOUNT=ab0246
 check=0								# run job in check mode, without submitting and / or launching
 
@@ -16,13 +16,13 @@ check=0								# run job in check mode, without submitting and / or launching
 #compute_time="00:20:00"  # this will cause walltime barriers, bu the job should start right away...
 compute_time="03:00:00"
 post_time="01:00:00"
-remove_post_dir=1
 ESM_USE_C_CALENDAR=1
 ###############################################################################
 
 ##########################
 ## GENERAL SECTION #######
 ##########################
+expid="LGM_TEST"
 
 BASE_DIR=/work/ba0989/a270077/AWICM_PISM
 

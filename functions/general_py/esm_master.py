@@ -188,6 +188,14 @@ import esm_parser
 #
 def main(args):
     print("args:", args)
+
+    # todo, setup_or_model = deassemble_args(args)
+    # if is_setup(setup_or_model):
+    #    models, actions = get_models_and_actions_from_setup
+    # else:
+    #    models, actions = setup_or_model, ""
+
+
     setups2models = esm_parser.yaml_file_to_dict("setups2models.yaml")
     esm_parser.pprint_config(setups2models)
 

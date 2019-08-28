@@ -21,10 +21,7 @@ FUNCTION_PATH = os.path.dirname(__file__) + "/../"
 
 class ShellscriptToUserConfig(dict):
     def __init__(self, runscript_path):
-        self.runscript_path = runscript_path
-
         with open(runscript_path) as runscript_file:
-            # Delete the lines containing
             all_lines = runscript_file.readlines()
         hashbang = all_lines[0]
         bad_lines = ("load_all_functions", "general_do_it_all", "#", "set ")
@@ -37,6 +34,8 @@ class ShellscriptToUserConfig(dict):
         module_commands = [line for line in good_lines if "module" in line]
         # Find index of a command "module purge"
         if "module purge" in module_commands:
+            # Anything before module purge is probably irrelevant, so flip the
+            # list around first before figuring out which index it is:
             index = module_commands[::-1].index("module purge")
             remaining_module_commands = module_commands[::-1][:index][::-1]
         else:
@@ -68,22 +67,20 @@ class ShellscriptToUserConfig(dict):
         for thisdiff in diffs:
             logging.debug("thisdiff=%s", thisdiff)
             for sim_thing in known_setups_and_models:
+                diff_name = thisdiff.replace("_" + sim_thing, "").replace(
+                    sim_thing + "_", ""
+                )
+                user_config.setdefault(sim_thing, {})
+
                 if thisdiff.endswith(sim_thing):
-                    if sim_thing not in user_config:
-                        user_config[sim_thing] = {}
-                    user_config[sim_thing][
-                        thisdiff.replace("_" + sim_thing, "")
-                    ] = env_after[thisdiff]
+                    user_config[sim_thing][diff_name] = env_after[thisdiff]
                     solved_diffs.append(thisdiff)
                     break
                 if thisdiff.startswith(sim_thing):
-                    if sim_thing not in user_config:
-                        user_config[sim_thing] = {}
-                    user_config[sim_thing][
-                        thisdiff.replace(sim_thing + "_", "")
-                    ] = env_after[thisdiff]
+                    user_config[sim_thing][diff_name] = env_after[thisdiff]
                     solved_diffs.append(thisdiff)
                     break
+        user_config = {k: v for k, v in user_config.items() if v}
         for solved_diff in solved_diffs:
             diffs.remove(solved_diff)
 

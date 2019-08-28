@@ -1,7 +1,7 @@
 #! /bin/ksh -l
 set -e
  
-
+module purge
 
 export FUNCTION_PATH=${HOME}/esm-master/esm-runscripts/functions/all
 export FPATH=$FUNCTION_PATH

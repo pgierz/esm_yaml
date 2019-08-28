@@ -236,6 +236,18 @@ def attach_to_config_and_reduce_keyword(
     del config_to_read_from[full_keyword]
 
 
+def attach_single_config(config, attach_value):
+    model, model_part = (
+        attach_value.split(".")[0],
+        ".".join(attach_value.split(".")[1:]),
+    )
+    logger.debug("Attaching: %s to %s", model, model_part)
+    attachable_config = yaml_file_to_dict(
+        FUNCTION_PATH + "/" + model + "/" + attach_value
+    )
+    config.update(attachable_config)
+
+
 def attach_to_config_and_remove(config, attach_key):
     """
     Attaches extra dict to this one and removes the chapter
@@ -258,25 +270,10 @@ def attach_to_config_and_remove(config, attach_key):
     if attach_key in config:
         attach_value = config[attach_key]
         if isinstance(attach_value, list):
-            for attach in attach_value:
-                model, model_part = (
-                    attach.split(".")[0],
-                    ".".join(attach.split(".")[1:]),
-                )
-                logger.debug("Attaching: %s to %s", model, model_part)
-                attachable_config = yaml_file_to_dict(
-                    FUNCTION_PATH + "/" + model + "/" + attach
-                )
-                config.update(attachable_config)
+            for attach_value in attach_value:
+                attach_single_config(config, attach_value)
         elif isinstance(attach_value, str):
-            model, model_part = (
-                attach_value.split(".")[0],
-                ".".join(attach_value.split(".")[1:]),
-            )
-            attachable_config = yaml_file_to_dict(
-                FUNCTION_PATH + "/" + model + "/" + attach_value
-            )
-            config.update(attachable_config)
+            attach_single_config(config, attach_value)
         else:
             raise TypeError("%s needs to have values of type list or str!" % attach_key)
         del config[attach_key]

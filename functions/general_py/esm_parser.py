@@ -59,14 +59,15 @@ from __future__ import division
 from __future__ import absolute_import
 
 # Python Standard Library imports
-import copy
 import collections
+import copy
 import logging
 import os
 import re
 import shutil
 import socket
 import subprocess
+import sys
 import warnings
 
 from builtins import dict
@@ -102,7 +103,17 @@ logger.addHandler(f_handler)
 CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE = ["further_reading"]
 DATE_MARKER = ">>>THIS_IS_A_DATE<<<"
 FUNCTION_PATH = os.path.dirname(__file__) + "/../"
+esm_master_dir = os.path.dirname(__file__) + "/../../"
+
 YAML_AUTO_EXTENSIONS = ["", ".yml", ".yaml", ".YML", ".YAML"]
+
+gray_list = [
+    r"choose_lresume",
+    r"choose_.*lresume",
+    r".*date$",
+    r".*date!(year|month|day|hour|minute|second)",
+]
+gray_list = [re.compile(entry) for entry in gray_list]
 
 
 def yaml_file_to_dict(filepath):
@@ -210,11 +221,11 @@ def attach_to_config_and_reduce_keyword(
     """
     if full_keyword in config_to_read_from:
         if level_to_write_to:
-            config_to_write_to[level_to_write_to][
+            config_to_read_from[level_to_write_to][
                 reduced_keyword
             ] = config_to_read_from[full_keyword]
         else:
-            config_to_write_to[reduced_keyword] = config_to_read_from[full_keyword]
+            config_to_read_from[reduced_keyword] = config_to_read_from[full_keyword]
         # FIXME: Does this only need to work for lists?
         if isinstance(config_to_read_from[full_keyword], list):
             for item in config_to_read_from[full_keyword]:
@@ -313,36 +324,15 @@ def priority_merge_dicts(first_config, second_config, priority="first"):
     return merged_dictionary
 
 
-def cross_update_models(model_config, all_model_names):
-    for target_model_name in all_model_names:
-        for source_model_name in all_model_names:
-            while target_model_name in model_config[source_model_name]:
-                logging.debug(
-                    "Updating %s from info of %s", target_model_name, source_model_name
+def check_conflicting_model_and_setup_names(config):
+    all_names = list(config)
+    all_model_names = config["setup"]["valid_model_names"]
+    for source_model in all_model_names:
+        for target_model in all_names:
+            if target_model in config[source_model]:
+                raise KeyError(
+                    "Please don't define %s in %s" % (target_model, source_model)
                 )
-                logging.debug(
-                    "Info to be sent: %s",
-                    model_config[source_model_name][target_model_name],
-                )
-                model_config[target_model_name].update(
-                    model_config[source_model_name][target_model_name]
-                )
-                logging.debug(
-                    "Deleting info %s from %s", target_model_name, source_model_name
-                )
-                del model_config[source_model_name][target_model_name]
-
-
-def update_models_from_setup(
-    setup_config, all_setup_names, model_config, all_model_names
-):
-    for target_model_name in all_model_names:
-        for source_setup_name in all_setup_names:
-            while target_model_name in setup_config[source_setup_name]:
-                model_config[target_model_name].update(
-                    setup_config[source_setup_name][target_model_name]
-                )
-                del setup_config[source_setup_name][target_model_name]
 
 
 def dict_merge(dct, merge_dct):
@@ -363,6 +353,13 @@ def dict_merge(dct, merge_dct):
             dict_merge(dct[k], merge_dct[k])
         else:
             dct[k] = merge_dct[k]
+
+
+def update_models_from_setup(config):
+    all_model_names = config["setup"]["valid_model_names"]
+    for model_name in all_model_names:
+        model_config_in_setup = config["setup"].pop(model_name, {})
+        dict_merge(config[model_name], model_config_in_setup)
 
 
 def deep_update(
@@ -427,6 +424,7 @@ def remove_entry_from_chapter(
     model_config,
     setup_config,
 ):
+    logging.debug("%s, %s", remove_entries, remove_chapter)
     if not isinstance(remove_entries, list):
         raise TypeError("Please put all entries to remove as a list")
     if model_to_remove_from in model_config:
@@ -686,6 +684,7 @@ def list_all_keys_starting_with_choose(mapping, model_name, ignore_list):
         A dictionary containing all key, value pairs starting with
         ``"choose_"``.
     """
+    logging.debug("Top of list_all_keys_starting_with_choose")
     all_chooses = []
     mappings = [mapping]
     while mappings:
@@ -698,7 +697,7 @@ def list_all_keys_starting_with_choose(mapping, model_name, ignore_list):
             if (
                 isinstance(key, str)
                 and key.startswith("choose_")
-                and key not in ignore_list  # TODO: with regex
+                and not determine_regex_list_match(key, ignore_list)  # TODO: with xor
             ):
                 if not "." in key:
                     old_key = key
@@ -708,6 +707,7 @@ def list_all_keys_starting_with_choose(mapping, model_name, ignore_list):
                 all_chooses.append((key, value))
             if isinstance(value, dict):
                 mappings.append(value)
+    logging.debug("Will return %s", all_chooses)
     return all_chooses
 
 
@@ -735,7 +735,6 @@ def determine_set_variables_in_choose_block(config, valid_model_names, model_nam
         determined in ``config``
     """
     set_variables = []
-    logging.debug("valid_model_names=%s", valid_model_names)
     for k, v in config.items():
         if isinstance(k, str) and k in valid_model_names:
             logging.debug(k)
@@ -772,12 +771,9 @@ def find_one_independent_choose(all_set_variables):
         list.
     """
     task_list = []
-    # task_list=['choose_partition', 'choose_jobtype']
     for key in all_set_variables:
         value = all_set_variables[key]
         for choose_keyword, set_vars in value.items():
-            # choose_keyword="choose_partition"
-            # set_vars=value[choose_keyword]
             task_list.append((key, choose_keyword))
             task_list = add_more_important_tasks(
                 choose_keyword, all_set_variables, task_list
@@ -786,30 +782,27 @@ def find_one_independent_choose(all_set_variables):
             return task_list[0]
 
 
-def resolve_choose(
-    model_with_choose, choose_key, setup_config, model_config, user_config
-):
-    logging.debug("Top of resolve choose")
-    if model_with_choose in setup_config:
-        config_to_replace_in = setup_config
-    elif model_with_choose in model_config:
-        config_to_replace_in = model_config
+def resolve_choose(model_with_choose, choose_key, config):
+    if model_with_choose in config:
+        config_to_replace_in = config
     else:
         raise KeyError("Something is horribly wrong")
     model_name, key = choose_key.replace("choose_", "").split(".")
+    choice = config.get(model_with_choose).get(key)
+    logging.debug(choice)
 
     config_to_search_in = {}
 
-    if model_name in model_config:
-        config_to_search_in = model_config
+    if model_name in config:
+        config_to_search_in = config
 
-    if model_name in setup_config:
-        if key in setup_config[model_name]:
-            config_to_search_in = setup_config
+    if model_name in config:
+        if key in config[model_name]:
+            config_to_search_in = config
 
-    if model_name in user_config:
-        if key in user_config[model_name]:
-            config_to_search_in = user_config
+    if model_name in config:
+        if key in config[model_name]:
+            config_to_search_in = config
 
     if not config_to_search_in:
         raise KeyError("Something else is horribly wrong")
@@ -828,8 +821,8 @@ def resolve_choose(
                     update_value,
                     model_with_choose,
                     model_with_choose,
-                    model_config,
-                    setup_config,
+                    config,
+                    config,
                 )
 
         elif "*" in config_to_replace_in[model_with_choose][choose_key]:
@@ -842,8 +835,8 @@ def resolve_choose(
                     update_value,
                     model_with_choose,
                     model_with_choose,
-                    model_config,
-                    setup_config,
+                    config,
+                    config,
                 )
         else:
             logging.warning("Choice %s could not be resolved", choice)
@@ -875,16 +868,11 @@ def add_more_important_tasks(choose_keyword, all_set_variables, task_list):
         A list of choices which must be made in order for choose_keyword to
         make sense.
     """
-    # logging.debug("Incoming task list %s", task_list)
     keyword = choose_keyword.replace("choose_", "")
-    # logging.debug("Keyword = %s", keyword)
     for model in all_set_variables:
         for choose_thing in all_set_variables[model]:
             logging.debug("Choose_thing = %s", choose_thing)
             for (host, keyword_that_is_set) in all_set_variables[model][choose_thing]:
-                # logging.debug(
-                #    "Host = %s, keyword_that_is_set=%s", host, keyword_that_is_set
-                # )
                 if keyword_that_is_set == keyword:
                     if (model, choose_thing) not in task_list:
                         task_list.insert(0, (model, choose_thing))
@@ -1018,10 +1006,10 @@ def recursive_get(config_to_search, config_elements):
     this_config = config_elements.pop(0)
 
     logger.debug("this_config=%s", this_config)
-
     result = config_to_search.get(this_config, None)
-    if not result:
-        raise ValueError("Couldn't find an answer for:", config_elements)
+    if result is None:
+        raise ValueError("Exactly None! Couldn't find an answer for:", config_elements)
+    # This looks dangerous too...
     if config_elements:
         return recursive_get(result, config_elements)
     return result
@@ -1030,7 +1018,9 @@ def recursive_get(config_to_search, config_elements):
 def determine_regex_list_match(test_str, regex_list):
     result = []
     for regex in regex_list:
+        logging.debug("Checking %s against %s", test_str, regex)
         result.append(regex.match(test_str))
+    logging.debug("Will return %s" % any(result))
     return any(result)
 
 
@@ -1039,7 +1029,7 @@ def find_variable(tree, rhs, full_config, white_or_black_list, isblacklist):
     if isinstance(raw_str, str) and "${" in raw_str:
         ok_part, rest = raw_str.split("${", 1)
         var, new_raw = rest.split("}", 1)
-        if (var in white_or_black_list) != isblacklist:
+        if (determine_regex_list_match(var, white_or_black_list)) != isblacklist:
             var_result = actually_find_variable(tree, var, full_config)
             if var_result:
                 if new_raw:
@@ -1109,7 +1099,8 @@ def list_to_multikey(tree, rhs, config_to_search):
                     replaced_list = []
                     for item in rhs:
                         if isinstance(item, str):
-                            replaced_list.append(item.replace(value_in_list, key))
+                            for key in entries_of_key:
+                                replaced_list.append(item.replace(value_in_list, key))
                         else:
                             replaced_list.append(item)
                     return_dict2 = {
@@ -1266,39 +1257,31 @@ class ConfigSetup(GeneralConfig):
     """ Config Class for Setups """
 
     def _config_init(self, user_config):
-        setup_relevant_configs = {
-            "computer": yaml_file_to_dict(determine_computer_from_hostname())
+        setup_config = {
+            "computer": yaml_file_to_dict(determine_computer_from_hostname()),
+            "setup": {},
         }
         # Add the fake "model" name to the computer:
-        setup_relevant_configs["computer"]["model"] = "computer"
+        setup_config["computer"]["model"] = "computer"
         logger.info("setup config is being updated with setup_relevant_configs")
-        if "standalone_model" in self.config:
-            setup_config = setup_relevant_configs
-            if "setup" not in setup_config:
-                setup_config["setup"] = {}
-            setup_config["setup"].update({"standalone": True})
-            model_config = {}
-            model_config[self.config["model"]] = self.config
-            attach_to_config_and_reduce_keyword(
-                model_config[self.config["model"]],
-                model_config,
-                "include_submodels",
-                "submodels",
-                self.config["model"],
-            )
-            del self.config
-        else:
-            setup_config = merge_dicts(self.config, setup_relevant_configs)
-            model_config = {}
-            attach_to_config_and_reduce_keyword(
-                setup_config, model_config, "include_models", "models"
-            )
-            for model in model_config["models"]:
-                logger.info("Updating dictionary for ", model)
-                tmp_config = ConfigComponent(model)
-                model_config[model] = merge_dicts(tmp_config, model_config[model])
 
-        setup_config["general"] = {}
+        model_config = {}
+
+        if "coupled_setup" not in self.config:
+            setup_config["setup"]["include_models"] = self.config["include_models"]
+            setup_config["setup"].update({"standalone": True})
+        else:
+            setup_config["setup"] = self.config
+            setup_config["setup"].update({"standalone": False})
+        del self.config
+        attach_to_config_and_reduce_keyword(
+            setup_config["setup"], model_config, "include_models", "models"
+        )
+        for model in setup_config["setup"]["models"]:
+            attach_to_config_and_reduce_keyword(
+                model_config[model], model_config, "include_models", "models"
+            )
+        setup_config["general"] = {"esm_master_dir": esm_master_dir}
         setup_config["setup"]["valid_setup_names"] = valid_setup_names = list(
             setup_config
         )
@@ -1308,52 +1291,25 @@ class ConfigSetup(GeneralConfig):
         logging.debug("Valid Setup Names = %s", valid_setup_names)
         logging.debug("Valid Model Names = %s", valid_model_names)
 
+        self.config = priority_merge_dicts(user_config, setup_config, priority="first")
+        self.config = priority_merge_dicts(self.config, model_config, priority="first")
+
+        check_conflicting_model_and_setup_names(self.config)
+        update_models_from_setup(self.config)
+
         all_set_variables = {}
 
-        gray_list = [
-            "choose_start_date.year",
-            "choose_lresume",
-            "choose_start_date",
-            "start_date",
-            "next_date",
-        ]
-        # TODO: gray_list = [re.compile("%r" % entry) for entry in gray_list]
-
-        for setup_name in valid_setup_names:
-            all_set_variables[setup_name] = {}
-            logging.debug(
-                list_all_keys_starting_with_choose(
-                    setup_config[setup_name], setup_name, gray_list
-                )
+        all_names = valid_setup_names + valid_model_names
+        for name in all_names:
+            all_set_variables[name] = {}
+            name_chooses = list_all_keys_starting_with_choose(
+                self.config[name], name, gray_list
             )
-            for choose_key, choose_block in list_all_keys_starting_with_choose(
-                setup_config[setup_name], setup_name, gray_list
-            ):
-                logging.debug("%s %s %s", setup_name, choose_key, choose_block)
-                all_set_variables[setup_name][
-                    choose_key
-                ] = determine_set_variables_in_choose_block(
-                    choose_block, valid_setup_names, model_name=setup_name
+            logging.debug(name_chooses)
+            for key, block in name_chooses:
+                all_set_variables[name][key] = determine_set_variables_in_choose_block(
+                    block, all_names, name
                 )
-
-        for model_name in valid_model_names:
-            all_set_variables[model_name] = {}
-            for choose_key, choose_block in list_all_keys_starting_with_choose(
-                model_config[model_name], model_name, gray_list
-            ):
-                all_set_variables[model_name][
-                    choose_key
-                ] = determine_set_variables_in_choose_block(
-                    choose_block, valid_model_names, model_name=model_name
-                )
-
-        if DEBUG_MODE:
-            for components_with_set_variables in all_set_variables:
-                logging.debug(
-                    "Simulation component %s has to set:", components_with_set_variables
-                )
-                for set_variable in all_set_variables[components_with_set_variables]:
-                    logging.debug("A variable to be set is %s", set_variable)
 
         while True:
             task_list = model_with_choose, choose_key = find_one_independent_choose(
@@ -1361,9 +1317,7 @@ class ConfigSetup(GeneralConfig):
             )
             logging.debug("The task list is: %s", task_list)
             logging.debug("all_set_variables: %s", all_set_variables)
-            resolve_choose(
-                model_with_choose, choose_key, setup_config, model_config, user_config
-            )
+            resolve_choose(model_with_choose, choose_key, self.config)
             del all_set_variables[model_with_choose][choose_key]
             for key in list(all_set_variables):
                 if not all_set_variables[key]:
@@ -1372,35 +1326,12 @@ class ConfigSetup(GeneralConfig):
             if not all_set_variables:
                 break
 
-        cross_update_models(model_config, valid_model_names)
-        update_models_from_setup(
-            setup_config, valid_setup_names, model_config, valid_model_names
-        )
-
-        logging.debug("Setup after cross update:")
-        if DEBUG_MODE:
-            pprint_config(setup_config)
-        logging.debug("Model after cross update:")
-        if DEBUG_MODE:
-            pprint_config(model_config)
-
         add_entries_to_chapter_in_config(
-            model_config, valid_model_names, setup_config, valid_setup_names
+            self.config, valid_model_names, self.config, valid_setup_names
         )
         remove_entries_from_chapter_in_config(
-            model_config, valid_model_names, setup_config, valid_setup_names
+            self.config, valid_model_names, self.config, valid_setup_names
         )
-
-        logging.debug("Setup before priority merge:")
-        pprint_config(setup_config)
-        logging.debug("Model before priority merge:")
-        pprint_config(model_config)
-
-        self.config = priority_merge_dicts(user_config, setup_config, priority="first")
-        self.config = priority_merge_dicts(self.config, model_config, priority="first")
-
-        logging.debug("After priority merge:")
-        pprint_config(self.config)
 
         recursive_run_function([], self.config, "atomic", mark_dates, self.config)
         recursive_run_function(
@@ -1415,15 +1346,6 @@ class ConfigSetup(GeneralConfig):
         recursive_run_function([], self.config, "atomic", do_math_in_entry, self.config)
         recursive_run_function([], self.config, "atomic", unmark_dates, self.config)
         recursive_run_function([], self.config, "always", list_to_multikey, self.config)
-
-
-class ConfigComponent(GeneralConfig):
-    """ Config class for components """
-
-    def _config_init(self):
-        attach_to_config_and_reduce_keyword(
-            self.config, "include_submodels", "submodels"
-        )
 
 
 if __name__ == "__main__":  # pragma: no cover

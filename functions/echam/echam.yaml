@@ -6,7 +6,7 @@ type: atmosphere
 
 standalone_model: True
 
-include_submodels:
+include_models:
         - jsbach
         - hdmodel
 
@@ -39,9 +39,9 @@ parent_dir: "${pool_dir}/MPIESM/restart/dev/${parent_expid}/restart/echam6"
 pseudo_start_date: ${start_date}
 pseudo_end_date: ${next_date}
 pseudo_resume_date: ${start_date}
-year_before_date: $(( ${start_date} - "1 years" )) # irgendwie so
-year_before_length: $((${start_date} - ${year_before_date} ))
-steps_in_year_before: $(( ${year_before_length} / ${time_step} - 1 ))
+#year_before_date: $(( ${start_date} - "1 years" )) # irgendwie so
+#year_before_length: $((${start_date} - ${year_before_date} ))
+#steps_in_year_before: $(( ${year_before_length} / ${time_step} - 1 ))
 
 restart:
         frequency: 1
@@ -52,7 +52,7 @@ restart:
 # default directories
 
 model_dir: "${general.BASE_DIR}/echam-${version}"
-bin_dir: "${setup.MODEL_DIR}/bin"
+bin_dir: "${MODEL_DIR}/bin"
 pool_dir: "${computer.pool_directories.pool}/ECHAM6"
 input_dir: "${pool_dir}/ECHAM6/input/${dataset}"
 adj_input_dir: "${input_dir}/${resolution}"
@@ -197,7 +197,7 @@ choose_lresume:
                         "[[streams-->STREAM]]":
                                 - vdate "<--set_dim--" ${start_date}
                                 - fdate "<--set_dim--" ${year_before_date}
-                                - ndate "<--set_dim--" ${steps_in_year_before}
+                                  # - ndate "<--set_dim--" ${steps_in_year_before}
         true:
                 # pseudo_start_date: $(( ${start_date} - ${time_step} ))
                 namelist_changes:
@@ -206,7 +206,8 @@ choose_lresume:
                                         dt_start: "remove_from_namelist"
 
 
-choose_start_date.year:
+start_date!year: 1850
+choose_start_date!year:
         disturbed_years:
                 namelist_changes:
                         namelist.echam:
@@ -218,20 +219,20 @@ choose_CO2:
                 namelist_changes:
                         namelist.echam:
                                 radctl:
-                                        co2vmr: "${co2}"
+                                        co2vmr: "${CO2}"
 
 choose_CH4:
         '*':
                 namelist_changes:
                         namelist.echam:
                                 radctl:
-                                        ch4vmr: "${ch4}"
+                                        ch4vmr: "${CH4}"
 choose_N2O:
         '*':
                 namelist_changes:
                         namelist.echam:
                                 radctl:
-                                        c2ovmr: "${n2o}"
+                                        c2ovmr: "${N2O}"
 
 choose_CECC:
         '*':
@@ -239,21 +240,21 @@ choose_CECC:
                 namelist_changes:
                         namelist.echam:
                                 radctl:
-                                        cecc: "${cecc}"
+                                        cecc: "${CECC}"
 choose_COBLD:
         '*':
                 yr_perp_off: true
                 namelist_changes:
                         namelist.echam:
                                 radctl:
-                                        cobld: "${cobld}"
+                                        cobld: "${COBLD}"
 choose_CLONP:
         '*':
                 yr_perp_off: true
                 namelist_changes:
                         namelist.echam:
                                 radctl:
-                                        clonp: "${clonp}"
+                                        clonp: "${CLONP}"
 
 choose_yr_perp_off:
         true:
@@ -266,7 +267,7 @@ choose_yr_perp_off:
 
 choose_transient_advance_forcing:
         true:
-                "[year, co2vmr, ch4vmr, n2ovmr, cecc, cobld, clonp]": "<--grep(${start_date.year})-- ${forcing_table}"
+                "[year, co2vmr, ch4vmr, n2ovmr, cecc, cobld, clonp]": "<--grep(${start_date!year})-- ${forcing_table}"
 
 input_in_workdir:
         "cldoptprops": "ECHAM6_CldOptProps.nc"
@@ -297,46 +298,48 @@ streams:
         - accw
         - co2
 
-ym_dates:
-        - "[[write_output_dates-->WHEN]]<--year--WHEN<--month--.WHEN<--day--"
+          #ym_dates:
+          #- "[[write_output_dates-->WHEN]]<--year--WHEN<--month--.WHEN<--day--"
 
           #restart_files:
           #"[[streams-->STREAM]]": "STREAM"
 
+# Only for testing:
+prev_date: 18500101
 restart_sources:
         "[[streams-->STREAM]]":
-                - "restart_${expid}_STREAM_${prev_date}.nc"
-                - "restart_${expid}_${prev_date}_STREAM.nc"
+                - "restart_${general.expid}_STREAM_${prev_date}.nc"
+                - "restart_${general.expid}_${prev_date}_STREAM.nc"
 
 restart_in_workdir:
-        "[[streams-->STREAM]]": "restart_${expid}_STREAM.nc"
+        "[[streams-->STREAM]]": "restart_${general.expid}_STREAM.nc"
 
         #restart_out_files:
         #"[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]": "STREAM_WHEN"
 
-restart_targets:
-        "[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]": "restart_${expid}_STREAM_WHEN.nc"
-
-        #restart_out_in_workdir:
-        #"[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]": "restart_${expid}_STREAM_WHEN.nc"
-
-output_targets:
-        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": ${expid}_echam6_STREAM_WHEN.grb
-        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": ${expid}_echam6_STREAM.codes
-        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": ${expid}_echam6_STREAM_WHEN.nc
-
-output_in_workdir:
-        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": "${expid}_WHEN.01_STREAM"
-        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": "${expid}_WHEN.01_STREAM.codes"
-        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": "${expid}_WHEN.01_STREAM.nc"
-
-        #output_files:
-        #"[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": "STREAM_WHEN_grb"
-        #"[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": "STREAM_WHEN_codes"
-        #"[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": "STREAM_WHEN_nc"
-
+        #restart_targets:
+        #        "[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]": "restart_${general.expid}_STREAM_WHEN.nc"
+        #
+        #        #restart_out_in_workdir:
+        #        #"[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]": "restart_${expid}_STREAM_WHEN.nc"
+        #
+        #output_targets:
+        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": ${general.expid}_echam6_STREAM_WHEN.grb
+        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": ${general.expid}_echam6_STREAM.codes
+        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": ${general.expid}_echam6_STREAM_WHEN.nc
+        #
+        #output_in_workdir:
+        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": "${general.expid}_WHEN.01_STREAM"
+        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": "${general.expid}_WHEN.01_STREAM.codes"
+        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": "${general.expid}_WHEN.01_STREAM.nc"
+        #
+        #        #output_files:
+        #        #"[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": "STREAM_WHEN_grb"
+        #        #"[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": "STREAM_WHEN_codes"
+        #        #"[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": "STREAM_WHEN_nc"
+        #
 log_files:
-        atmout: ${expid}_echam6_atmout_${start_date}_${end_date}
+        atmout: ${general.expid}_echam6_atmout_${start_date}_${end_date}
 
 log_in_workdir:
         atmout: atmout
@@ -344,14 +347,14 @@ log_in_workdir:
 namelist_changes:
         namelist.echam:
                 runctl:
-                        out_expname: '${expid}'
+                        out_expname: '${general.expid}'
                         dt_start:    '${pseudo_start_date}'
                         dt_stop:     '${pseudo_end_date}'
                         dt_resume:   '${pseudo_resume_date}'
                         lresume: ".${lresume}."
                         lcouple: ".false."
                         delta_time: "${time_step}"
-                        putrerun: "${restart.rate}, ${restart.unit}, ${restart.firstlast}, 0"
+                        putrerun: "${restart_rate}, ${restart_unit}, ${restart_firstlast}, 0"
                 parctl:
                         nproca: "nproca"
                         nprocb: "nprocb"
@@ -398,16 +401,24 @@ coupling_fields:
                 grid: atmo
 grids:
         atmo:
-                nx: "${nx}"
-                ny: "${ny}"
+                nx: "${_nx}"
+                ny: "${_ny}"
 
+
+# restart_control:
+restart_rate: 1
+restart_unit: years
+restart_firstlast: first
+
+# Work dir:
+work_dir: "."
 
 
 
 errors:
         mo_exception:
                 check_frequency: 300
-                detection_method: "<--grep(mo_exeption.f90)-- ${standard_out}"
+                detection_method: "<--grep(mo_exeption.f90)-- standard_out"
                 error_message: |
                         !!! DETECTED ERROR !!!
                         Problem with echam >> mo_exception.f90 << has occured. Killing your job, sorry.
@@ -416,7 +427,7 @@ errors:
 
         wind_speed:
                 check_frequency: 300
-                detection_method: "<--grep(wind speed)-- ${standard_out}"
+                detection_method: "<--grep(wind speed)-- standard_out"
                 error_message: |
                         !!! DETECTED ERROR !!!
                         high wind speed was found during your run, applying wind speed fix and resubmitting...

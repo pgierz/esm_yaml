@@ -1,0 +1,31 @@
+# AWICM 1 YAML CONFIGURATION FILE
+#
+#
+
+model: awicm0
+
+include_models:
+        - echam
+
+coupled_setup: True
+
+echam:
+        restart:
+                firstlast: "'first'"
+        namelist_changes:
+                namelist.echam:
+                        runctl:
+                                lcouple: '.true.'
+        remove_forcing_files:
+                - sst
+                - sic
+
+jsbach:
+        dynveg_file_ending: ""
+        namelist_changes:
+                namelist.jsbach:
+                        hydrology_ctl:
+                                gethd: "remove_from_namelist"
+                                puthd: "remove_from_namelist"
+
+

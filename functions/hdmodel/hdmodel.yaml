@@ -26,7 +26,7 @@ choose_lresume:
                 restart_in_files:
                         hdrestart: hdrestart
 
-ini_restart_dir: "${pool_dir}/MPIESM/restart/dev/${parent_exp_id}/restart/jsbach"
+                        #ini_restart_dir: "${pool_dir}/MPIESM/restart/dev/${parent_exp_id}/restart/jsbach"
 
 #input_files :
 #        hdpara: hdpara
@@ -47,17 +47,13 @@ restart_in_workdir:
 
 restart_sources:
         hdrestart:
-                - restart_${parent_expid}_hd_${parent_date}.nc
+                #- restart_${parent_expid}_hd_${parent_date}.nc
                 - hdrestart.nc
 
-restart_targets:
-        hd_stream: restart_${parent_expid}_hd_${end_date}.nc
 
 log_in_workdir:
         outflow: hd_outflow_*.log # DIBA muss noch rausfinden was * in diesem Fall ist
 
-log_files:
-        log: ${expid}_jsbach_hd_outflow_${end_date}.log
 
 choose_hdpara_file:
         "*":

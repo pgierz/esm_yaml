@@ -18,7 +18,7 @@ import unittest
 import esm_parser
 
 
-class TestParserFuncs(unittest.TestCase):
+class Test_yaml_file_to_dict(unittest.TestCase):
     def test_yaml_file_to_dict(self):
         """Tests extension expansion and loading of YAML documents"""
         document = """
@@ -49,19 +49,46 @@ class TestParserFuncs(unittest.TestCase):
         finally:
             os.remove("test.hjkl")
 
+
+class Test_attach_to_config_and_remove(unittest.TestCase):
+    def setUp(self):
+        self.config = {}
+
+    def test_skips_loop_if_attach_key_missing(self):
+        """Makes sure the loop is skipped if the attach_key is missing"""
+        attach_key = "some_key_not_in_dummy_config"
+        self.assertIs(
+            None, esm_parser.attach_to_config_and_remove(self.config, attach_key)
+        )
+
+    def test_attach_value_is_badtype(self):
+        """Makes sure a type error is raised if anything not a list or str is passed"""
+        for attach_key in [1, 1.0]:
+            self.config[attach_key] = attach_key
+            self.assertRaises(
+                TypeError,
+                esm_parser.attach_to_config_and_remove,
+                self.config,
+                attach_key,
+            )
+
+
+class OtherCrap:
     def test_attach_to_config_and_reduce_keyword_typeerror(self):
-        config_to_read_from = {"model": "Earth", "include_files": "satellites"}
+        config = {"model": "Earth", "include_files": "satellites"}
         config_to_write_to = {}
         full_keyword = "include_files"
 
         self.assertRaises(
             TypeError,
             esm_parser.attach_to_config_and_reduce_keyword,
-            config_to_read_from,
+            config,
             config_to_write_to,
             full_keyword,
         )
 
+
+class Junk_I_do_not_understand(object):
     def test_attach_to_config_and_reduce_keyword_nolevel(self):
         config_to_read_from = {
             "model": "Earth",

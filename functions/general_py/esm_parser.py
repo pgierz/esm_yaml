@@ -77,6 +77,9 @@ from pprint import pformat
 
 standard_library.install_aliases()
 
+import esm_backwards_compatability
+import esm_sim_objects
+
 # Date class
 from esm_calendar import Date
 
@@ -1188,7 +1191,6 @@ def determine_computer_from_hostname():
     )
 
 
-# NOTE: This whole function is just way too weird for me...
 def do_math_in_entry(tree, rhs, config):
     if not tree[-1]:
         tree = tree[:-1]
@@ -1196,16 +1198,12 @@ def do_math_in_entry(tree, rhs, config):
     entry = " " + str(entry) + " "
     while "$((" in entry:
         math, after_math = entry.split("))", 1)
-        # Math becomes reversed -- I don't remember why
         math, before_math = math[::-1].split("(($", 1)
-        # Reverse both math and before_math back to original form.
         math = math[::-1]
         before_math = before_math[::-1]
-        ## Now we want to actually do math
         if DATE_MARKER in math:
             all_dates = []
             steps = math.split(" ")
-            # Remove emtpy strings from the list
             steps = [step for step in steps if step]
             math = ""
             index = 0
@@ -1242,122 +1240,6 @@ def unmark_dates(tree, rhs, config):
     if isinstance(entry, str) and DATE_MARKER in entry:
         entry = entry.replace(DATE_MARKER, "")
     return entry
-
-
-class SimulationSetup(object):
-    def __init__(self, name, user_config):
-        self.config = ConfigSetup(name, user_config)
-        if DEBUG_MODE:
-            pprint_config(self.config)
-        components = []
-        for component in self.config["setup"]["valid_model_names"]:
-            components.append(SimulationComponent(self.config[component]))
-        del user_config
-
-
-class SimulationComponent(object):
-    def __init__(self, config):
-        self.config = config
-
-        self.exp_base = "/tmp/example_experiments/"
-        self.expid = "test"
-        start_date = "18500101"
-        end_date = "18510101"
-
-        self.all_filetypes = [
-            "analysis",
-            "bin",
-            "config",
-            "couple",
-            "forcing",
-            "input",
-            "log",
-            "mon",
-            "outdata",
-            "restart",
-            "scripts",
-            "viz",
-        ]
-
-        for filetype in self.all_filetypes:
-            setattr(
-                self,
-                "thisrun_" + filetype + "_dir",
-                self.exp_base
-                + "/"
-                + self.expid
-                + "/run_"
-                + start_date
-                + "-"
-                + end_date
-                + "/"
-                + filetype
-                + "/"
-                + self.config["model"]
-                + "/",
-            )
-            if not os.path.exists(getattr(self, "thisrun_" + filetype + "_dir")):
-                os.makedirs(getattr(self, "thisrun_" + filetype + "_dir"))
-
-            setattr(
-                self,
-                "experiment_" + filetype + "_dir",
-                self.exp_base
-                + "/"
-                + self.expid
-                + "/"
-                + filetype
-                + "/"
-                + self.config["model"]
-                + "/",
-            )
-            if not os.path.exists(getattr(self, "experiment_" + filetype + "_dir")):
-                os.makedirs(getattr(self, "experiment_" + filetype + "_dir"))
-
-    def filesystem_to_experiment(self):
-        for filetype in self.all_filetypes:
-            # forcing_files = {'sst': 'pisst'}
-            # forcing_sources = {'pisst': '/some/path/to/pisst_file/'}
-            # forcing_in_work = {'sst': 'unit.24'}
-            if filetype + "_sources" not in self.config:
-                continue
-            filedir_intermediate = getattr(self, "thisrun_" + filetype + "_dir")
-            for file_descriptor, file_source in self.config[
-                filetype + "_sources"
-            ].items():
-                if filetype + "_files" in self.config:
-                    if file_descriptor not in self.config[filetype + "_files"].values():
-                        continue
-                    else:
-                        inverted_dict = {
-                            v: k for k, v in self.config[filetype + "_files"].items()
-                        }
-                        file_category = inverted_dict[file_descriptor]
-                else:
-                    file_category = file_descriptor
-                if (
-                    filetype + "_in_work" in self.config
-                    and file_category in self.config[filetype + "_in_work"].keys()
-                ):
-                    # Cosmetic TODO: Give this dude a real name
-                    file_target = (
-                        filedir_intermediate
-                        + "/"
-                        + self.config[filetype + "_in_work"][file_category]
-                    )
-                else:
-                    file_target = (
-                        filedir_intermediate + "/" + os.path.basename(file_source)
-                    )
-                shutil.copy2(
-                    file_source,
-                    filedir_intermediate + "/" + os.path.basename(file_source),
-                )
-                if not os.path.isfile(file_target):
-                    os.symlink(
-                        filedir_intermediate + "/" + os.path.basename(file_source),
-                        file_target,
-                    )
 
 
 class GeneralConfig(dict):
@@ -1547,102 +1429,6 @@ class ConfigComponent(GeneralConfig):
         )
 
 
-class ShellscriptToUserConfig(dict):
-    def __init__(self, runscript_path):
-        self.runscript_path = runscript_path
-
-        with open(runscript_path) as runscript_file:
-            # Delete the lines containing
-            all_lines = runscript_file.readlines()
-        hashbang = all_lines[0]
-        bad_lines = ("load_all_functions", "general_do_it_all", "#", "set ")
-        good_lines = [
-            line.strip() for line in all_lines if not line.startswith(bad_lines)
-        ]
-        good_lines.insert(0, hashbang)
-        good_lines.insert(1, "set -a")
-        # Module commands:
-        module_commands = [line for line in good_lines if "module" in line]
-        # Find index of a command "module purge"
-        if "module purge" in module_commands:
-            index = module_commands[::-1].index("module purge")
-            remaining_module_commands = module_commands[::-1][:index][::-1]
-        else:
-            remaining_module_commands = module_commands
-        module_commands = [l for l in remaining_module_commands if "list" not in l]
-        for module_command in module_commands:
-            os.system(module_command)
-        env_before = os.environ
-        with open("cleaned_runscript", "w") as cleaned_runscript:
-            for line in good_lines:
-                cleaned_runscript.write(line + "\n")
-        pipe1 = subprocess.Popen(
-            ". cleaned_runscript; env", stdout=subprocess.PIPE, shell=True
-        )
-        output = pipe1.communicate()[0].decode("utf-8")
-        env_after = {}
-        for line in output.split("\n"):
-            if line:
-                key, value = line.split("=", 1)
-                if value:
-                    env_after[key] = value
-        os.remove("cleaned_runscript")
-        diffs = list(set(env_after) - set(env_before))
-
-        known_setups_and_models = os.listdir(FUNCTION_PATH)
-        user_config = {}
-        logging.debug(diffs)
-        solved_diffs = []
-        for thisdiff in diffs:
-            print(thisdiff)
-            for sim_thing in known_setups_and_models:
-                # print("Determinging if %s in %s" % (thisdiff, sim_thing))
-                if thisdiff.endswith(sim_thing):
-                    if sim_thing not in user_config:
-                        user_config[sim_thing] = {}
-                    user_config[sim_thing][
-                        thisdiff.replace("_" + sim_thing, "")
-                    ] = env_after[thisdiff]
-                    solved_diffs.append(thisdiff)
-                    break
-                if thisdiff.startswith(sim_thing):
-                    if sim_thing not in user_config:
-                        user_config[sim_thing] = {}
-                    user_config[sim_thing][
-                        thisdiff.replace(sim_thing + "_", "")
-                    ] = env_after[thisdiff]
-                    solved_diffs.append(thisdiff)
-                    break
-        for solved_diff in solved_diffs:
-            diffs.remove(solved_diff)
-
-        solved_diffs = []
-        deprecated_diffs = [
-            "FUNCTION_PATH",
-            "FPATH",
-            "machine_name",
-            "ESM_USE_C_CALENDAR",
-        ]
-        user_config["general"] = {}
-        for diff in diffs:
-            if diff in deprecated_diffs:
-                print(
-                    "You used a discontinued variable: %s. Please reconsider your life choices"
-                    % diff
-                )
-            if diff not in deprecated_diffs:
-                user_config["general"][diff] = env_after[diff]
-                solved_diffs.append(diff)
-
-        for solved_diff in solved_diffs:
-            diffs.remove(solved_diff)
-        logging.debug("Diffs after removing: %s", diffs)
-        pprint_config(user_config)
-
-        for k, v in user_config.items():
-            self.__setitem__(k, v)
-
-
 if __name__ == "__main__":  # pragma: no cover
 
     import argparse
@@ -1682,8 +1468,8 @@ if __name__ == "__main__":  # pragma: no cover
         os.getcwd() + "/" + os.path.dirname(__file__) + "/../",
     )
 
-    Script = ShellscriptToUserConfig(ARGS.runscript)
-    Setup = SimulationSetup(
+    Script = esm_backwards_compatability.ShellscriptToUserConfig(ARGS.runscript)
+    Setup = esm_sim_objects.SimulationSetup(
         Script["general"]["setup_name"].replace("_standalone", ""), Script
     )
     pprint_config(Setup.config)

@@ -6,13 +6,15 @@
 Welcome to esm-yaml's documentation!
 ====================================
 
+Here is some documentation. I guess the handbook so more or less go here
+
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
-.. automodule:: general_py.esm_parser
-   :members:
-   :undoc-members:
+   user_documentation
+   modules
 
 Indices and tables
 ==================

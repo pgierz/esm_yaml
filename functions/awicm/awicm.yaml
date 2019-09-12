@@ -3,10 +3,9 @@
 #
 
 model: awicm
-model_dir:
-        ${esm_master_dir}/awicm-${version}
+model_dir: ${esm_master_dir}/awicm-${version}
 
-include_submodels:
+include_models:
         - fesom
         - echam
         - oasis3mct
@@ -142,10 +141,10 @@ coupling_directions:
                         to_grid: atmo
                         lag: o2a_lag
                         seq: 1
-         'echam->fesom':
-                 from: echam
-                 to: fesom
-                 'atmo->feom':
+        'echam->fesom':
+                from: echam
+                to: fesom
+                'atmo->feom':
                         from_grid: atmo
                         to_grid: feom
                         lag: $a2o_lag

@@ -37,6 +37,12 @@ class Dateformat(object):
         self.printminutes = printminutes
         self.printhours = printhours
 
+    def __repr__(self):
+        return (
+            "Dateformat(form=%s, printhours=%s, printminutes=%s, printseconds=%s)"
+            % (self.form, self.printhours, self.printminutes, self.printseconds)
+        )
+
 
 class Calendar(object):
     """
@@ -236,113 +242,69 @@ class Date(object):
     """
 
     def __init__(self, indate, calendar=Calendar()):
-        # NOTE: I went through and turned Python into English. Maybe it is
-        # helpful for someone else.
         printhours = True
         printminutes = True
         printseconds = True
         ndate = ["1900", "01", "01", "00", "00", "00"]
-
-        # The default should be an empty string:
-        date_seperator = time_seperator = ""
-
-        # Clean up the time seperator. If it's "T", make it into a "_"
+        ds = ""
+        ts = ""
         if "T" in indate:
-            indate = indate.replace("T", "_")
-        if "_" in indate:
-            # Split up the date and the time.
-            date, time = indate.split("_")
+            indate2 = indate.replace("T", "_")
+            ts = ":"
         else:
-            # No time was provided; the time becomes an empty string and the
-            # time_seperator turns into a ":"
-            date = indate
+            indate2 = indate
+        if "_" in indate2:
+            date, time = indate2.split("_")
+        else:
+            date = indate2
             time = ""
-            time_seperator = ":"
-
-        if time != "":
-            # OK, the user wants a time. We should try to split it up with a
-            # useful seperator.
-            #
-            # NOTE: Parse the time. In the following, I use HH:MM:SS as a full
-            # description of the time.
-            hours = minutes = seconds = "00"
-            printhours = printminutes = printseconds = False
-            if ":" in time:
-                time_seperator = ":"
-                number_of_time_seperators = time.count(time_seperator)
-                if number_of_time_seperators == 0:
-                    hours = time.split(time_seperator)
-                    printhours = True
-                elif number_of_time_seperators == 1:
-                    hours, minutes = time.split(time_seperator)
-                    printhours = printminutes = True
-                elif number_of_time_seperators == 2:
-                    hours, minutes, seconds = time.split(time_seperator)
-                    printhours = printminutes = printseconds = True
+            ts = ":"
+        for index in [3, 4, 5]:
+            if len(time) == 2:
+                ndate[index] = time
+                time = time[2:]
+            elif len(time) > 2:
+                ndate[index] = time[:2]
+                if len(time) > 2:
+                    time = time[2:]
+                    if time[0] == ":":
+                        time = time[1:]
+                        ts = ":"
             else:
-                # Here, we didn't use a seperator; so we need to check for
-                # negative hours, minutes, or seconds
-                time_seperator = ""
-                if time[0] == "-":
-                    hours = time[:3]
-                    time = time[3:]
-                    printhours = True
-                else:
-                    hours = time[:2]
-                    time = time[2:]
-                    printhours = True
-                if time[0] == "-":
-                    minutes = time[:3]
-                    time = time[3:]
-                    printminutes = True
-                else:
-                    minutes = time[:2]
-                    time = time[2:]
-                    printminutes = True
-                if time[0] == "-":
-                    seconds = time[:3]
-                    time = time[3:]
-                    printseconds = True
-                else:
-                    seconds = time[:2]
-                    time = time[2:]
-                    printseconds = True
-
-            ndate[3] = hours
-            ndate[4] = minutes
-            ndate[5] = seconds
-
-        # NOTE: Parse the date.
-        for index in 2, 1:
+                ndate[index] = "00"
+                if index == 3:
+                    printhours = False
+                elif index == 4:
+                    printminutes = False
+                elif index == 5:
+                    printseconds = False
+        for index in [2, 1]:
             ndate[index] = date[-2:]
             date = date[:-2]
-            if date[-1] == "-":
+            if len(date) > 0 and date[-1] == "-":
                 date = date[:-1]
-                date_seperator = "-"
-                # Check for a negative day or month
-                if date[-1] == "-":
-                    ndate[index] = "-" + ndate[index]
-                    date = date[:-1]
+                ds = "-"
         ndate[0] = date
-
-        if date_seperator == "-" and time_seperator == ":":
+        if ds == "-" and ts == ":":
             if "T" not in indate:
                 form = 1
             else:
                 form = 2
-        elif date_seperator == "-" and time_seperator == "":
+        elif ds == "-" and ts == "":
             form = 7
-        elif date_seperator == "" and time_seperator == ":":
+        elif ds == "" and ts == ":":
             form = 6
-        elif date_seperator == "" and time_seperator == "":
+        elif ds == "" and ts == "":
             form = 9
-
         self.year, self.month, self.day, self.hour, self.minute, self.second = map(
             int, ndate
         )
 
         self._date_format = Dateformat(form, printhours, printminutes, printseconds)
         self._calendar = calendar
+
+    def output(self, form="SELF"):
+        return self.format(form)
 
     @classmethod
     def from_list(cls, _list):
@@ -782,12 +744,12 @@ class Date(object):
         new_date : ~`pyesm.core.time_control.Date`
             A new date object with the added dates
         """
-        new_year = self.year + to_add.year
-        new_month = self.month + to_add.month
-        new_day = self.day + to_add.day
-        new_hour = self.hour + to_add.hour
-        new_minute = self.minute + to_add.minute
-        new_second = self.second + to_add.second
+        new_year = self.year + to_add[0]
+        new_month = self.month + to_add[1]
+        new_day = self.day + to_add[2]
+        new_hour = self.hour + to_add[3]
+        new_minute = self.minute + to_add[4]
+        new_second = self.second + to_add[5]
         new_date = self.from_list(
             [new_year, new_month, new_day, new_hour, new_minute, new_second]
         )
@@ -810,12 +772,12 @@ class Date(object):
         new_date : ~`pyesm.core.time_control.Date`
             A new date object with the subtracted dates
         """
-        new_year = self.year - to_sub.year
-        new_month = self.month - to_sub.month
-        new_day = self.day - to_sub.day
-        new_hour = self.hour - to_sub.hour
-        new_minute = self.minute - to_sub.minute
-        new_second = self.second - to_sub.second
+        new_year = self.year - to_sub[0]
+        new_month = self.month - to_sub[1]
+        new_day = self.day - to_sub[2]
+        new_hour = self.hour - to_sub[3]
+        new_minute = self.minute - to_sub[4]
+        new_second = self.second - to_sub[5]
         new_date = self.from_list(
             [new_year, new_month, new_day, new_hour, new_minute, new_second]
         )

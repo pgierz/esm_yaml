@@ -19,10 +19,10 @@ input_dir: "${echam.input_dir}"
 executable: NONE
 
 choose_lresume:
-        false:
+        False:
                 input_files:
                         hdstart: hdstart
-        true:
+        True:
                 restart_in_files:
                         hdrestart: hdrestart
 

@@ -110,6 +110,7 @@ YAML_AUTO_EXTENSIONS = ["", ".yml", ".yaml", ".YML", ".YAML"]
 gray_list = [
     r"choose_lresume",
     r"choose_.*lresume",
+    r"lresume",
     r".*date$",
     r".*date!(year|month|day|hour|minute|second)",
 ]
@@ -326,7 +327,7 @@ def priority_merge_dicts(first_config, second_config, priority="first"):
 
 def check_conflicting_model_and_setup_names(config):
     all_names = list(config)
-    all_model_names = config["setup"]["valid_model_names"]
+    all_model_names = config["general"]["valid_model_names"]
     for source_model in all_model_names:
         for target_model in all_names:
             if target_model in config[source_model]:
@@ -356,9 +357,9 @@ def dict_merge(dct, merge_dct):
 
 
 def update_models_from_setup(config):
-    all_model_names = config["setup"]["valid_model_names"]
+    all_model_names = config["general"]["valid_model_names"]
     for model_name in all_model_names:
-        model_config_in_setup = config["setup"].pop(model_name, {})
+        model_config_in_setup = config["general"].pop(model_name, {})
         dict_merge(config[model_name], model_config_in_setup)
 
 
@@ -665,7 +666,7 @@ def find_value_for_nested_key(mapping, key_of_interest, tree=[]):
     # raise KeyError("Couldn't find value for key %s", key_of_interest)
 
 
-def list_all_keys_starting_with_choose(mapping, model_name, ignore_list):
+def list_all_keys_starting_with_choose(mapping, model_name, ignore_list, isblacklist):
     """
     Given a ``mapping`` (e.g. a ``dict``-type object), list all keys that start
     with ``"choose_"`` on any level of the nested dictionary.
@@ -686,27 +687,21 @@ def list_all_keys_starting_with_choose(mapping, model_name, ignore_list):
     """
     logging.debug("Top of list_all_keys_starting_with_choose")
     all_chooses = []
-    mappings = [mapping]
-    while mappings:
-        mapping = mappings.pop()
-        try:
-            items = mapping.items()
-        except AttributeError:
-            continue
-        for key, value in items:
-            if (
-                isinstance(key, str)
-                and key.startswith("choose_")
-                and not determine_regex_list_match(key, ignore_list)  # TODO: with xor
-            ):
-                if not "." in key:
-                    old_key = key
-                    key = "choose_" + model_name + "." + key.split("choose_")[-1]
-                    del mapping[old_key]
-                    mapping[key] = value
-                all_chooses.append((key, value))
-            if isinstance(value, dict):
-                mappings.append(value)
+    for key, value in mapping.items():
+        if (
+            isinstance(key, str)
+            and key.startswith("choose_")
+            and (
+                (not isblacklist)
+                or (isblacklist and not determine_regex_list_match(key, ignore_list))
+            )
+        ):
+            if not "." in key:
+                old_key = key
+                key = "choose_" + model_name + "." + key.split("choose_")[-1]
+                del mapping[old_key]
+                mapping[key] = value
+            all_chooses.append((key, value))
     logging.debug("Will return %s", all_chooses)
     return all_chooses
 
@@ -747,7 +742,7 @@ def determine_set_variables_in_choose_block(config, valid_model_names, model_nam
         else:
             var_name = k
             if not model_name:
-                model_name = "setup"
+                model_name = "general"
             set_variables.append((model_name, var_name))
     return set_variables
 
@@ -789,20 +784,16 @@ def resolve_choose(model_with_choose, choose_key, config):
         raise KeyError("Something is horribly wrong")
     model_name, key = choose_key.replace("choose_", "").split(".")
     choice = config.get(model_with_choose).get(key)
+    if isinstance(choice, str) and "${" in choice:
+        logging.warn("Variable %s as a choice, skipping...", choice)
+        del config_to_replace_in[model_with_choose][choose_key]
+        return
     logging.debug(choice)
 
     config_to_search_in = {}
 
     if model_name in config:
         config_to_search_in = config
-
-    if model_name in config:
-        if key in config[model_name]:
-            config_to_search_in = config
-
-    if model_name in config:
-        if key in config[model_name]:
-            config_to_search_in = config
 
     if not config_to_search_in:
         raise KeyError("Something else is horribly wrong")
@@ -840,6 +831,7 @@ def resolve_choose(model_with_choose, choose_key, config):
                 )
         else:
             logging.warning("Choice %s could not be resolved", choice)
+            logging.warning("Key was key=%s", key)
         logging.debug("key=%s", key)
     elif "*" not in config_to_replace_in[model_with_choose][choose_key]:
         raise KeyError("Key %s was not defined", key)
@@ -922,35 +914,45 @@ def recursive_run_function(tree, right, level, func, *args, **kwargs):
         def func(tree, right, *args, **kwargs(
 
     """
-    logging.debug("Top of function")
-    logging.debug("tree=%s", tree)
+    # logging.debug("Top of function")
+    # logging.debug("tree=%s", tree)
     if level is "mappings":
         do_func_for = [dict, list]
     elif level is "atomic":
         do_func_for = [str, int, float]
     elif level is "always":
         do_func_for = [str, dict, list, int, float, bool]
+    elif level is "keys":
+        do_func_for = []
     else:
         do_func_for = []
 
-    logger.debug("right is a %s!", type(right))
+    if level is "keys" and isinstance(right, dict):
+        keys = list(right)
+        for key in keys:
+            old_value = right[key]
+            returned_key = func(tree + [key], key, *args, **kwargs)
+            del right[key]
+            right.update({returned_key: old_value})
+
+    # logger.debug("right is a %s!", type(right))
     if type(right) in do_func_for:
-        logger.debug("It's in %s", do_func_for)
+        # logger.debug("It's in %s", do_func_for)
         if isinstance(right, dict):
             keys = list(right)
             for key in keys:
                 value = right[key]
-                logger.debug("Deleting key %s", key)
-                logging.debug(
-                    "Start func %s with %s, %s sent from us",
-                    func.__name__,
-                    tree + [key],
-                    value,
-                )
+                # logger.debug("Deleting key %s", key)
+                # logging.debug(
+                #    "Start func %s with %s, %s sent from us",
+                #    func.__name__,
+                #    tree + [key],
+                #    value,
+                # )
                 returned_dict = func(tree + [key], value, *args, **kwargs)
                 del right[key]
-                logger.debug("Back out of func %s", func.__name__)
-                logger.debug("Got as returned_dict: %s", returned_dict)
+                # logger.debug("Back out of func %s", func.__name__)
+                # logger.debug("Got as returned_dict: %s", returned_dict)
                 right.update(returned_dict)
         elif isinstance(right, list):
             for index, item in enumerate(right):
@@ -959,7 +961,7 @@ def recursive_run_function(tree, right, level, func, *args, **kwargs):
         else:
             right = func(tree + [None], right, *args, **kwargs)
 
-    logger.debug("finished with do_func_for")
+    # logger.debug("finished with do_func_for")
 
     if isinstance(right, list):
         for index, item in enumerate(right):
@@ -1032,6 +1034,72 @@ def find_variable(tree, rhs, full_config, white_or_black_list, isblacklist):
         if (determine_regex_list_match(var, white_or_black_list)) != isblacklist:
             var_result = actually_find_variable(tree, var, full_config)
             if var_result:
+                ok_part, var_result, more_rest = (
+                    str(ok_part),
+                    str(var_result),
+                    str(new_raw),
+                )
+                logger.debug("Will replace again: %s", ok_part + var_result + more_rest)
+                return find_variable(
+                    tree,
+                    ok_part + var_result + more_rest,
+                    full_config,
+                    white_or_black_list,
+                    isblacklist,
+                )
+
+                # if new_raw:
+                #    more_rest = find_variable(
+                #        tree, new_raw, full_config, white_or_black_list, isblacklist
+                #    )
+                # else:
+                #    more_rest = ""
+                ## Make sure everything is a string:
+                # return ok_part + var_result + more_rest
+    return raw_str
+
+
+def actually_find_variable(tree, rhs, full_config):
+    config_elements = rhs.split(".")
+    valid_names = (
+        full_config["general"]["valid_model_names"]
+        + full_config["general"]["valid_setup_names"]
+    )
+    logging.debug(valid_names)
+    if config_elements[0] not in valid_names:
+        config_elements.insert(0, tree[0])
+
+    original_config_elements = config_elements.copy()
+    try:
+        var_result = recursive_get(full_config, config_elements)
+        return var_result
+    except ValueError:
+        # Maybe it is in the general:
+        try:
+            config_elements = original_config_elements
+            logging.debug(config_elements)
+            config_elements[0] = "general"
+            var_result = recursive_get(full_config, config_elements)
+            return var_result
+        except:
+            raise ValueError("Sorry: %s not found" % (rhs))
+
+
+constant_replace_dict = {"${expid}": "TEST_EXPID"}
+
+
+def replace_constants(tree, rhs, config):
+    if not tree[-1]:
+        tree = tree[:-1]
+    lhs = tree[-1]
+    entry = rhs
+    # FIXME(PG): I don't like have this duplicate code here...
+    if isinstance(raw_str, str) and "${" in raw_str:
+        ok_part, rest = raw_str.split("${", 1)
+        var, new_raw = rest.split("}", 1)
+        if (determine_regex_list_match(var, white_or_black_list)) != isblacklist:
+            # var_result =
+            if var_result:
                 if new_raw:
                     more_rest = find_variable(
                         tree, new_raw, full_config, white_or_black_list, isblacklist
@@ -1048,36 +1116,32 @@ def find_variable(tree, rhs, full_config, white_or_black_list, isblacklist):
                 return ok_part + var_result + more_rest
     return raw_str
 
-
-def actually_find_variable(tree, rhs, full_config):
-    config_elements = rhs.split(".")
-    valid_names = (
-        full_config["setup"]["valid_model_names"]
-        + full_config["setup"]["valid_setup_names"]
-    )
-    logging.debug(valid_names)
-    if config_elements[0] not in valid_names:
-        config_elements.insert(0, tree[0])
-
-    try:
-        var_result = recursive_get(full_config, config_elements)
-        return var_result
-    except ValueError:
-        raise ValueError("Sorry: %s not found" % (rhs))
+    if entry in list(constant_replace_dict):
+        entry = constant_replace_dict[entry]
+    return entry
 
 
 def list_to_multikey(tree, rhs, config_to_search):
-    logging.debug("tree=%s", tree)
-    logging.debug("rhs=%s", rhs)
+    """
+    A recursive_run_function conforming func which puts any list based key to a
+    multikey elsewhere. Sorry, that sounds confusing even to me, and I wrote
+    the function.
+
+    Parameters
+    ----------
+    tree : list
+
+    rhs : str
+
+    config_to_search : dict
+
+
+
+    """
     if tree:
         lhs = tree[-1]
         list_fence = "[["
         list_end = "]]"
-        logging.debug("Running list_to_multikey")
-        logging.debug("lhs=%s", lhs)
-        logging.debug(type(lhs))
-        logging.debug("rhs=%s", rhs)
-        logging.debug(type(rhs))
         if isinstance(lhs, str) and lhs:
             if list_fence in lhs:
                 return_dict = {}
@@ -1117,9 +1181,7 @@ def list_to_multikey(tree, rhs, config_to_search):
                         )
                 else:
                     return_dict = return_dict2
-                logging.debug("About to return: %s", return_dict)
                 return return_dict
-            logging.debug("About to return: %s", {lhs: rhs})
             return {lhs: rhs}
         if isinstance(rhs, str) and list_fence in rhs:
             rhs_list = []
@@ -1140,9 +1202,10 @@ def list_to_multikey(tree, rhs, config_to_search):
                     out_list += list_to_multikey(
                         tree + [None], rhs_listitem, config_to_search
                     )
-                    logging.debug(out_list)
                 rhs_list = out_list
             return rhs_list
+        elif isinstance(lhs, bool):
+            return {lhs: rhs}
     return rhs
 
 
@@ -1183,6 +1246,8 @@ def do_math_in_entry(tree, rhs, config):
     if not tree[-1]:
         tree = tree[:-1]
     entry = rhs
+    if "${" in str(entry):
+        return entry
     entry = " " + str(entry) + " "
     while "$((" in entry:
         math, after_math = entry.split("))", 1)
@@ -1213,9 +1278,39 @@ def mark_dates(tree, rhs, config):
         tree = tree[:-1]
     lhs = tree[-1]
     entry = rhs
-    logging.debug(lhs)
+    if "${" in str(entry):
+        return entry
     if isinstance(lhs, str) and lhs.endswith("date"):
         entry = str(entry) + DATE_MARKER
+    return entry
+
+
+def marked_date_to_date_object(tree, rhs, config):
+    """Transforms a marked date string into a Date object"""
+    if not tree[-1]:
+        tree = tree[:-1]
+    lhs = tree[-1]
+    entry = rhs
+    if isinstance(entry, Date):
+        return entry
+    if "${" in str(entry):
+        return entry
+    if isinstance(lhs, str) and lhs.endswith("date"):
+        # if isinstance(entry, str) and DATE_MARKER in entry and "<--" not in entry:
+        while DATE_MARKER in entry:
+            entry = entry.replace(DATE_MARKER, "")
+            if "!" in entry:
+                actual_date, date_attr = entry.split("!", 1)
+            else:
+                actual_date, date_attr = entry, None
+            entry = Date(actual_date)
+            if date_attr:
+                rentry = []
+                for attr in date_attr.split("!"):
+                    rentry.append(str(getattr(entry, attr)))
+                return "".join(rentry)
+            else:
+                return entry.output()
     return entry
 
 
@@ -1259,7 +1354,7 @@ class ConfigSetup(GeneralConfig):
     def _config_init(self, user_config):
         setup_config = {
             "computer": yaml_file_to_dict(determine_computer_from_hostname()),
-            "setup": {},
+            "general": {},
         }
         # Add the fake "model" name to the computer:
         setup_config["computer"]["model"] = "computer"
@@ -1268,24 +1363,24 @@ class ConfigSetup(GeneralConfig):
         model_config = {}
 
         if "coupled_setup" not in self.config:
-            setup_config["setup"]["include_models"] = self.config["include_models"]
-            setup_config["setup"].update({"standalone": True})
+            setup_config["general"]["include_models"] = self.config["include_models"]
+            setup_config["general"].update({"standalone": True})
         else:
-            setup_config["setup"] = self.config
-            setup_config["setup"].update({"standalone": False})
+            setup_config["general"] = self.config
+            setup_config["general"].update({"standalone": False})
         del self.config
         attach_to_config_and_reduce_keyword(
-            setup_config["setup"], model_config, "include_models", "models"
+            setup_config["general"], model_config, "include_models", "models"
         )
-        for model in setup_config["setup"]["models"]:
+        for model in setup_config["general"]["models"]:
             attach_to_config_and_reduce_keyword(
                 model_config[model], model_config, "include_models", "models"
             )
-        setup_config["general"] = {"esm_master_dir": esm_master_dir}
-        setup_config["setup"]["valid_setup_names"] = valid_setup_names = list(
+        setup_config["general"] = {"esm_master_dir": esm_master_dir, "expid": "test"}
+        setup_config["general"]["valid_setup_names"] = valid_setup_names = list(
             setup_config
         )
-        setup_config["setup"]["valid_model_names"] = valid_model_names = list(
+        setup_config["general"]["valid_model_names"] = valid_model_names = list(
             model_config
         )
         logging.debug("Valid Setup Names = %s", valid_setup_names)
@@ -1297,55 +1392,71 @@ class ConfigSetup(GeneralConfig):
         check_conflicting_model_and_setup_names(self.config)
         update_models_from_setup(self.config)
 
+        self.choose_blocks(self.config)
+        self.run_recursive_functions(self.config)
+
+    def choose_blocks(self, config, isblacklist=True):
+        valid_setup_names = config["general"]["valid_setup_names"]
+        valid_model_names = config["general"]["valid_model_names"]
         all_set_variables = {}
 
         all_names = valid_setup_names + valid_model_names
         for name in all_names:
-            all_set_variables[name] = {}
-            name_chooses = list_all_keys_starting_with_choose(
-                self.config[name], name, gray_list
-            )
-            logging.debug(name_chooses)
-            for key, block in name_chooses:
-                all_set_variables[name][key] = determine_set_variables_in_choose_block(
-                    block, all_names, name
+            while True:
+                all_set_variables[name] = {}
+                name_chooses = list_all_keys_starting_with_choose(
+                    config[name], name, gray_list, isblacklist
                 )
+                if name_chooses == []:
+                    break
+                for key, block in name_chooses:
+                    all_set_variables[name][
+                        key
+                    ] = determine_set_variables_in_choose_block(block, all_names, name)
 
-        while True:
-            task_list = model_with_choose, choose_key = find_one_independent_choose(
-                all_set_variables
-            )
-            logging.debug("The task list is: %s", task_list)
-            logging.debug("all_set_variables: %s", all_set_variables)
-            resolve_choose(model_with_choose, choose_key, self.config)
-            del all_set_variables[model_with_choose][choose_key]
-            for key in list(all_set_variables):
-                if not all_set_variables[key]:
-                    del all_set_variables[key]
-            logging.debug("Remaining all_set_variables=%s", all_set_variables)
-            if not all_set_variables:
-                break
+                task_list = model_with_choose, choose_key = find_one_independent_choose(
+                    all_set_variables
+                )
+                logging.debug("The task list is: %s", task_list)
+                logging.debug("all_set_variables: %s", all_set_variables)
+                resolve_choose(model_with_choose, choose_key, config)
+                del all_set_variables[model_with_choose][choose_key]
+                for key in list(all_set_variables):
+                    if not all_set_variables[key]:
+                        del all_set_variables[key]
+                logging.debug("Remaining all_set_variables=%s", all_set_variables)
 
         add_entries_to_chapter_in_config(
-            self.config, valid_model_names, self.config, valid_setup_names
+            config, valid_model_names, config, valid_setup_names
         )
         remove_entries_from_chapter_in_config(
-            self.config, valid_model_names, self.config, valid_setup_names
+            config, valid_model_names, config, valid_setup_names
         )
 
-        recursive_run_function([], self.config, "atomic", mark_dates, self.config)
+    def run_recursive_functions(self, config, isblacklist=True):
+        recursive_run_function([], config, "atomic", mark_dates, config)
         recursive_run_function(
             [],
-            self.config,
+            config,
             "atomic",
             find_variable,
-            self.config,
+            config,
             gray_list,
-            isblacklist=True,
+            isblacklist=isblacklist,
         )
-        recursive_run_function([], self.config, "atomic", do_math_in_entry, self.config)
-        recursive_run_function([], self.config, "atomic", unmark_dates, self.config)
-        recursive_run_function([], self.config, "always", list_to_multikey, self.config)
+        recursive_run_function(
+            [],
+            config,
+            "keys",
+            find_variable,
+            config,
+            gray_list,
+            isblacklist=isblacklist,
+        )
+        recursive_run_function([], config, "atomic", do_math_in_entry, config)
+        recursive_run_function([], config, "atomic", unmark_dates, config)
+        recursive_run_function([], config, "atomic", marked_date_to_date_object, config)
+        recursive_run_function([], config, "always", list_to_multikey, config)
 
 
 if __name__ == "__main__":  # pragma: no cover
@@ -1391,4 +1502,3 @@ if __name__ == "__main__":  # pragma: no cover
     Setup = esm_sim_objects.SimulationSetup(
         Script["general"]["setup_name"].replace("_standalone", ""), Script
     )
-    pprint_config(Setup.config)

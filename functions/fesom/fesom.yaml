@@ -190,12 +190,12 @@ config_sources:
         #[[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2: [[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2
 
 output_targets:
-        [[streams --> STREAM]]_[[write_output_dates --> WHEN]]: ${expid}_STREAM_fesom_WHEN.nc
-        [[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2: ${expid}_STREAM.fesom.WHEN<--year--.nc
+        "[[streams --> STREAM]]_[[write_output_dates --> WHEN]]": ${expid}_STREAM_fesom_WHEN.nc
+        "[[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2": ${expid}_STREAM.fesom.WHEN<--year--.nc
 
 output_in_work:
-        [[streams --> STREAM]]_[[write_output_dates --> WHEN]]: STREAM_fesom_WHEN.nc
-        [[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2: STREAM.fesom.WHEN<--year--.nc
+        "[[streams --> STREAM]]_[[write_output_dates --> WHEN]]": STREAM_fesom_WHEN.nc
+        "[[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2": STREAM.fesom.WHEN<--year--.nc
 
 
         #restart_files:

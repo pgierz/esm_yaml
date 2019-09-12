@@ -23,7 +23,7 @@ license_text: |
 executable: echam6
 version: 6.304p1
 resolution: T63
-scenario: PI-CTRL
+scenario: "PI-CTRL"
 postprocessing_stream: 'BOT ATM LOG'
 yr_perp_off: false
 transient_advance_forcing: false
@@ -92,7 +92,7 @@ choose_version:
                 dataset: r0007
 
 choose_scenario:
-        PI-CTRL:
+        "PI-CTRL":
                 forcing_files:
                         sst: pisst
                         sic: pisic
@@ -192,13 +192,13 @@ choose_scenario:
 
 
 choose_lresume:
-        false:
+        False:
                 restart_in_modifications:
                         "[[streams-->STREAM]]":
-                                - vdate "<--set_dim--" ${start_date}
-                                - fdate "<--set_dim--" ${year_before_date}
+                                - "vdate <--set_dim-- ${start_date}"
+                                  # - fdate "<--set_dim--" ${year_before_date}
                                   # - ndate "<--set_dim--" ${steps_in_year_before}
-        true:
+        True:
                 # pseudo_start_date: $(( ${start_date} - ${time_step} ))
                 namelist_changes:
                         namelist.echam:
@@ -206,13 +206,14 @@ choose_lresume:
                                         dt_start: "remove_from_namelist"
 
 
-start_date!year: 1850
-choose_start_date!year:
-        disturbed_years:
-                namelist_changes:
-                        namelist.echam:
-                                dynctl:
-                                        enstdif: "${disturbance}"
+start_date: 18500101
+# PG: Still a problem: can't use ! in a choose block
+#choose_start_date!year:
+#        disturbed_years:
+#                namelist_changes:
+#                        namelist.echam:
+#                                dynctl:
+#                                        enstdif: "${disturbance}"
 
 choose_CO2:
         '*':
@@ -265,9 +266,9 @@ choose_yr_perp_off:
                                 runctl:
                                         l_orbsvop87: ".false."
 
-choose_transient_advance_forcing:
-        true:
-                "[year, co2vmr, ch4vmr, n2ovmr, cecc, cobld, clonp]": "<--grep(${start_date!year})-- ${forcing_table}"
+#choose_transient_advance_forcing:
+        #true:
+                #"[year, co2vmr, ch4vmr, n2ovmr, cecc, cobld, clonp]": "<--grep(${start_date!year})-- ${forcing_table}"
 
 input_in_workdir:
         "cldoptprops": "ECHAM6_CldOptProps.nc"
@@ -308,11 +309,11 @@ streams:
 prev_date: 18500101
 restart_sources:
         "[[streams-->STREAM]]":
-                - "restart_${general.expid}_STREAM_${prev_date}.nc"
-                - "restart_${general.expid}_${prev_date}_STREAM.nc"
+                - "restart_${expid}_STREAM_${prev_date}.nc"
+                - "restart_${expid}_${prev_date}_STREAM.nc"
 
 restart_in_workdir:
-        "[[streams-->STREAM]]": "restart_${general.expid}_STREAM.nc"
+        "[[streams-->STREAM]]": "restart_${expid}_STREAM.nc"
 
         #restart_out_files:
         #"[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]": "STREAM_WHEN"
@@ -351,7 +352,7 @@ namelist_changes:
                         dt_start:    '${pseudo_start_date}'
                         dt_stop:     '${pseudo_end_date}'
                         dt_resume:   '${pseudo_resume_date}'
-                        lresume: ".${lresume}."
+                        lresume: "${lresume}"
                         lcouple: ".false."
                         delta_time: "${time_step}"
                         putrerun: "${restart_rate}, ${restart_unit}, ${restart_firstlast}, 0"

@@ -51,6 +51,7 @@ choose_version:
 forcings:
         LU_trans: LU_trans
 
+scenario: RCP85
 choose_scenario:
         PI-CTRL:
                 forcings:
@@ -144,8 +145,8 @@ streams:
 
 restart_sources:
         "[[streams-->STREAM]]":
-                - "restart_${general.expid}_STREAM_${prev_date}.nc"
-                - "restart_${general.expid}_${prev_date}_STREAM.nc"
+                # - "restart_${general.expid}_STREAM_${prev_date}.nc"
+                "restart_${general.expid}_${prev_date}_STREAM.nc"
 
 restart_in_workdir:        
         "[[streams-->STREAM]]": "restart_${general.expid}_STREAM.nc"

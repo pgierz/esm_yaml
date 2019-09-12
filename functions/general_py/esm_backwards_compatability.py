@@ -94,7 +94,7 @@ class ShellscriptToUserConfig(dict):
         user_config["general"] = {}
         for diff in diffs:
             if diff in deprecated_diffs:
-                print(
+                logging.warn(
                     "You used a discontinued variable: %s. Please reconsider your life choices"
                     % diff
                 )

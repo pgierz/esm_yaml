@@ -1,14 +1,16 @@
 """
 Documentation goes here
 """
+import logging
 import os
 import shutil
+import sys
 
-from esm_calendar import Date
-import logging
+import f90nml
 import tqdm
 import yaml
 
+from esm_calendar import Date
 import esm_parser
 
 
@@ -206,7 +208,9 @@ class SimulationSetup(object):
         print("\n" "- Namelists modified according to experiment specifications")
         for nml_name, nml in all_namelists.items():
             print("Contents of ", nml_name, ":")
-            print(nml)
+            nml.write(sys.stdout)
+            print("\n", 40*"+ ")
+
 
     def _prepare_copy_files(self, flist):
         successful_files = []
@@ -354,24 +358,31 @@ class SimulationComponent(object):
         return all_files_to_process
 
     def nmls_load(self):
-        nmls = self.config.get("namelists")
+        nmls = self.config.get("namelists", [])
         self.config["namelists"] = dict.fromkeys(nmls)
         for nml in nmls:
+            logging.debug("Loading %s", nml)
             self.config["namelists"][nml] = f90nml.read(
-                os.path.join(self.config_dir, nml)
+                os.path.join(self.thisrun_config_dir, nml)
             )
 
     def nmls_remove(self):
         namelist_changes = self.config.get("namelist_changes", {})
         namelist_removes = []
-        for namelist, changes in namelist_changes.items():
-            for change_chapter, change_entries in changes:
-                for key, value in change_entries:
+        for namelist in list(namelist_changes):
+            changes = namelist_changes[namelist]
+            logging.debug("Determining remove entires for %s", namelist)
+            logging.debug("All changes: %s", changes)
+            for change_chapter in list(changes):
+                change_entries = changes[change_chapter]
+                for key in list(change_entries):
+                    value = change_entries[key]
                     if value == "remove_from_namelist":
                         namelist_removes.append((namelist, change_chapter, key))
                         del namelist_changes[namelist][change_chapter][key]
         for remove in namelist_removes:
             namelist, change_chapter, key = remove
+            logging.debug("Removing from %s: %s, %s", namelist, change_chapter, key)
             del self.config["namelists"][namelist][change_chapter][key]
 
     def nmls_modify(self):
@@ -381,7 +392,7 @@ class SimulationComponent(object):
 
     def nmls_finalize(self, all_nmls):
         for nml_name, nml_obj in self.config.get("namelists", {}).items():
-            with open(os.path.join(self.config_dir, nml_name), "w") as nml_file:
+            with open(os.path.join(self.thisrun_config_dir, nml_name), "w") as nml_file:
                 nml_obj.write(nml_file)
             all_nmls[nml_name] = nml_obj  # PG or a string representation?
 

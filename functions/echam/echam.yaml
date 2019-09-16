@@ -21,7 +21,7 @@ license_text: |
 
 
 executable: echam6
-version: 6.304p1
+version: 6.3.04p1
 resolution: T63
 scenario: "PI-CTRL"
 postprocessing_stream: 'BOT ATM LOG'
@@ -58,7 +58,7 @@ input_dir: "${pool_dir}/input/${dataset}"
 adj_input_dir: "${input_dir}/${resolution}"
 forcing_dir: "${input_dir}/${resolution}"
 greenhouse_dir: "${pool_dir}"
-namelist_dir: "${general.BASE_DIR}/esm_runscripts/namelists/echam/${version}/${scenario}"
+namelist_dir: "${general.esm_master_dir}/namelists/echam/${version}/${scenario}"
 
 # choices
 
@@ -87,7 +87,7 @@ choose_resolution:
                 _ny: 192
 
 choose_version:
-        6.304p1:
+        6.3.04p1:
                 repo_tag: 6.304p1
                 dataset: r0007
 
@@ -346,6 +346,9 @@ log_files:
 log_in_workdir:
         atmout: atmout
 
+namelists:
+        - "namelist.echam"
+
 namelist_changes:
         namelist.echam:
                 runctl:
@@ -415,7 +418,9 @@ restart_firstlast: first
 # Work dir:
 work_dir: "."
 
-
+# Configuration Files:
+config_sources:
+        "namelist.echam": "${namelist_dir}/namelist.echam"
 
 errors:
         mo_exception:

@@ -5,4 +5,4 @@ ollie:
                 - 'bkli04m034*'
         compute_nodes: 'prod-*'
 mistral:
-        login_nodes: 'mlogin-*.dkrz.de'
+        login_nodes: 'mlogin*'

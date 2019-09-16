@@ -54,10 +54,10 @@ restart:
 model_dir: "${general.BASE_DIR}/echam-${version}"
 bin_dir: "${MODEL_DIR}/bin"
 pool_dir: "${computer.pool_directories.pool}/ECHAM6"
-input_dir: "${pool_dir}/ECHAM6/input/${dataset}"
+input_dir: "${pool_dir}/input/${dataset}"
 adj_input_dir: "${input_dir}/${resolution}"
 forcing_dir: "${input_dir}/${resolution}"
-greenhouse_dir: "${pool_dir}/ECHAM6"
+greenhouse_dir: "${pool_dir}"
 namelist_dir: "${general.BASE_DIR}/esm_runscripts/namelists/echam/${version}/${scenario}"
 
 # choices
@@ -307,10 +307,11 @@ streams:
 
 # Only for testing:
 prev_date: 18500101
-restart_sources:
-        "[[streams-->STREAM]]":
-                - "restart_${expid}_STREAM_${prev_date}.nc"
-                - "restart_${expid}_${prev_date}_STREAM.nc"
+# BUG: PG Why do we need lists here?
+#restart_sources:
+#        "[[streams-->STREAM]]":
+#                - "restart_${expid}_STREAM_${prev_date}.nc"
+#                - "restart_${expid}_${prev_date}_STREAM.nc"
 
 restart_in_workdir:
         "[[streams-->STREAM]]": "restart_${expid}_STREAM.nc"

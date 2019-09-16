@@ -1,3 +1,6 @@
+"""
+Backwards compatability for old runscripts
+"""
 # Python 2 and 3 version agnostic compatiability:
 from __future__ import print_function
 from __future__ import unicode_literals
@@ -11,7 +14,6 @@ import subprocess
 
 from builtins import dict
 from builtins import open
-from builtins import super
 from future import standard_library
 
 standard_library.install_aliases()
@@ -20,6 +22,10 @@ FUNCTION_PATH = os.path.dirname(__file__) + "/../"
 
 
 class ShellscriptToUserConfig(dict):
+    """
+    Generates a User Config from an old Shellscript
+    """
+
     def __init__(self, runscript_path):
         with open(runscript_path) as runscript_file:
             all_lines = runscript_file.readlines()
@@ -44,16 +50,22 @@ class ShellscriptToUserConfig(dict):
         for module_command in module_commands:
             os.system(module_command)
         env_before = os.environ
+        logging.debug("Got environment from the system %s", env_before)
         with open("cleaned_runscript", "w") as cleaned_runscript:
             for line in good_lines:
                 cleaned_runscript.write(line + "\n")
-        pipe1 = subprocess.Popen(
-            ". cleaned_runscript; env", stdout=subprocess.PIPE, shell=True
+            logging.debug("Finished writing cleaned_runscript")
+        command_to_run = "source %s/cleaned_runscript; env" % os.getcwd()
+        logging.debug(
+            "Using the following command to determine environment in runscript: %s",
+            command_to_run,
         )
+        pipe1 = subprocess.Popen(command_to_run, stdout=subprocess.PIPE, shell=True)
         output = pipe1.communicate()[0].decode("utf-8")
+        logging.debug(output)
         env_after = {}
         for line in output.split("\n"):
-            if line:
+            if line and "=" in line:
                 key, value = line.split("=", 1)
                 if value:
                     env_after[key] = value
@@ -94,9 +106,9 @@ class ShellscriptToUserConfig(dict):
         user_config["general"] = {}
         for diff in diffs:
             if diff in deprecated_diffs:
-                logging.warn(
-                    "You used a discontinued variable: %s. Please reconsider your life choices"
-                    % diff
+                logging.warning(
+                    "You used a discontinued variable: %s. Please reconsider your life choices",
+                    diff,
                 )
             if diff not in deprecated_diffs:
                 user_config["general"][diff] = env_after[diff]
@@ -106,5 +118,5 @@ class ShellscriptToUserConfig(dict):
             diffs.remove(solved_diff)
         logging.debug("Diffs after removing: %s", diffs)
 
-        for k, v in user_config.items():
-            self.__setitem__(k, v)
+        for key, value in user_config.items():
+            self.__setitem__(key, value)

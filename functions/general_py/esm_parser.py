@@ -102,8 +102,8 @@ logger.addHandler(f_handler)
 # Module Constants:
 CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE = ["further_reading"]
 DATE_MARKER = ">>>THIS_IS_A_DATE<<<"
-FUNCTION_PATH = os.path.dirname(__file__) + "/../"
-esm_master_dir = os.path.dirname(__file__) + "/../../"
+FUNCTION_PATH = os.path.normpath(os.path.dirname(__file__) + "/../")
+esm_master_dir = os.path.normpath(os.path.dirname(__file__) + "/../../")
 
 YAML_AUTO_EXTENSIONS = ["", ".yml", ".yaml", ".YML", ".YAML"]
 
@@ -1502,3 +1502,4 @@ if __name__ == "__main__":  # pragma: no cover
     Setup = esm_sim_objects.SimulationSetup(
         Script["general"]["setup_name"].replace("_standalone", ""), Script
     )
+    Setup.prepare()

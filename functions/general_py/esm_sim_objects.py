@@ -6,6 +6,7 @@ import shutil
 
 from esm_calendar import Date
 import logging
+import tqdm
 import yaml
 
 import esm_parser
@@ -23,7 +24,7 @@ class SimulationSetup(object):
 
         self.config = esm_parser.ConfigSetup(name, user_config)
 
-        self.config["general"]["base_dir"] = "/tmp/example_experiments/"
+        self.config["general"]["base_dir"] = self.config["general"]["BASE_DIR"]
         self.config["general"]["expid"] = "test"
 
         components = []
@@ -32,7 +33,6 @@ class SimulationSetup(object):
                 SimulationComponent(self.config["general"], self.config[component])
             )
         del user_config
-        # Maybe this wastes memory, not sure:
         self.components = components
 
         self.all_filetypes = ["analysis", "config", "log", "mon", "scripts"]
@@ -60,8 +60,12 @@ class SimulationSetup(object):
 
         self._read_date_file()
         self._initialize_calendar()
+        self._finalize_config()
+        self._finalize_components()
+
+    def _finalize_config(self):
         # esm_parser.pprint_config(self.config["hdmodel"])
-        logging.error("SECOND TIME!")
+        logging.debug("SECOND TIME!")
         self.config.choose_blocks(self.config, isblacklist=False)
         self.config.run_recursive_functions(self.config, isblacklist=False)
         with open(
@@ -72,6 +76,11 @@ class SimulationSetup(object):
             "w",
         ) as config_file:
             yaml.dump(self.config, config_file)
+
+    def _finalize_components(self):
+        for component in self.components:
+            component.general_config = self.config["general"]
+            component.finalize_attributes()
 
     def _read_date_file(self, date_file=None):
         if not date_file:
@@ -173,6 +182,38 @@ class SimulationSetup(object):
         with open(date_file, "w") as date_file:
             date_file.write(self.current_date.output() + " " + str(self.run_number))
 
+    def prepare(self):
+        print("=" * 80, "\n")
+        print("PREPARING EXPERIMENT")
+        all_files_to_copy = []
+        for component in self.components:
+            print("-" * 80)
+            print("* %s" % component.config["model"], "\n")
+            all_files_to_copy += component.filesystem_to_experiment()
+        print("\n" "- File lists populated, proceeding with copy...")
+        self._prepare_copy_files(all_files_to_copy)
+
+    def _prepare_copy_files(self, flist):
+        successful_files = []
+        missing_files = []
+        # TODO: Check if we are on login node or elsewhere for the progress
+        # bar, it doesn't make sense on the compute nodes:
+        for ftuple in tqdm.tqdm(flist, 
+                        bar_format= '{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]'):
+            logging.debug(ftuple)
+            (file_source, file_intermediate, file_target) = ftuple
+            try:
+                shutil.copy2(file_source, file_intermediate)
+                if not os.path.isfile(file_target):
+                    os.symlink(file_intermediate, file_target)
+                successful_files.append(file_target)
+            except IOError:
+                missing_files.append(file_target)
+        if missing_files:
+           print("--- WARNING: These files were missing:")
+           for missing_file in missing_files: 
+                print("- %s" % missing_file)
+
 
 class SimulationComponent(object):
     def __init__(self, general, component_config):
@@ -210,16 +251,20 @@ class SimulationComponent(object):
                 os.makedirs(getattr(self, "experiment_" + filetype + "_dir"))
 
     def filesystem_to_experiment(self):
+        print("- Gathering files to be copied to experiment tree:")
+        all_files_to_process = []
         for filetype in self.all_filetypes:
-            # forcing_files = {'sst': 'pisst'}
-            # forcing_sources = {'pisst': '/some/path/to/pisst_file/'}
-            # forcing_in_work = {'sst': 'unit.24'}
+            filetype_files = []
+            print("- %s" % filetype)
             if filetype + "_sources" not in self.config:
                 continue
             filedir_intermediate = getattr(self, "thisrun_" + filetype + "_dir")
             for file_descriptor, file_source in self.config[
                 filetype + "_sources"
             ].items():
+                logging.debug(
+                    "file_descriptor=%s, file_source=%s", file_descriptor, file_source
+                )
                 if filetype + "_files" in self.config:
                     if file_descriptor not in self.config[filetype + "_files"].values():
                         continue
@@ -230,42 +275,79 @@ class SimulationComponent(object):
                         file_category = inverted_dict[file_descriptor]
                 else:
                     file_category = file_descriptor
+
+                logging.debug(type(file_source))
+                if isinstance(file_source, dict):
+                    logging.debug(
+                        "Checking which file to use for this year: %s",
+                        self.general_config["current_date"].year,
+                    )
+                    for fname, valid_years in file_source.items():
+                        logging.debug("Checking %s", fname)
+                        min_year = float(valid_years.get("from", "-inf"))
+                        max_year = float(valid_years.get("to", "inf"))
+                        logging.debug("Valid from: %s", min_year)
+                        logging.debug("Valid to: %s", max_year)
+                        logging.debug(
+                            "%s <= %s --> %s",
+                            min_year,
+                            self.general_config["current_date"].year,
+                            min_year <= self.general_config["current_date"].year,
+                        )
+                        logging.debug(
+                            "%s <= %s --> %s",
+                            self.general_config["current_date"].year,
+                            max_year,
+                            self.general_config["current_date"].year <= max_year,
+                        )
+                        if (
+                            min_year <= self.general_config["current_date"].year
+                            and self.general_config["current_date"].year <= max_year
+                        ):
+                            file_source = fname
+                        else:
+                            continue  # PG: With the big loop?
                 if (
                     filetype + "_in_work" in self.config
                     and file_category in self.config[filetype + "_in_work"].keys()
                 ):
-                    # Cosmetic TODO: Give this dude a real name
                     file_target = (
                         filedir_intermediate
                         + "/"
                         + self.config[filetype + "_in_work"][file_category]
                     )
                 else:
-                    file_target = (
-                        filedir_intermediate + "/" + os.path.basename(file_source)
-                    )
-                shutil.copy2(
-                    file_source,
-                    filedir_intermediate + "/" + os.path.basename(file_source),
-                )
-                if not os.path.isfile(file_target):
-                    os.symlink(
+                    if isinstance(file_source, str):
+                        file_target = (
+                            filedir_intermediate + "/" + os.path.basename(file_source)
+                        )
+                    else:
+                        raise TypeError(
+                            "Don't know what to do, sorry. You gave %s" % file_source
+                        )
+                logging.debug(file_source)
+                filetype_files.append(
+                    (
+                        file_source,
                         filedir_intermediate + "/" + os.path.basename(file_source),
                         file_target,
                     )
+                )
+            all_files_to_process += filetype_files
+        return all_files_to_process
 
-    def other_stuff(self):
+    def finalize_attributes(self):
         for filetype in self.all_filetypes:
             setattr(
                 self,
                 "thisrun_" + filetype + "_dir",
-                self.exp_base
+                self.general_config["base_dir"]
                 + "/"
-                + self.expid
+                + self.general_config["expid"]
                 + "/run_"
-                + start_date
+                + self.general_config["current_date"].output()
                 + "-"
-                + end_date
+                + self.general_config["end_date"].output()
                 + "/"
                 + filetype
                 + "/"

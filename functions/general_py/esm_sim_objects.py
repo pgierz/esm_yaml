@@ -185,6 +185,7 @@ class SimulationSetup(object):
     def prepare(self):
         print("=" * 80, "\n")
         print("PREPARING EXPERIMENT")
+        # Copy files:
         all_files_to_copy = []
         for component in self.components:
             print("-" * 80)
@@ -193,13 +194,29 @@ class SimulationSetup(object):
         print("\n" "- File lists populated, proceeding with copy...")
         self._prepare_copy_files(all_files_to_copy)
 
+        # Load and modify namelists:
+        all_namelists = {}
+        for component in self.components:
+            print("-" * 80)
+            print("* %s" % component.config["model"], "\n")
+            component.nmls_load()
+            component.nmls_remove()
+            component.nmls_modify()
+            component.nmls_finalize(all_namelists)
+        print("\n" "- Namelists modified according to experiment specifications")
+        for nml_name, nml in all_namelists.items():
+            print("Contents of ", nml_name, ":")
+            print(nml)
+
     def _prepare_copy_files(self, flist):
         successful_files = []
         missing_files = []
         # TODO: Check if we are on login node or elsewhere for the progress
         # bar, it doesn't make sense on the compute nodes:
-        for ftuple in tqdm.tqdm(flist, 
-                        bar_format= '{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]'):
+        for ftuple in tqdm.tqdm(
+            flist,
+            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]",
+        ):
             logging.debug(ftuple)
             (file_source, file_intermediate, file_target) = ftuple
             try:
@@ -210,8 +227,8 @@ class SimulationSetup(object):
             except IOError:
                 missing_files.append(file_target)
         if missing_files:
-           print("--- WARNING: These files were missing:")
-           for missing_file in missing_files: 
+            print("--- WARNING: These files were missing:")
+            for missing_file in missing_files:
                 print("- %s" % missing_file)
 
 
@@ -335,6 +352,38 @@ class SimulationComponent(object):
                 )
             all_files_to_process += filetype_files
         return all_files_to_process
+
+    def nmls_load(self):
+        nmls = self.config.get("namelists")
+        self.config["namelists"] = dict.fromkeys(nmls)
+        for nml in nmls:
+            self.config["namelists"][nml] = f90nml.read(
+                os.path.join(self.config_dir, nml)
+            )
+
+    def nmls_remove(self):
+        namelist_changes = self.config.get("namelist_changes", {})
+        namelist_removes = []
+        for namelist, changes in namelist_changes.items():
+            for change_chapter, change_entries in changes:
+                for key, value in change_entries:
+                    if value == "remove_from_namelist":
+                        namelist_removes.append((namelist, change_chapter, key))
+                        del namelist_changes[namelist][change_chapter][key]
+        for remove in namelist_removes:
+            namelist, change_chapter, key = remove
+            del self.config["namelists"][namelist][change_chapter][key]
+
+    def nmls_modify(self):
+        namelist_changes = self.config.get("namelist_changes", {})
+        for namelist, changes in namelist_changes.items():
+            self.config["namelists"][namelist].patch(changes)
+
+    def nmls_finalize(self, all_nmls):
+        for nml_name, nml_obj in self.config.get("namelists", {}).items():
+            with open(os.path.join(self.config_dir, nml_name), "w") as nml_file:
+                nml_obj.write(nml_file)
+            all_nmls[nml_name] = nml_obj  # PG or a string representation?
 
     def finalize_attributes(self):
         for filetype in self.all_filetypes:

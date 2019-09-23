@@ -15,7 +15,7 @@ license_text: |
 
 
 pool_dir: "${computer.pool_directories.pool}/JSBACH"
-input_dir: "${pool_dir}/ECHAM6/input/${dataset}"
+input_dir: "${pool_dir}/input/${dataset}"
 adj_input_dir: "${input_dir}/${resolution}"
 
 dynamic_vegetations: True
@@ -26,14 +26,16 @@ choose_dynamic_vegetations:
         false:
                 dynveg: "_no_dynveg"
 
-version: 3.20
+version: "3.20"
 dataset: r0009
 
 forcing_sources:
         lctlib: "${model_dir}/lctlib_nlct21.def"
+config_sources:
+        'namelist.jsbach': "${namelist_dir}/namelist.jsbach"
 
 choose_version:
-        3.20:
+        "3.20":
                 dataset: r0010               
                 forcings:
                         a_nd_file: a_nd_file
@@ -41,16 +43,18 @@ choose_version:
                         popdens: popdens
                 choose_dynamic_vegetations: 
                         true:
-                                namelist_dir: "${general.esm_master_dir}/esm-runscripts/namelists/jsbach/${scenario}/dynveg"
+                                namelist_dir: "${general.esm_master_dir}/namelists/jsbach/${version}/${scenario}/dynveg"
                         false:
-                                namelist_dir: "${general.esm_master_dir}/esm-runscripts/namelists/jsbach/${scenario}/no_dynveg"
-        3.10:
+                                namelist_dir: "${general.esm_master_dir}/namelists/jsbach/${version}/${scenario}/no_dynveg"
+        "3.10":
                 dataset: r0007
-                namelist_dir: "${general.esm_master_dir}/esm-runscripts/namelists/jsbach/${scenario}/${resolution}"
+                namelist_dir: "${general.esm_master_dir}/esm-runscripts/namelists/jsbach/${version}/${scenario}/${resolution}"
 
 forcings:
         LU_trans: LU_trans
 
+
+scenario: RCP85
 choose_scenario:
         PI-CTRL:
                 forcings:
@@ -144,8 +148,8 @@ streams:
 
 restart_sources:
         "[[streams-->STREAM]]":
-                - "restart_${general.expid}_STREAM_${prev_date}.nc"
-                - "restart_${general.expid}_${prev_date}_STREAM.nc"
+                # - "restart_${general.expid}_STREAM_${prev_date}.nc"
+                "restart_${general.expid}_${prev_date}_STREAM.nc"
 
 restart_in_workdir:        
         "[[streams-->STREAM]]": "restart_${general.expid}_STREAM.nc"
@@ -173,6 +177,9 @@ restart_in_workdir:
         #"[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": STREAM_WHEN_grd
         #"[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": STREAM_WHEN_codes
         #"[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": STREAM_WHEN_nc
+
+namelists:
+        - "namelist.jsbach"
 
 further_reading:
         - jsbach.inherit.yaml

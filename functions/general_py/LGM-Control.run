@@ -26,8 +26,8 @@ expid="LGM_TEST"
 
 BASE_DIR=/work/ba0989/a270077/AWICM_PISM
 
-INITIAL_DATE_echam=1850-01-01 # initial exp. date
-FINAL_DATE_echam=3850-01-01 # final date of the experiment
+INITIAL_DATE=1850-01-01 # initial exp. date
+FINAL_DATE=3850-01-01 # final date of the experiment
 
 NYEAR_echam=1          # number of years per run
 NMONTH_echam=0

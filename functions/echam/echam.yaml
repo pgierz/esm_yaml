@@ -21,9 +21,9 @@ license_text: |
 
 
 executable: echam6
-version: 6.304p1
+version: 6.3.04p1
 resolution: T63
-scenario: PI-CTRL
+scenario: "PI-CTRL"
 postprocessing_stream: 'BOT ATM LOG'
 yr_perp_off: false
 transient_advance_forcing: false
@@ -54,11 +54,11 @@ restart:
 model_dir: "${general.BASE_DIR}/echam-${version}"
 bin_dir: "${MODEL_DIR}/bin"
 pool_dir: "${computer.pool_directories.pool}/ECHAM6"
-input_dir: "${pool_dir}/ECHAM6/input/${dataset}"
+input_dir: "${pool_dir}/input/${dataset}"
 adj_input_dir: "${input_dir}/${resolution}"
 forcing_dir: "${input_dir}/${resolution}"
-greenhouse_dir: "${pool_dir}/ECHAM6"
-namelist_dir: "${general.BASE_DIR}/esm_runscripts/namelists/echam/${version}/${scenario}"
+greenhouse_dir: "${pool_dir}"
+namelist_dir: "${general.esm_master_dir}/namelists/echam/${version}/${scenario}"
 
 # choices
 
@@ -87,12 +87,12 @@ choose_resolution:
                 _ny: 192
 
 choose_version:
-        6.304p1:
+        6.3.04p1:
                 repo_tag: 6.304p1
                 dataset: r0007
 
 choose_scenario:
-        PI-CTRL:
+        "PI-CTRL":
                 forcing_files:
                         sst: pisst
                         sic: pisic
@@ -192,13 +192,13 @@ choose_scenario:
 
 
 choose_lresume:
-        false:
+        False:
                 restart_in_modifications:
                         "[[streams-->STREAM]]":
-                                - vdate "<--set_dim--" ${start_date}
-                                - fdate "<--set_dim--" ${year_before_date}
+                                - "vdate <--set_dim-- ${start_date}"
+                                  # - fdate "<--set_dim--" ${year_before_date}
                                   # - ndate "<--set_dim--" ${steps_in_year_before}
-        true:
+        True:
                 # pseudo_start_date: $(( ${start_date} - ${time_step} ))
                 namelist_changes:
                         namelist.echam:
@@ -206,13 +206,14 @@ choose_lresume:
                                         dt_start: "remove_from_namelist"
 
 
-start_date!year: 1850
-choose_start_date!year:
-        disturbed_years:
-                namelist_changes:
-                        namelist.echam:
-                                dynctl:
-                                        enstdif: "${disturbance}"
+start_date: 18500101
+# PG: Still a problem: can't use ! in a choose block
+#choose_start_date!year:
+#        disturbed_years:
+#                namelist_changes:
+#                        namelist.echam:
+#                                dynctl:
+#                                        enstdif: "${disturbance}"
 
 choose_CO2:
         '*':
@@ -265,9 +266,9 @@ choose_yr_perp_off:
                                 runctl:
                                         l_orbsvop87: ".false."
 
-choose_transient_advance_forcing:
-        true:
-                "[year, co2vmr, ch4vmr, n2ovmr, cecc, cobld, clonp]": "<--grep(${start_date!year})-- ${forcing_table}"
+#choose_transient_advance_forcing:
+        #true:
+                #"[year, co2vmr, ch4vmr, n2ovmr, cecc, cobld, clonp]": "<--grep(${start_date!year})-- ${forcing_table}"
 
 input_in_workdir:
         "cldoptprops": "ECHAM6_CldOptProps.nc"
@@ -306,13 +307,14 @@ streams:
 
 # Only for testing:
 prev_date: 18500101
-restart_sources:
-        "[[streams-->STREAM]]":
-                - "restart_${general.expid}_STREAM_${prev_date}.nc"
-                - "restart_${general.expid}_${prev_date}_STREAM.nc"
+# BUG: PG Why do we need lists here?
+#restart_sources:
+#        "[[streams-->STREAM]]":
+#                - "restart_${expid}_STREAM_${prev_date}.nc"
+#                - "restart_${expid}_${prev_date}_STREAM.nc"
 
 restart_in_workdir:
-        "[[streams-->STREAM]]": "restart_${general.expid}_STREAM.nc"
+        "[[streams-->STREAM]]": "restart_${expid}_STREAM.nc"
 
         #restart_out_files:
         #"[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]": "STREAM_WHEN"
@@ -344,6 +346,9 @@ log_files:
 log_in_workdir:
         atmout: atmout
 
+namelists:
+        - "namelist.echam"
+
 namelist_changes:
         namelist.echam:
                 runctl:
@@ -351,7 +356,7 @@ namelist_changes:
                         dt_start:    '${pseudo_start_date}'
                         dt_stop:     '${pseudo_end_date}'
                         dt_resume:   '${pseudo_resume_date}'
-                        lresume: ".${lresume}."
+                        lresume: "${lresume}"
                         lcouple: ".false."
                         delta_time: "${time_step}"
                         putrerun: "${restart_rate}, ${restart_unit}, ${restart_firstlast}, 0"
@@ -413,7 +418,9 @@ restart_firstlast: first
 # Work dir:
 work_dir: "."
 
-
+# Configuration Files:
+config_sources:
+        "namelist.echam": "${namelist_dir}/namelist.echam"
 
 errors:
         mo_exception:

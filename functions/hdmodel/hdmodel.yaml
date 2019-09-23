@@ -19,10 +19,10 @@ input_dir: "${echam.input_dir}"
 executable: NONE
 
 choose_lresume:
-        false:
+        False:
                 input_files:
                         hdstart: hdstart
-        true:
+        True:
                 restart_in_files:
                         hdrestart: hdrestart
 
@@ -46,9 +46,7 @@ restart_in_workdir:
         hdrestart: hdrestart.nc
 
 restart_sources:
-        hdrestart:
-                #- restart_${parent_expid}_hd_${parent_date}.nc
-                - hdrestart.nc
+        hdrestart: hdrestart.nc
 
 
 log_in_workdir:

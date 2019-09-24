@@ -1159,12 +1159,10 @@ def list_to_multikey(tree, rhs, config_to_search):
                     tree, key_in_list, config_to_search
                 )
                 if isinstance(rhs, str):
-                    return_dict2 = {
-                        lhs.replace("[[" + actual_list + "]]", key).replace(
-                            value_in_list, key
-                        ): rhs.replace(value_in_list, key)
-                        for key in entries_of_key
-                    }
+                    return_dict2 = {}
+                    for key in entries_of_key:
+                        return_dict2[lhs.replace("[[" + actual_list + "]]", key).replace(value_in_list, key)] = rhs.replace(value_in_list, key)
+
                 if isinstance(rhs, list):
                     replaced_list = []
                     for item in rhs:

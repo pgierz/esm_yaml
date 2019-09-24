@@ -12,6 +12,8 @@ import logging
 import os
 import subprocess
 
+import six
+
 
 FUNCTION_PATH = os.path.dirname(__file__) + "/../"
 
@@ -87,7 +89,9 @@ class ShellscriptToUserConfig(dict):
                     user_config[sim_thing][diff_name] = env_after[thisdiff]
                     solved_diffs.append(thisdiff)
                     break
-        user_config = {k: v for k, v in user_config.items() if v}
+        for k, v in six.iteritems(user_config):
+            if v:
+                user_config[k] = v
         for solved_diff in solved_diffs:
             diffs.remove(solved_diff)
 

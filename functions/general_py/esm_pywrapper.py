@@ -14,6 +14,7 @@ import sys
 sys.path.append("../external_py/coloredlogs")
 sys.path.append("../external_py/f90nml")
 sys.path.append("../external_py/humanfriendly")
+sys.path.append("../external_py/importlib")
 sys.path.append("../external_py/six")
 sys.path.append("../external_py/tqdm")
 

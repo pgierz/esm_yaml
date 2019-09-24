@@ -1,0 +1,6 @@
+[run]
+source = coloredlogs
+omit = coloredlogs/tests.py
+
+[report]
+exclude_lines = assert False

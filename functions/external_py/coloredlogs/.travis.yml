@@ -1,0 +1,33 @@
+sudo: required
+language: python
+matrix:
+  include:
+  - os: linux
+    python: "2.6"
+  - os: linux
+    python: "2.7"
+  - os: linux
+    python: "3.4"
+  - os: linux
+    python: "3.5"
+  - os: linux
+    python: "3.6"
+  - os: linux
+    python: "pypy"
+  - os: osx
+    language: generic
+install:
+  - scripts/travis.sh pip install coveralls
+  - scripts/travis.sh pip install --requirement=requirements-checks.txt
+  - scripts/travis.sh pip install --requirement=requirements-tests.txt
+  - scripts/travis.sh LC_ALL=C pip install .
+# The `make test' command below is run under `sudo -E' to enable
+# the test suite to read /var/log/syslog on Travis CI workers.
+script:
+  - scripts/travis.sh make check
+  - scripts/travis.sh sudo -E make test
+after_success:
+  - scripts/travis.sh coveralls
+branches:
+  except:
+    - /^[0-9]/

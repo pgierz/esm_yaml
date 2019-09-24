@@ -1236,10 +1236,14 @@ def determine_computer_from_hostname():
                 for pattern in computer_patterns:
                     if re.match(pattern, socket.gethostname()):
                         return FUNCTION_PATH + "/machines/" + this_computer + ".yaml"
-    raise FileNotFoundError(
-        "The yaml file for this computer (%s) could not be determined!"
-        % socket.gethostname()
-    )
+    print ("The yaml file for this computer (%s) could not be determined!" % socket.gethostname())
+    print ("Continuing with generic settings...")
+    return FUNCTION_PATH + "/machines/generic.yaml"
+
+    #raise FileNotFoundError(
+    #    "The yaml file for this computer (%s) could not be determined!"
+    #    % socket.gethostname()
+    #)
 
 
 def do_math_in_entry(tree, rhs, config):

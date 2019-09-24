@@ -18,8 +18,8 @@ esm-software:
 
 
 defaults:                          
-        comp_command: '"mkdir -p build; cd build; cmake ..;   make install -j `nproc --all`"'
-        clean_command: '"rm -rf build CMakeCache.txt"'
+        comp_command: 'mkdir -p build; cd build; cmake ..;   make install -j `nproc --all`'
+        clean_command: 'rm -rf build CMakeCache.txt'
                
 
 components:
@@ -118,7 +118,7 @@ components:
                         - "build/lib/psmile/mct/libmct.a"
                         - "build/lib/psmile/mct/mpeu/libmpeu.a"
                         - "build/lib/psmile/scrip/libscrip.a"
-                comp_command: '"mkdir -p build; cd build; cmake ..;   make -j `nproc --all`"'
+                comp_command: 'mkdir -p build; cd build; cmake ..;   make -j `nproc --all`'
                 clean_command: "${default.clean_command}"
                 git-repository: "gitlab.dkrz.de/modular_esm/oasis3-mct.git"
                 destination: "oasis"

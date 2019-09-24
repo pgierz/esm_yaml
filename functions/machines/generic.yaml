@@ -1,4 +1,4 @@
-# MISTRAL YAML CONFIGURATION FILES
+# GENERIC YAML CONFIGURATION FILES
 
 #hyper_flag: "--cpus-per-task=1"
 additional_flags: "--mem=0"
@@ -29,6 +29,9 @@ pool_directories:
 
 # standard environment setup
 #
+#
+
+useMPI: intelmpi
 module_actions:
         - "purge"
         - "load gcc/4.8.2"

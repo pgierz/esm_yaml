@@ -933,8 +933,8 @@ def recursive_run_function(tree, right, level, func, *args, **kwargs):
             assert isinstance(right, str)
             logging.warn(right)
 
-    logging.error("Type right: %s", type(right))
-    logging.error("Do func for: %s", do_func_for)
+    logging.debug("Type right: %s", type(right))
+    logging.debug("Do func for: %s", do_func_for)
 
     if level is "keys" and isinstance(right, dict):
         keys = list(right)
@@ -1288,7 +1288,7 @@ def mark_dates(tree, rhs, config):
         tree = tree[:-1]
     lhs = tree[-1]
     entry = rhs
-    logging.error(entry)
+    logging.debug(entry)
     if "${" in str(entry):
         return entry
     if isinstance(lhs, str) and lhs.endswith("date"):
@@ -1445,7 +1445,7 @@ class ConfigSetup(GeneralConfig):
         )
 
     def run_recursive_functions(self, config, isblacklist=True):
-        logging.error("Top of run recursive functions")
+        logging.debug("Top of run recursive functions")
         recursive_run_function([], config, "atomic", mark_dates, config)
         recursive_run_function(
             [],

@@ -1161,7 +1161,11 @@ def list_to_multikey(tree, rhs, config_to_search):
                 if isinstance(rhs, str):
                     return_dict2 = {}
                     for key in entries_of_key:
-                        return_dict2[lhs.replace("[[" + actual_list + "]]", key).replace(value_in_list, key)] = rhs.replace(value_in_list, key)
+                        return_dict2[
+                            lhs.replace("[[" + actual_list + "]]", key).replace(
+                                value_in_list, key
+                            )
+                        ] = rhs.replace(value_in_list, key)
 
                 if isinstance(rhs, list):
                     replaced_list = []
@@ -1171,12 +1175,13 @@ def list_to_multikey(tree, rhs, config_to_search):
                                 replaced_list.append(item.replace(value_in_list, key))
                         else:
                             replaced_list.append(item)
-                    return_dict2 = {
-                        lhs.replace("[[" + actual_list + "]]", key).replace(
-                            value_in_list, key
-                        ): replaced_list
-                        for key in entries_of_key
-                    }
+                    return_dict2 = {}
+                    for key in entries_of_keys:
+                        return_dict2[
+                            lhs.replace("[[" + actual_list + "]]", key).replace(
+                                value_in_list, key
+                            )
+                        ] = replaced_list
 
                 if list_fence in new_raw:
                     for key, value in six.iteritems(return_dict2):
@@ -1240,14 +1245,17 @@ def determine_computer_from_hostname():
                 for pattern in computer_patterns:
                     if re.match(pattern, socket.gethostname()):
                         return FUNCTION_PATH + "/machines/" + this_computer + ".yaml"
-    print ("The yaml file for this computer (%s) could not be determined!" % socket.gethostname())
-    print ("Continuing with generic settings...")
+    print(
+        "The yaml file for this computer (%s) could not be determined!"
+        % socket.gethostname()
+    )
+    print("Continuing with generic settings...")
     return FUNCTION_PATH + "/machines/generic.yaml"
 
-    #raise FileNotFoundError(
+    # raise FileNotFoundError(
     #    "The yaml file for this computer (%s) could not be determined!"
     #    % socket.gethostname()
-    #)
+    # )
 
 
 def do_math_in_entry(tree, rhs, config):

@@ -1061,10 +1061,11 @@ def find_variable(tree, rhs, full_config, white_or_black_list, isblacklist):
 
 def actually_find_variable(tree, rhs, full_config):
     config_elements = rhs.split(".")
-    valid_names = (
-        full_config["general"]["valid_model_names"]
-        + full_config["general"]["valid_setup_names"]
-    )
+    valid_names = list(full_config)
+    #(
+    #    full_config["general"]["valid_model_names"]
+    #    + full_config["general"]["valid_setup_names"]
+    #)
     logging.debug(valid_names)
     if config_elements[0] not in valid_names:
         config_elements.insert(0, tree[0])

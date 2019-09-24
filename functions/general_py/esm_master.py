@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # import fileinput, os, sys, getopt
-import sys, copy, os
+import sys, copy, os, re
 import esm_parser
-
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
 ######################################################################################
 ##################################### globals ########################################
@@ -605,7 +606,9 @@ class task:
 
 class setup_and_model_infos:
     def __init__(self, vcs, general):
+        blacklist = [re.compile(entry) for entry in [".*version", ".*_dir", ".*grid", ".*archfile"]]
         self.config = esm_parser.yaml_file_to_dict(components_yaml)
+        esm_parser.recursive_run_function([], self.config, "atomic", esm_parser.find_variable, self.config, blacklist, True)
         self.model_kinds = list(self.config.keys())
         self.meta_todos=general.meta_todos
         self.meta_command_order = general.meta_command_order

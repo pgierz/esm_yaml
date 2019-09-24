@@ -44,5 +44,5 @@ export PATH=/sw/rhel6-x64/gcc/binutils-2.24-gccsys/bin:${PATH}
 export LD_LIBRARY_PATH=/sw/rhel6-x64/grib_api/grib_api-1.15.0-intel14/lib:${NETCDFF_ROOT}/lib:${HDF5ROOT}/lib:${NETCDF_ROOT}/lib:${SZIPROOT}/lib:$LD_LIBRARY_PATH
 
 cd fesom-1.4
-${default.comp_command}
+mkdir -p build; cd build; cmake ..;   make install -j `nproc --all`
 cd ..

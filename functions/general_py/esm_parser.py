@@ -70,13 +70,9 @@ import subprocess
 import sys
 import warnings
 
-from builtins import dict
-from builtins import open
-from builtins import super
-from future import standard_library
 from pprint import pformat
 
-standard_library.install_aliases()
+import six
 
 import esm_backwards_compatability
 import esm_sim_objects
@@ -345,7 +341,7 @@ def dict_merge(dct, merge_dct):
     :param merge_dct: dct merged into dct
     :return: None
     """
-    for k, v in merge_dct.items():
+    for k, v in six.iteritems(merge_dct):
         if (
             k in dct
             and isinstance(dct[k], dict)
@@ -402,7 +398,7 @@ def find_remove_entries_in_config(mapping, model_name):
     while mappings:
         mapping = mappings.pop()
         try:
-            items = mapping.items()
+            items = six.iteritems(mapping)
         except AttributeError:
             continue
         for key, value in items:
@@ -473,7 +469,7 @@ def find_add_entries_in_config(mapping, model_name):
     while mappings:
         mapping = mappings.pop()
         try:
-            items = mapping.items()
+            items = six.iteritems(mapping)
         except AttributeError:
             continue
         for key, value in items:
@@ -657,7 +653,7 @@ def find_value_for_nested_key(mapping, key_of_interest, tree=[]):
             tree = [None]
     for leaf in reversed(tree):
         logging.debug("Looking in bottommost leaf %s", leaf)
-        for key, value in mapping.items():
+        for key, value in six.iteritems(mapping):
             if key == key_of_interest:
                 return value
         if leaf:
@@ -687,7 +683,7 @@ def list_all_keys_starting_with_choose(mapping, model_name, ignore_list, isblack
     """
     logging.debug("Top of list_all_keys_starting_with_choose")
     all_chooses = []
-    for key, value in mapping.items():
+    for key, value in six.iteritems(mapping):
         if (
             isinstance(key, str)
             and key.startswith("choose_")
@@ -730,7 +726,7 @@ def determine_set_variables_in_choose_block(config, valid_model_names, model_nam
         determined in ``config``
     """
     set_variables = []
-    for k, v in config.items():
+    for k, v in six.iteritems(config):
         if isinstance(k, str) and k in valid_model_names:
             logging.debug(k)
             model_name = k
@@ -768,7 +764,7 @@ def find_one_independent_choose(all_set_variables):
     task_list = []
     for key in all_set_variables:
         value = all_set_variables[key]
-        for choose_keyword, set_vars in value.items():
+        for choose_keyword, set_vars in six.iteritems(value):
             task_list.append((key, choose_keyword))
             task_list = add_more_important_tasks(
                 choose_keyword, all_set_variables, task_list
@@ -804,9 +800,9 @@ def resolve_choose(model_with_choose, choose_key, config):
         logging.debug(choice)
 
         if choice in config_to_replace_in[model_with_choose][choose_key]:
-            for update_key, update_value in config_to_replace_in[model_with_choose][
-                choose_key
-            ][choice].items():
+            for update_key, update_value in six.iteritems(
+                config_to_replace_in[model_with_choose][choose_key][choice]
+            ):
                 deep_update(
                     update_key,
                     update_value,
@@ -818,9 +814,9 @@ def resolve_choose(model_with_choose, choose_key, config):
 
         elif "*" in config_to_replace_in[model_with_choose][choose_key]:
             logging.debug("Found a * case!")
-            for update_key, update_value in config_to_replace_in[model_with_choose][
-                choose_key
-            ]["*"].items():
+            for update_key, update_value in six.iteritems(
+                config_to_replace_in[model_with_choose][choose_key]["*"]
+            ):
                 deep_update(
                     update_key,
                     update_value,
@@ -916,16 +912,29 @@ def recursive_run_function(tree, right, level, func, *args, **kwargs):
     """
     # logging.debug("Top of function")
     # logging.debug("tree=%s", tree)
-    if level is "mappings":
+    if level == "mappings":
         do_func_for = [dict, list]
-    elif level is "atomic":
+    elif level == "atomic":
         do_func_for = [str, int, float]
-    elif level is "always":
+        if six.PY2:
+            do_func_for.append(unicode)
+    elif level == "always":
         do_func_for = [str, dict, list, int, float, bool]
-    elif level is "keys":
+    elif level == "keys":
         do_func_for = []
     else:
         do_func_for = []
+
+    # Python 2/3 error in YAML parser, bad workaround:
+    if six.PY2:
+        if isinstance(right, unicode):
+            logging.warn("Unicode type detected, converting to a regular string!")
+            right = right.encode("utf-8")
+            assert isinstance(right, str)
+            logging.warn(right)
+
+    logging.error("Type right: %s", type(right))
+    logging.error("Do func for: %s", do_func_for)
 
     if level is "keys" and isinstance(right, dict):
         keys = list(right)
@@ -937,18 +946,17 @@ def recursive_run_function(tree, right, level, func, *args, **kwargs):
 
     # logger.debug("right is a %s!", type(right))
     if type(right) in do_func_for:
-        # logger.debug("It's in %s", do_func_for)
         if isinstance(right, dict):
             keys = list(right)
             for key in keys:
                 value = right[key]
-                # logger.debug("Deleting key %s", key)
-                # logging.debug(
-                #    "Start func %s with %s, %s sent from us",
-                #    func.__name__,
-                #    tree + [key],
-                #    value,
-                # )
+                logger.debug("Deleting key %s", key)
+                logging.debug(
+                    "Start func %s with %s, %s sent from us",
+                    func.__name__,
+                    tree + [key],
+                    value,
+                )
                 returned_dict = func(tree + [key], value, *args, **kwargs)
                 del right[key]
                 # logger.debug("Back out of func %s", func.__name__)
@@ -1008,6 +1016,7 @@ def recursive_get(config_to_search, config_elements):
     this_config = config_elements.pop(0)
 
     logger.debug("this_config=%s", this_config)
+    logger.debug("config_to_search=%s", config_to_search)
     result = config_to_search.get(this_config, None)
     if result is None:
         raise ValueError("Exactly None! Couldn't find an answer for:", config_elements)
@@ -1062,15 +1071,11 @@ def find_variable(tree, rhs, full_config, white_or_black_list, isblacklist):
 def actually_find_variable(tree, rhs, full_config):
     config_elements = rhs.split(".")
     valid_names = list(full_config)
-    #(
-    #    full_config["general"]["valid_model_names"]
-    #    + full_config["general"]["valid_setup_names"]
-    #)
     logging.debug(valid_names)
     if config_elements[0] not in valid_names:
         config_elements.insert(0, tree[0])
 
-    original_config_elements = config_elements.copy()
+    original_config_elements = copy.deepcopy(config_elements)
     try:
         var_result = recursive_get(full_config, config_elements)
         return var_result
@@ -1176,7 +1181,7 @@ def list_to_multikey(tree, rhs, config_to_search):
                     }
 
                 if list_fence in new_raw:
-                    for key, value in return_dict2.items():
+                    for key, value in six.iteritems(return_dict2):
                         return_dict.update(
                             list_to_multikey(tree + [key], value, config_to_search)
                         )
@@ -1283,6 +1288,7 @@ def mark_dates(tree, rhs, config):
         tree = tree[:-1]
     lhs = tree[-1]
     entry = rhs
+    logging.error(entry)
     if "${" in str(entry):
         return entry
     if isinstance(lhs, str) and lhs.endswith("date"):
@@ -1334,7 +1340,7 @@ class GeneralConfig(dict):
     """ All configs do this! """
 
     def __init__(self, path, user_config):
-        super().__init__()
+        super(dict, self).__init__()
         if os.path.isfile(path):
             config_path = path
         else:
@@ -1343,7 +1349,7 @@ class GeneralConfig(dict):
         for attachment in CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE:
             attach_to_config_and_remove(self.config, attachment)
         self._config_init(user_config)
-        for k, v in self.config.items():
+        for k, v in six.iteritems(self.config):
             self.__setitem__(k, v)
         del self.config
 
@@ -1439,6 +1445,7 @@ class ConfigSetup(GeneralConfig):
         )
 
     def run_recursive_functions(self, config, isblacklist=True):
+        logging.error("Top of run recursive functions")
         recursive_run_function([], config, "atomic", mark_dates, config)
         recursive_run_function(
             [],
@@ -1464,6 +1471,7 @@ class ConfigSetup(GeneralConfig):
         recursive_run_function([], config, "always", list_to_multikey, config)
 
 
+# PG: Delete this:
 if __name__ == "__main__":  # pragma: no cover
 
     import argparse
@@ -1478,7 +1486,7 @@ if __name__ == "__main__":  # pragma: no cover
             action="store_const",
             dest="loglevel",
             const=logging.DEBUG,
-            default=logging.WARNING,
+            default=logging.ERROR,
         )
         parser.add_argument(
             "-v",

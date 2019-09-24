@@ -12,11 +12,6 @@ import logging
 import os
 import subprocess
 
-from builtins import dict
-from builtins import open
-from future import standard_library
-
-standard_library.install_aliases()
 
 FUNCTION_PATH = os.path.dirname(__file__) + "/../"
 

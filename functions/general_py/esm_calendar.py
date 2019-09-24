@@ -1,6 +1,8 @@
 """
 Module Docstring.,..?
 """
+import copy
+import logging
 import sys
 
 
@@ -176,6 +178,9 @@ class Calendar(object):
         if isinstance(month, str):
             month = month.capitalize()  # Clean up possible badly formated month
             month = self.monthnames.index(month) + 1  # Remember, python is 0 indexed
+        # Make sure you gave a month from 1 to 12
+        if month > 12:
+            raise TypeError("You have given an idiotic month, please reconsider")
         elif not isinstance(month, int):
             raise TypeError(
                 "You must supply either a str with short month name, or an int!"
@@ -516,8 +521,13 @@ class Date(object):
         return self_tup > other_tup
 
     def __sub__(self, other):
-        d1 = self
-        d2 = other
+        # FIXME / BUG -- d1 and d2 are actually modified in this function. That's bad.
+        d1 = copy.deepcopy(
+            [self.year, self.month, self.day, self.hour, self.minute, self.second]
+        )
+        d2 = copy.deepcopy(
+            [other.year, other.month, other.day, other.hour, other.minute, other.second]
+        )
 
         diff = [0, 0, 0, 0, 0, 0]
 
@@ -528,24 +538,24 @@ class Date(object):
         #            if diff[i] < 0:
         #                diff[i-1] -= 1
 
-        while d1.month > 1:
+        while d1[1] > 1:
             diff[1] -= 1
-            d1.month -= 1
-            diff[2] -= self._calendar.day_in_month(d1.year, d1.month)
+            d1[1] -= 1
+            diff[2] -= self._calendar.day_in_month(d1[0], d1[1])
 
-        while d2.month > 1:
+        while d2[1] > 1:
             diff[1] += 1
-            d2.month -= 1
-            diff[2] += self._calendar.day_in_month(d2[0], d2.month)
+            d2[1] -= 1
+            diff[2] += self._calendar.day_in_month(d2[0], d2[1])
 
         if diff[1] < 0:
             diff[0] = diff[0] - 1
 
-        while d1.year > d2.year:
+        while d1[0] > d2[0]:
             diff[0] += 1
             diff[1] += 12
-            diff[2] += self._calendar.day_in_year(d1.year)
-            d2.year += 1
+            diff[2] += self._calendar.day_in_year(d1[0])
+            d2[0] += 1
 
         diff[3] += diff[2] * 24
         if diff[3] < 0:
@@ -604,7 +614,7 @@ class Date(object):
         )
 
     def format(
-        self, form="SELF", ph=False, pm=False, ps=False
+        self, form="SELF", givenph=None, givenpm=None, givenps=None
     ):  # basically format_date
         """
         Needs a docstring!
@@ -644,6 +654,17 @@ class Date(object):
         """
         if form == "SELF":
             form = self._date_format.form
+
+        ph = self._date_format.printhours
+        pm = self._date_format.printminutes
+        ps = self._date_format.printseconds
+
+        if not givenph == None:
+            ph = givenph
+        if not givenpm == None:
+            pm = givenpm
+        if not givenps == None:
+            ps = givenps
         ndate = list(
             map(
                 str,
@@ -679,11 +700,11 @@ class Date(object):
         ndate[4] = self._date_format.timesep[form] + ndate[4]
         ndate[5] = self._date_format.timesep[form] + ndate[5]
 
-        if not ps and not self._date_format.printseconds:
+        if not ps:
             ndate[5] = ""
-        if not pm and not self._date_format.printminutes and ndate[5] == "":
+        if not pm and ndate[5] == "":
             ndate[4] = ""
-        if not ph and not self._date_format.printhours and ndate[4] == "":
+        if not ph and ndate[4] == "":
             ndate[3] = ""
 
         return ndate[0] + ndate[1] + ndate[2] + ndate[3] + ndate[4] + ndate[5]
@@ -696,7 +717,7 @@ class Date(object):
         something similar. Here, we put the overflowed time into the
         appropriate unit.
         """
-        ndate = self
+        ndate = copy.deepcopy(self)
         ndate[4] = ndate[4] + ndate[5] / 60
         ndate[5] = ndate[5] % 60
 
@@ -706,20 +727,31 @@ class Date(object):
         ndate[2] = ndate[2] + ndate[3] / 24
         ndate[3] = ndate[3] % 24
 
-        while ndate[2] > self._calendar.day_in_month(ndate[1], ndate[0]):
-            ndate[2] = ndate[2] - self._calendar.day_in_month(ndate[1], ndate[0])
+        while ndate[2] > self._calendar.day_in_month(ndate[0], ndate[1]):
+            ndate[2] = ndate[2] - self._calendar.day_in_month(ndate[0], ndate[1])
             ndate[0] = ndate[0] + ndate[1] / 12
             ndate[1] = ndate[1] % 12
             ndate[1] = ndate[1] + 1
+        logging.debug("After first while: %s", ndate)
 
         while ndate[2] <= 0:
             ndate[1] = ndate[1] - 1
+            logging.debug("Sub 1 from ndate[1], now %s", ndate)
             ndate[0] = ndate[0] + ndate[1] / 12
+            logging.debug("Add month fracs to ndate[0], now %s", ndate)
             ndate[1] = ndate[1] % 12
+            logging.debug("Reset ndate[1], now %s", ndate)
             if ndate[1] == 0:
-                ndate[5] = 12
+                ndate[1] = 12
+                logging.debug("Month 0 is actually month 12: %s", ndate)
                 ndate[0] = ndate[0] - 1
-            ndate[2] = ndate[2] + self._calendar.day_in_month(ndate[1], ndate[0])
+                logging.debug("Take 1 off the year, %s", ndate)
+            logging.debug("Before day manipulation: %s", ndate)
+            logging.debug(
+                "day in month: %s", self._calendar.day_in_month(ndate[0], ndate[1])
+            )
+            ndate[2] = ndate[2] + self._calendar.day_in_month(ndate[0], ndate[1])
+        logging.debug("After second while: %s", ndate)
 
         ndate[0] = ndate[0] + ndate[1] / 12
         ndate[1] = ndate[1] % 12
@@ -772,14 +804,40 @@ class Date(object):
         new_date : ~`pyesm.core.time_control.Date`
             A new date object with the subtracted dates
         """
-        new_year = self.year - to_sub[0]
-        new_month = self.month - to_sub[1]
-        new_day = self.day - to_sub[2]
-        new_hour = self.hour - to_sub[3]
-        new_minute = self.minute - to_sub[4]
-        new_second = self.second - to_sub[5]
-        new_date = self.from_list(
+        logging.debug("Subtracting %s %s", self, to_sub)
+        # Probably, this also does something with modifing the actual values.
+        # Better to just make a copy of everything:
+        original = copy.deepcopy(self)
+        logging.debug("SUB: %s, %s", original.year, to_sub[0])
+        new_year = original.year - to_sub[0]
+        logging.debug(new_year)
+
+        logging.debug("SUB: %s, %s", original.month, to_sub[1])
+        new_month = original.month - to_sub[1]
+        logging.debug(new_month)
+
+        logging.debug("SUB: %s, %s", original.day, to_sub[2])
+        new_day = original.day - to_sub[2]
+        logging.debug(new_day)
+
+        logging.debug("SUB: %s, %s", original.hour, to_sub[3])
+        new_hour = original.hour - to_sub[3]
+        logging.debug(new_hour)
+
+        logging.debug("SUB: %s, %s", original.minute, to_sub[4])
+        new_minute = original.minute - to_sub[4]
+        logging.debug(new_minute)
+
+        logging.debug("SUB: %s, %s", original.second, to_sub[5])
+        new_second = original.second - to_sub[5]
+        logging.debug(new_second)
+
+        logging.debug([new_year, new_month, new_day, new_hour, new_minute, new_second])
+        new_date = original.from_list(
             [new_year, new_month, new_day, new_hour, new_minute, new_second]
         )
+        logging.debug("new_date after sub: %s", new_date)
+        logging.debug("makesense start...")
         new_date.makesense()
+        logging.debug("After makesense: %s", new_date)
         return new_date

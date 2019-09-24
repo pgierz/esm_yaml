@@ -5,7 +5,7 @@ repository: https://gitlab.dkrz.de/modular_esm/echam6
 domain: hydrology
 
 description: |
-        The Hagemann/Dümenil hydrology model,
+        The Hagemann/Duemenil hydrology model,
         (someone from Hamburg)
         paper citation
 

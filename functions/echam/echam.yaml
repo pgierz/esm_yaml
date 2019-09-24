@@ -220,20 +220,20 @@ choose_CO2:
                 namelist_changes:
                         namelist.echam:
                                 radctl:
-                                        co2vmr: "${CO2}"
+                                        co2vmr: ${CO2}
 
 choose_CH4:
         '*':
                 namelist_changes:
                         namelist.echam:
                                 radctl:
-                                        ch4vmr: "${CH4}"
+                                        ch4vmr: ${CH4}
 choose_N2O:
         '*':
                 namelist_changes:
                         namelist.echam:
                                 radctl:
-                                        c2ovmr: "${N2O}"
+                                        c2ovmr: ${N2O}
 
 choose_CECC:
         '*':
@@ -241,21 +241,21 @@ choose_CECC:
                 namelist_changes:
                         namelist.echam:
                                 radctl:
-                                        cecc: "${CECC}"
+                                        cecc: ${CECC}
 choose_COBLD:
         '*':
                 yr_perp_off: true
                 namelist_changes:
                         namelist.echam:
                                 radctl:
-                                        cobld: "${COBLD}"
+                                        cobld: ${COBLD}
 choose_CLONP:
         '*':
                 yr_perp_off: true
                 namelist_changes:
                         namelist.echam:
                                 radctl:
-                                        clonp: "${CLONP}"
+                                        clonp: ${CLONP}
 
 choose_yr_perp_off:
         true:

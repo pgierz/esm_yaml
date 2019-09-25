@@ -357,10 +357,9 @@ class SimulationComponent(object):
                     if file_descriptor not in self.config[filetype + "_files"].values():
                         continue
                     else:
-                        inverted_dict = {
-                            v: k
-                            for k, v in six.iteritems(self.config[filetype + "_files"])
-                        }
+                        inverted_dict = {}
+                        for k, v in six.iteritems(self.config[filetype + "_files"]):
+                            inverted_dict[v] = k
                         file_category = inverted_dict[file_descriptor]
                 else:
                     file_category = file_descriptor

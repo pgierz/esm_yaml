@@ -7,26 +7,10 @@ A small wrapper that combines the shell interface and the Python interface
 import argparse
 import logging
 import os
-
-# Add external libraries:
 import sys
 
-sys.path.append("../external_py/coloredlogs")
-sys.path.append("../external_py/f90nml")
-sys.path.append("../external_py/humanfriendly")
-sys.path.append("../external_py/six")
-sys.path.append("../external_py/tqdm")
+import externals
 
-
-# The YAML Lib isn't python agnostic
-import six
-
-if six.PY2:
-    sys.path.append("../external_py/pyyaml/lib")
-    sys.path.append("../external_py/pyyaml/lib/yaml")
-elif six.PY3:
-    sys.path.append("../external_py/pyyaml/lib3")
-    sys.path.append("../external_py/pyyaml/lib3/yaml")
 
 # Import from 3rd Party packages
 import coloredlogs

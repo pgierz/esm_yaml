@@ -70,6 +70,9 @@ import subprocess
 import sys
 import warnings
 
+# Always import externals before any non standard library imports
+import externals
+
 from pprint import pformat
 
 import six
@@ -111,6 +114,14 @@ gray_list = [
     r".*date!(year|month|day|hour|minute|second)",
 ]
 gray_list = [re.compile(entry) for entry in gray_list]
+
+constant_blacklist = [r"PATH", r"LD_LIBRARY_PATH", r"NETCDFF_ROOT", r"mpifc"]
+
+constant_blacklist = [re.compile(entry) for entry in constant_blacklist]
+
+# Ensure FileNotFoundError exists:
+if six.PY2: FileNotFoundError = IOError
+
 
 
 def yaml_file_to_dict(filepath):
@@ -691,6 +702,7 @@ def list_all_keys_starting_with_choose(mapping, model_name, ignore_list, isblack
                 (not isblacklist)
                 or (isblacklist and not determine_regex_list_match(key, ignore_list))
             )
+            and not determine_regex_list_match(key, constant_blacklist)
         ):
             if not "." in key:
                 old_key = key
@@ -1040,7 +1052,9 @@ def find_variable(tree, rhs, full_config, white_or_black_list, isblacklist):
     if isinstance(raw_str, str) and "${" in raw_str:
         ok_part, rest = raw_str.split("${", 1)
         var, new_raw = rest.split("}", 1)
-        if (determine_regex_list_match(var, white_or_black_list)) != isblacklist:
+        if ((determine_regex_list_match(var, white_or_black_list)) != isblacklist) and (
+            not determine_regex_list_match(var, constant_blacklist)
+        ):
             var_result = actually_find_variable(tree, var, full_config)
             if var_result:
                 ok_part, var_result, more_rest = (

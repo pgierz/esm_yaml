@@ -3,6 +3,7 @@
 
 import sys, copy, os, re
 import subprocess
+import argparse
 
 FUNCTION_PATH = os.path.abspath(os.path.dirname(__file__) + "/../")
 sys.path.append(FUNCTION_PATH+"/external_py/coloredlogs")
@@ -27,10 +28,6 @@ vcs_folder='functions/vcs'
 overall_conf_file='~/.esm_master.conf'
 local_conf_file='esm_master.conf'
 
-verbose=True
-very_verbose=False
-
-
 ######################################################################################
 ############################## class "general_infos" #################################
 ######################################################################################
@@ -44,7 +41,7 @@ class general_infos:
         self.meta_todos, self.meta_command_order = self.get_meta_command()
         self.display_kinds = self.get_display_kinds()
 
-        if very_verbose:
+        if verbose > 1:
             self.output()                    
 
 
@@ -127,7 +124,7 @@ class version_control_infos:
                     todo = entry.replace("_command", "")
                     if todo not in self.known_todos:
                         self.known_todos.append(todo)
-        if very_verbose:
+        if verbose > 1:
             self.output()
 
     def assemble_command(self, package, todo, setup_info, general):
@@ -346,20 +343,20 @@ class task:
             for arg in raw:
                 str_arg=str_arg + " " + arg
             raw = str_arg.strip()
-            if raw == "default":
-                raw = ""
-            if raw == "drytestall":
-                # panic
-                for package in setup_info.all_packages:
-                    for todo in package.targets:
-                        try:
-                            print (todo+"-"+package.raw_name)
-                            newtask = task(todo+"-"+package.raw_name, setup_info, vcs)
-                            newtask.output_steps()  
-                        except:
-                            print ("Problem found with target "+newtask.raw_name)
-                            sys.exit(1)
-                sys.exit(0)
+        if raw == "default":
+            raw = ""
+        if raw == "drytestall":
+            # panic
+            for package in setup_info.all_packages:
+                for todo in package.targets:
+                    try:
+                        print (todo+"-"+package.raw_name)
+                        newtask = task(todo+"-"+package.raw_name, setup_info, vcs)
+                        newtask.output_steps()  
+                    except:
+                        print ("Problem found with target "+newtask.raw_name)
+                        sys.exit(1)
+            sys.exit(0)
         
         if type(raw) == str:
             self.todo, kind, model, version, self.only_subtask, self.raw_name = setup_info.split_raw_target(raw, setup_info)
@@ -381,7 +378,7 @@ class task:
         self.dir_list=self.list_required_dirs()
         self.command_list=self.assemble_command_list()
 
-        if very_verbose:
+        if verbose > 1:
             self.output()
 
 
@@ -532,8 +529,7 @@ class task:
 
 
     def validate(self):
-#        self.check_requirements()
-        self.output_steps()    
+        self.check_requirements()
 
 
 
@@ -630,7 +626,7 @@ class setup_and_model_infos:
         esm_parser.recursive_run_function([], self.config, "atomic", esm_parser.find_variable, self.config, blacklist, True)
 #        self.output()
 
-        if very_verbose:
+        if verbose > 1:
             self.output()
 
     def update_packages(self, vcs, general):
@@ -852,15 +848,43 @@ class setup_and_model_infos:
 
 def main(args):
 
+    global check, verbose
+
+    parser=argparse.ArgumentParser(prog="esm_master", description='tool for downloading, configuring and compiling.')
+    parser.add_argument('target', metavar='target', nargs='?', type=str, help='name of the target (leave empty for full list of targets)')
+    parser.add_argument('--check', '-c', action='store_true', default='false', help='show what would be done, not doing anything')
+    parser.add_argument('--verbose', '-v', action='count', default=0, help='toggle verbose mode')
+    parser.add_argument('--version', action='version', version='%(prog)s 3.0 (Oct 01, 2019)')
+    parsed_args=vars(parser.parse_args())
+
+    check = False
+    verbose = 0
+    target = ""
+
+    if parsed_args:
+        if "target" in parsed_args:
+            target = parsed_args["target"]
+        if "check" in parsed_args:
+            check = parsed_args["check"]
+        if "verbose" in parsed_args:
+            verbose = parsed_args["verbose"]
+
+    if not target:
+        target = ""
+
     main_infos = general_infos()
     vcs = version_control_infos()
     setups2models = setup_and_model_infos(vcs, main_infos)
-    user_task = task(args, setups2models, vcs, main_infos)
-    if verbose:
-	    user_task.output()
-    user_task.validate()
-
+    user_task = task(target, setups2models, vcs, main_infos)
     env = esm_environment.environment_infos()
+    if verbose > 0:
+	    user_task.output()
+
+    user_task.output_steps()
+
+    if check:
+        sys.exit(0)
+    user_task.validate()
     env.write_dummy_script()
 
     user_task.execute(env)

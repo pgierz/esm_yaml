@@ -1,3 +1,3 @@
 default:
 %:
-	python3 functions/general_py/esm_master.py "$@"
+	functions/general_py/esm_master.py "$@"

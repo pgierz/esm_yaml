@@ -1,5 +1,7 @@
 ollie:
-        login_nodes: 'ollie*'
+        login_nodes: 
+                - 'ollie0'
+                - 'ollie1'
         compute_nodes: 'prod-*'
 
 mistral:

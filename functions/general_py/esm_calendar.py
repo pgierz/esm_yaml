@@ -304,9 +304,60 @@ class Date(object):
         self.year, self.month, self.day, self.hour, self.minute, self.second = map(
             int, ndate
         )
+        self.syear, self.smonth, self.sday, self.shour, self.sminute, self.ssecond = map(
+            str, ndate
+        )
 
         self._date_format = Dateformat(form, printhours, printminutes, printseconds)
         self._calendar = calendar
+
+    @property
+    def syear(self):
+        return self.__syear
+
+    @syear.setter
+    def syear(self, syear):
+        self.__syear = str(self.year)
+
+    @property
+    def smonth(self):
+        return self.__smonth
+
+    @smonth.setter
+    def smonth(self, smonth):
+        self.__smonth = str(self.month).zfill(2)
+
+    @property
+    def sday(self):
+        return self.__sday
+
+    @sday.setter
+    def sday(self, sday):
+        self.__sday = str(self.day).zfill(2)
+
+    @property
+    def shour(self):
+        return self.__shour
+
+    @shour.setter
+    def shour(self, shour):
+        self.__shour = str(self.hour).zfill(2)
+
+    @property
+    def sminute(self):
+        return self.__sminute
+
+    @sminute.setter
+    def sminute(self, sminute):
+        self.__sminute = str(self.minute).zfill(2)
+
+    @property
+    def ssecond(self):
+        return self.__ssecond
+
+    @ssecond.setter
+    def ssecond(self, ssecond):
+        self.__ssecond = str(self.second).zfill(2)
 
     def output(self, form="SELF"):
         return self.format(form)
@@ -373,6 +424,8 @@ class Date(object):
             year + "-" + month + "-" + day + "_" + hour + ":" + minute + ":" + second
         )
         return cls(indate)
+
+    fromlist = from_list
 
     def __repr__(self):
         return "Date(%s-%s-%sT%s:%s:%s)" % (

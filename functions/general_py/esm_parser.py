@@ -100,9 +100,10 @@ logger.addHandler(f_handler)
 
 # Module Constants:
 CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE = ["further_reading"]
-DATE_MARKER = ">>>THIS_IS_A_DATE<<<"
-FUNCTION_PATH = os.path.normpath(os.path.dirname(__file__) + "/../")
-esm_master_dir = os.path.normpath(os.path.dirname(__file__) + "/../../")
+# NOTE: For very strange reasons, DATE_MARKER ends up being unicode in py2, not a string...
+DATE_MARKER = str(">>>THIS_IS_A_DATE<<<")
+FUNCTION_PATH = str(os.path.normpath(os.path.dirname(__file__) + "/../"))
+esm_master_dir = str(os.path.normpath(os.path.dirname(__file__) + "/../../"))
 
 YAML_AUTO_EXTENSIONS = ["", ".yml", ".yaml", ".YML", ".YAML"]
 
@@ -120,8 +121,8 @@ constant_blacklist = [r"PATH", r"LD_LIBRARY_PATH", r"NETCDFF_ROOT", r"mpifc"]
 constant_blacklist = [re.compile(entry) for entry in constant_blacklist]
 
 # Ensure FileNotFoundError exists:
-if six.PY2: FileNotFoundError = IOError
-
+if six.PY2:  # pragma: no cover
+    FileNotFoundError = IOError
 
 
 def yaml_file_to_dict(filepath):
@@ -919,7 +920,7 @@ def recursive_run_function(tree, right, level, func, *args, **kwargs):
 
     .. code::
 
-        def func(tree, right, *args, **kwargs(
+        def func(tree, right, *args, **kwargs)
 
     """
     # logging.debug("Top of function")
@@ -954,6 +955,7 @@ def recursive_run_function(tree, right, level, func, *args, **kwargs):
             old_value = right[key]
             returned_key = func(tree + [key], key, *args, **kwargs)
             del right[key]
+            print("boop")
             right.update({returned_key: old_value})
 
     # logger.debug("right is a %s!", type(right))
@@ -962,23 +964,26 @@ def recursive_run_function(tree, right, level, func, *args, **kwargs):
             keys = list(right)
             for key in keys:
                 value = right[key]
-                logger.debug("Deleting key %s", key)
+                logging.debug("Deleting key %s", key)
                 logging.debug(
                     "Start func %s with %s, %s sent from us",
                     func.__name__,
                     tree + [key],
                     value,
+                    "type_of_sender=dict",
                 )
                 returned_dict = func(tree + [key], value, *args, **kwargs)
                 del right[key]
                 # logger.debug("Back out of func %s", func.__name__)
                 # logger.debug("Got as returned_dict: %s", returned_dict)
+                print("beep")
                 right.update(returned_dict)
-        elif isinstance(right, list):
-            for index, item in enumerate(right):
-                del right[index]
-                right.append(func(tree + [None], item, *args, **kwargs))
+        # elif isinstance(right, list):
+        #    for index, item in enumerate(right):
+        #        del right[0]
+        #        right.append(func(tree + [None], item, *args, **kwargs))
         else:
+            print("toot toot")
             right = func(tree + [None], right, *args, **kwargs)
 
     # logger.debug("finished with do_func_for")
@@ -1035,6 +1040,18 @@ def recursive_get(config_to_search, config_elements):
     # This looks dangerous too...
     if config_elements:
         return recursive_get(result, config_elements)
+
+    # Unicode vs Str again
+    if six.PY2:
+        if isinstance(result, list):
+            for index, entry in enumerate(result):
+                if isinstance(entry, unicode):
+                    logging.critical("Changing unicode to str!")
+                    result[index] = str(index)
+        elif isinstance(result, unicode):
+            logging.critical("Changing unicode to str!")
+            entries_of_key = str(entries_of_key)
+
     return result
 
 
@@ -1057,6 +1074,8 @@ def find_variable(tree, rhs, full_config, white_or_black_list, isblacklist):
         ):
             var_result = actually_find_variable(tree, var, full_config)
             if var_result:
+                # BUG/FIXME: Note that this means that we **always** will get
+                # back a string if a variable is replaced!
                 ok_part, var_result, more_rest = (
                     str(ok_part),
                     str(var_result),
@@ -1105,42 +1124,6 @@ def actually_find_variable(tree, rhs, full_config):
             raise ValueError("Sorry: %s not found" % (rhs))
 
 
-constant_replace_dict = {"${expid}": "TEST_EXPID"}
-
-
-def replace_constants(tree, rhs, config):
-    if not tree[-1]:
-        tree = tree[:-1]
-    lhs = tree[-1]
-    entry = rhs
-    # FIXME(PG): I don't like have this duplicate code here...
-    if isinstance(raw_str, str) and "${" in raw_str:
-        ok_part, rest = raw_str.split("${", 1)
-        var, new_raw = rest.split("}", 1)
-        if (determine_regex_list_match(var, white_or_black_list)) != isblacklist:
-            # var_result =
-            if var_result:
-                if new_raw:
-                    more_rest = find_variable(
-                        tree, new_raw, full_config, white_or_black_list, isblacklist
-                    )
-                else:
-                    more_rest = ""
-                # Make sure everything is a string:
-                ok_part, var_result, more_rest = (
-                    str(ok_part),
-                    str(var_result),
-                    str(more_rest),
-                )
-                logger.debug("Will return: %s", ok_part + var_result + more_rest)
-                return ok_part + var_result + more_rest
-    return raw_str
-
-    if entry in list(constant_replace_dict):
-        entry = constant_replace_dict[entry]
-    return entry
-
-
 def list_to_multikey(tree, rhs, config_to_search):
     """
     A recursive_run_function conforming func which puts any list based key to a
@@ -1158,10 +1141,10 @@ def list_to_multikey(tree, rhs, config_to_search):
 
 
     """
+    list_fence = "[["
+    list_end = "]]"
     if tree:
         lhs = tree[-1]
-        list_fence = "[["
-        list_end = "]]"
         if isinstance(lhs, str) and lhs:
             if list_fence in lhs:
                 return_dict = {}
@@ -1172,6 +1155,7 @@ def list_to_multikey(tree, rhs, config_to_search):
                 entries_of_key = actually_find_variable(
                     tree, key_in_list, config_to_search
                 )
+
                 if isinstance(rhs, str):
                     return_dict2 = {}
                     for key in entries_of_key:
@@ -1190,7 +1174,7 @@ def list_to_multikey(tree, rhs, config_to_search):
                         else:
                             replaced_list.append(item)
                     return_dict2 = {}
-                    for key in entries_of_keys:
+                    for key in entries_of_key:
                         return_dict2[
                             lhs.replace("[[" + actual_list + "]]", key).replace(
                                 value_in_list, key
@@ -1259,11 +1243,11 @@ def determine_computer_from_hostname():
                 for pattern in computer_patterns:
                     if re.match(pattern, socket.gethostname()):
                         return FUNCTION_PATH + "/machines/" + this_computer + ".yaml"
-    print(
+    logging.warn(
         "The yaml file for this computer (%s) could not be determined!"
         % socket.gethostname()
     )
-    print("Continuing with generic settings...")
+    logging.warn("Continuing with generic settings...")
     return FUNCTION_PATH + "/machines/generic.yaml"
 
     # raise FileNotFoundError(
@@ -1356,7 +1340,7 @@ def unmark_dates(tree, rhs, config):
     return entry
 
 
-class GeneralConfig(dict):
+class GeneralConfig(dict):  # pragma: no cover
     """ All configs do this! """
 
     def __init__(self, path, user_config):
@@ -1379,7 +1363,7 @@ class GeneralConfig(dict):
         )
 
 
-class ConfigSetup(GeneralConfig):
+class ConfigSetup(GeneralConfig):  # pragma: no cover
     """ Config Class for Setups """
 
     def _config_init(self, user_config):

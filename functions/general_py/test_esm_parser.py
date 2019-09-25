@@ -1,17 +1,6 @@
 """
 Tests for the ESM-Config YAML Parser
 """
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-
-from builtins import open
-from future import standard_library
-
-standard_library.install_aliases()
-
-import logging
 import os
 import unittest
 
@@ -45,7 +34,7 @@ class Test_yaml_file_to_dict(unittest.TestCase):
         with open("test.hjkl", "w") as bad_test_file:
             bad_test_file.write(document)
         try:
-            self.assertRaises(FileNotFoundError, esm_parser.yaml_file_to_dict, "test")
+            self.assertRaises(Exception, esm_parser.yaml_file_to_dict, "test")
         finally:
             os.remove("test.hjkl")
 

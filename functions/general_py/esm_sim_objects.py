@@ -3,6 +3,7 @@ Documentation goes here
 """
 import logging
 import os
+import pdb
 import shutil
 import sys
 
@@ -63,16 +64,17 @@ class SimulationSetup(object):
         ) as config_file:
             yaml.dump(self.config, config_file)
 
+        # pdb.set_trace()
         self._read_date_file()
         self._initialize_calendar()
         self._finalize_config()
-        esm_parser.pprint_config(self.config)
-        sys.exit()
         self._finalize_components()
         self._finalize_attributes()
         self._write_finalized_config()
         self._copy_preliminary_files_from_experiment_to_thisrun()
         self._show_simulation_info()
+        esm_parser.pprint_config(self.config)
+        sys.exit()
 
     def _show_simulation_info(self):
         six.print_(80 * "=")

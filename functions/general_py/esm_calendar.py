@@ -661,9 +661,15 @@ class Date(object):
 
     def __str__(self):
         return (
-            "-".join([str(self.year), str(self.month), str(self.day)])
+            "-".join([str(self.year), str(self.month).zfill(2), str(self.day).zfill(2)])
             + "T"
-            + ":".join([str(self.hour), str(self.minute), str(self.second)])
+            + ":".join(
+                [
+                    str(self.hour).zfill(2),
+                    str(self.minute).zfill(2),
+                    str(self.second).zfill(2),
+                ]
+            )
         )
 
     def format(
@@ -721,7 +727,14 @@ class Date(object):
         ndate = list(
             map(
                 str,
-                (self.year, self.month, self.day, self.hour, self.minute, self.second),
+                (
+                    self.year,
+                    self.smonth,
+                    self.sday,
+                    self.shour,
+                    self.sminute,
+                    self.ssecond,
+                ),
             )
         )
         if form == 0:

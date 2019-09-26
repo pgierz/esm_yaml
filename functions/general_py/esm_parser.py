@@ -1308,6 +1308,9 @@ def list_to_multikey(tree, rhs, config_to_search, ignore_list, isblacklist):
                     tree, key_in_list, config_to_search
                 )
 
+                if isinstance(entries_of_key, str):
+                    entries_of_key = [entries_of_key]
+
                 if isinstance(rhs, str):
                     return_dict2 = {}
                     for key in entries_of_key:
@@ -1358,6 +1361,8 @@ def list_to_multikey(tree, rhs, config_to_search, ignore_list, isblacklist):
                 return rhs
             key_elements = key_in_list.split(".")
             entries_of_key = actually_find_variable(tree, key_in_list, config_to_search)
+            if isinstance(entries_of_key, str):
+                entries_of_key = [entries_of_key]
             for entry in entries_of_key:
                 rhs_list.append(
                     rhs.replace("[[" + actual_list + "]]", entry).replace(
@@ -1458,8 +1463,8 @@ def mark_dates(tree, rhs, config):
     lhs = tree[-1]
     entry = rhs
     logging.debug(entry)
-    if "${" in str(entry):
-        return entry
+    # if "${" in str(entry):
+    #    return entry
     if isinstance(lhs, str) and lhs.endswith("date"):
         entry = str(entry) + DATE_MARKER
     return entry
@@ -1477,7 +1482,7 @@ def marked_date_to_date_object(tree, rhs, config):
         return entry
     if isinstance(lhs, str) and lhs.endswith("date"):
         # if isinstance(entry, str) and DATE_MARKER in entry and "<--" not in entry:
-        while DATE_MARKER in entry:
+        while DATE_MARKER in entry and "${" not in entry:
             entry = entry.replace(DATE_MARKER, "")
             if "!" in entry:
                 actual_date, date_attr = entry.split("!", 1)

@@ -144,7 +144,7 @@ def yaml_file_to_dict(filepath):
     for extension in YAML_AUTO_EXTENSIONS:
         try:
             with open(filepath + extension) as yaml_file:
-                return yaml.load(yaml_file, Loader=yaml.FullLoader)
+                return yaml.load(yaml_file)#, Loader=yaml.FullLoader)
         except IOError as error:
             logger.debug(
                 "IOError (%s) File not found with %s, trying another extension pattern.",
@@ -976,14 +976,12 @@ def recursive_run_function(tree, right, level, func, *args, **kwargs):
                 del right[key]
                 # logger.debug("Back out of func %s", func.__name__)
                 # logger.debug("Got as returned_dict: %s", returned_dict)
-                print("beep")
                 right.update(returned_dict)
         # elif isinstance(right, list):
         #    for index, item in enumerate(right):
         #        del right[0]
         #        right.append(func(tree + [None], item, *args, **kwargs))
         else:
-            print("toot toot")
             right = func(tree + [None], right, *args, **kwargs)
 
     # logger.debug("finished with do_func_for")

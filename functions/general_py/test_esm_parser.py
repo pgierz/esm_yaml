@@ -94,30 +94,19 @@ def replace_with_str_recursive_func(tree, right, full_config):
 
 
 def recursive_always_tester(tree, right, full_config):
-    print("Incoming:", full_config)
-    print("Incoming:", right)
-    print(tree)
     if not tree[-1]:
         tree = tree[:-1]
         type_of_sender = int
     else:
-        # if len(tree) > 1:
-        #    type_of_sender = type(esm_parser.recursive_get(full_config, tree))
-        #    print("Type of sender = ", type_of_sender)
-        # else:
         type_of_sender = dict
     if type_of_sender == dict:
-        print("Returning {%s: %s}" % (tree[-1], right))
         return {tree[-1]: right}
     else:
         if isinstance(right, list):
-            print("Returning backwards list")
             right = right[::-1]
         if isinstance(right, str):
-            print("Returning newstr")
             right = "newstr"
         if isinstance(right, int):
-            print("Returning higher int")
             right = right + 1
     return right
 
@@ -399,10 +388,13 @@ class Test_list_to_multikey(unittest.TestCase):
 
 class Test_determine_computer_from_hostname(unittest.TestCase):
     def test_loads_generic(self):
-        machine_config = esm_parser.determine_computer_from_hostname()
-        self.assertEqual(
-            machine_config, esm_parser.FUNCTION_PATH + "/machines/generic.yaml"
-        )
+        if not mock_avail:
+            self.skipTest()
+        with mock.patch("socket.gethostname", return_value="uss_enterprise"):
+            machine_config = esm_parser.determine_computer_from_hostname()
+            self.assertEqual(
+                machine_config, esm_parser.FUNCTION_PATH + "/machines/generic.yaml"
+            )
 
     def test_loads_mistral(self):
         if not mock_avail:

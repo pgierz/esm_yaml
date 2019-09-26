@@ -36,5 +36,5 @@ elif six.PY3:
     sys.path.append(FUNCTION_PATH + "/external_py/pyyaml/lib3/yaml")
     
 
-if os.env.get("RUNNING_CI") == "1":
+if os.environ.get("RUNNING_CI") == "1":
     six.print_(sys.path)

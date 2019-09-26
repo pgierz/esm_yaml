@@ -1,3 +1,5 @@
+env:
+  - RUNNING_CI=1
 sudo: false
 language: python
 python:

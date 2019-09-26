@@ -6,10 +6,12 @@ import os
 import shutil
 import sys
 
+import externals
 import f90nml
 import six
 import tqdm
 import yaml
+
 
 from esm_calendar import Date
 import esm_parser

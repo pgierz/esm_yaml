@@ -117,5 +117,11 @@ class ShellscriptToUserConfig(dict):
             diffs.remove(solved_diff)
         logging.debug("Diffs after removing: %s", diffs)
 
+        # Remove all empty dictionaries:
+        for key in list(user_config):
+            value = user_config[key]
+            if not value:
+                del user_config[key]
+
         for key, value in user_config.items():
             self.__setitem__(key, value)

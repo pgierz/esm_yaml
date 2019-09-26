@@ -29,6 +29,7 @@ pool_directories:
 
 # standard environment setup
 #
+useMPI: intelmpi
 module_actions:
         - "purge"
         - "load gcc/4.8.2"

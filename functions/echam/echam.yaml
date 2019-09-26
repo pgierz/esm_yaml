@@ -208,7 +208,9 @@ choose_lresume:
 
 start_date: 18500101
 # PG: Still a problem: can't use ! in a choose block
-#choose_start_date!year:
+# Not sure what Dirk is thinking here
+#start_date_year: ${start_date}!year
+#choose_start_date_year:
 #        disturbed_years:
 #                namelist_changes:
 #                        namelist.echam:

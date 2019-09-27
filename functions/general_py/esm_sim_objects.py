@@ -72,7 +72,6 @@ class SimulationSetup(object):
         self._write_finalized_config()
         self._copy_preliminary_files_from_experiment_to_thisrun()
         self._show_simulation_info()
-        esm_parser.pprint_config(self.config)
         sys.exit()
 
     def _show_simulation_info(self):

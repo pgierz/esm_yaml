@@ -931,7 +931,7 @@ def resolve_basic_choose(config, config_to_replace_in, choose_key):
             deep_update(update_key, update_value, config_to_replace_in)
     else:
         logging.warning("Choice %s could not be resolved", choice)
-        logging.warning("Key was key=%s", key)
+        logging.warning("Key was key=%s", choose_key)
     del config_to_replace_in[choose_key]
 
 

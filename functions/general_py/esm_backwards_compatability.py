@@ -12,10 +12,51 @@ import logging
 import os
 import subprocess
 
+# Third party imports
+import externals
 import six
+
+# Imports from this module
+import esm_parser
 
 
 FUNCTION_PATH = os.path.dirname(__file__) + "/../"
+
+
+def mini_recursive_run_func(config, func):
+    func(config)
+    for key, value in six.iteritems(config):
+        if isinstance(value, dict):
+            mini_recursive_run_func(value, func)
+
+
+# NOTE: Both of the next to blocks need to be recursive through the whole dictionary...
+#
+# BLOCK 1: Use mapping table
+# Load a mapping table if it exists and swap old and new keys
+def remap_old_new_keys(config):
+    try:
+        mapping_table_old_to_new = "not a thing yet"
+        mapping_table = esm_parser.yaml_file_to_dict(mapping_table_old_to_new)
+        for script_key, python_key in six.iteritems(mapping_table):
+            for config_key, config_value in six.iteritems(config):
+                if config_key == script_key:
+                    del config[script_key]
+                    config[python_key] = config_calue
+    except:
+        pass
+
+
+# BLOCK 2: make every key lowercase always
+#
+# Adapt cases to always be lowercase (I guess this is the new default)
+def purify_cases(config):
+    purify_case = True
+    if purify_case:
+        for key, value in six.iteritems(config):
+            del config[key]
+            new_key = key.lower()
+            config[new_key] = value
 
 
 class ShellscriptToUserConfig(dict):
@@ -123,5 +164,8 @@ class ShellscriptToUserConfig(dict):
             if not value:
                 del user_config[key]
 
-        for key, value in user_config.items():
+        mini_recursive_run_func(user_config, remap_old_new_keys)
+        mini_recursive_run_func(user_config, purify_cases)
+
+        for key, value in six.iteritems(user_config):
             self.__setitem__(key, value)

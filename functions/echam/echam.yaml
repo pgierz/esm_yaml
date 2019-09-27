@@ -51,8 +51,8 @@ restart:
 
 # default directories
 
-model_dir: "${general.BASE_DIR}/echam-${version}"
-bin_dir: "${MODEL_DIR}/bin"
+model_dir: "${general.base_dir}/echam-${version}"
+bin_dir: "${model_dir}/bin"
 pool_dir: "${computer.pool_directories.pool}/ECHAM6"
 input_dir: "${pool_dir}/input/${dataset}"
 adj_input_dir: "${input_dir}/${resolution}"

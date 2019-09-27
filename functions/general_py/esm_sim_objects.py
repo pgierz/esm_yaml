@@ -30,7 +30,6 @@ class SimulationSetup(object):
 
         self.config = esm_parser.ConfigSetup(name, user_config)
 
-        self.config["general"]["base_dir"] = self.config["general"]["BASE_DIR"]
         self.config["general"]["expid"] = "test"
 
         components = []
@@ -214,10 +213,10 @@ class SimulationSetup(object):
         self.delta_date = (nyear, nmonth, nday, nhour, nminute, nsecond)
         self.config["general"]["current_date"] = self.current_date
         self.config["general"]["initial_date"] = Date(
-            self.config["general"]["INITIAL_DATE"]
+            self.config["general"]["initial_date"]
         )
         self.config["general"]["final_date"] = Date(
-            self.config["general"]["FINAL_DATE"]
+            self.config["general"]["final_date"]
         )
         self.config["general"]["prev_date"] = self.current_date.sub((0, 0, 1, 0, 0, 0))
 
@@ -240,7 +239,7 @@ class SimulationSetup(object):
         else:
             # Did the user give a value? If yes, keep it, if not, first run:
             for component in self.components:
-                user_lresume = component.config.get("LRESUME", False)
+                user_lresume = component.config.get("lresume", False)
                 component.config.setdefault("lresume", user_lresume)
 
     def _increment_date_and_run_number(self):

@@ -1,0 +1,4 @@
+[run]
+include =
+   # Only look at files here
+   . 

@@ -1,4 +1,4 @@
-# MISTRAL YAML CONFIGURATION FILES
+# GENERIC YAML CONFIGURATION FILES
 
 #hyper_flag: "--cpus-per-task=1"
 additional_flags: "--mem=0"
@@ -26,9 +26,11 @@ threads_per_core: 1
 pool_directories:
         pool: "/pool/data"
 
-useMPI: intel
+
 # standard environment setup
 #
+#
+
 useMPI: intelmpi
 module_actions:
         - "purge"
@@ -79,6 +81,11 @@ export_vars:
         LAPACK_LIB_DEFAULT: "-L/sw/rhel6-x64/intel/intel-18.0.1/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_core -lmkl_sequential"
         OASIS3MCT_FC_LIB: "-L$NETCDFFROOT/lib -lnetcdff"
 
+        FC: ${fc}
+        F77: ${f77}
+        MPIFC: ${mpifc}
+        CC: ${cc}
+        CXX: ${cxx}
         MPIROOT: "$(${mpifc} -show | perl -lne 'm{ -I(.*?)/include } and print $1')"
         MPI_LIB: "$(${mpifc} -show |sed -e 's/^[^ ]*//' -e 's/-[I][^ ]*//g')"
 
@@ -92,27 +99,26 @@ choose_useMPI:
                         - "unload intelmpi"
                         - "load intel/18.0.1 intelmpi/2018.1.163"
                         - "load autoconf/2.69"
-                add_export_vars:
-                        FC: mpiifort
-                        F77: mpiifort
-                        MPIFC: mpiifort
-                        CC: mpiicc
-                        CXX: mpiicpc
+                fc: mpiifort
+                f77: mpiifort
+                mpifc: mpiifort
+                cc: mpiicc
+                cxx: mpiicpc
         openmpi:
                 add_module_actions:
                         - "load openmpi/2.0.2p2_hpcx-intel14"
                 add_export_vars:
-                        FC: mpif90
-                        F77: mpif90
-                        MPIFC: mpif90
-                        CC: mpicc
-                        CXX: mpicxx
                         OMPI_MCA_pml: cm         # sets the point-to-point management layer
                         OMPI_MCA_mtl: mxm        # sets the matching transport layer
                         MXM_RDMA_PORTS: mlx5_0:1
                         MXM_LOG_LEVEL: ERROR
                         MXM_HANDLE_ERRORS: bt
                         UCX_HANDLE_ERRORS: bt
+                fc: mpif90
+                f77: mpif90
+                mpifc: mpif90
+                cc: mpicc
+                cxx: mpicxx
         bullxmpi:
                 add_module_actions:
                         - "load mxm/3.4.3082"

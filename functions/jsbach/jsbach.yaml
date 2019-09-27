@@ -21,11 +21,6 @@ adj_input_dir: "${input_dir}/${echam.resolution}"
 
 dynamic_vegetations: True
 
-choose_dynamic_vegetations: 
-        true:
-                dynveg: "_dynveg"
-        false:
-                dynveg: "_no_dynveg"
 
 version: "3.20"
 dataset: r0009
@@ -45,12 +40,18 @@ choose_version:
                 choose_dynamic_vegetations: 
                         true:
                                 namelist_dir: "${general.esm_master_dir}/namelists/jsbach/${version}/${scenario}/dynveg"
+                                dynveg: "_dynveg"
                         false:
                                 namelist_dir: "${general.esm_master_dir}/namelists/jsbach/${version}/${scenario}/no_dynveg"
+                                dynveg: "_no_dynveg"
         "3.10":
                 dataset: r0007
                 namelist_dir: "${general.esm_master_dir}/esm-runscripts/namelists/jsbach/${version}/${scenario}/${resolution}"
-
+                choose_dynamic_vegetations: 
+                        true:
+                                dynveg: "_dynveg"
+                        false:
+                                dynveg: "_no_dynveg"
 forcings:
         LU_trans: LU_trans
 

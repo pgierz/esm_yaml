@@ -16,6 +16,7 @@ import coloredlogs
 
 # Import from this package
 import esm_backwards_compatability
+import esm_parser
 import esm_sim_objects
 
 # Logger and related constants

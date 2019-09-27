@@ -39,7 +39,7 @@ POOL_DIR_echam=/pool/data
 ##########################
 ## ECHAM/JSBACH SECTION ##
 ##########################
-
+#VALUE_echam="user_script"
 RES_echam=T63
 SCENARIO_echam=PALEO
 

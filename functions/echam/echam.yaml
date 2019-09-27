@@ -60,6 +60,11 @@ forcing_dir: "${input_dir}/${resolution}"
 greenhouse_dir: "${pool_dir}"
 namelist_dir: "${general.esm_master_dir}/namelists/echam/${version}/${scenario}"
 
+switch: 1
+value : "echam default"
+choose_switch:
+        1:
+                value: "echam switch"
 # choices
 
 choose_resolution:

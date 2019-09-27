@@ -51,12 +51,16 @@ def remap_old_new_keys(config):
 #
 # Adapt cases to always be lowercase (I guess this is the new default)
 def purify_cases(config):
+    import time
     purify_case = True
     if purify_case:
-        for key, value in six.iteritems(config):
+        keys = list(config)
+        for key in keys: # value in six.iteritems(config):
+            value = config[key]
             del config[key]
             new_key = key.lower()
             config[new_key] = value
+            time.sleep(0.01)
 
 
 class ShellscriptToUserConfig(dict):
@@ -164,7 +168,7 @@ class ShellscriptToUserConfig(dict):
             if not value:
                 del user_config[key]
 
-        mini_recursive_run_func(user_config, remap_old_new_keys)
+        #mini_recursive_run_func(user_config, remap_old_new_keys)
         mini_recursive_run_func(user_config, purify_cases)
 
         for key, value in six.iteritems(user_config):

@@ -1,14 +1,12 @@
 # AWICM 1 YAML CONFIGURATION FILE
 #
 #
-
-model: awicm0
-
-include_models:
-        - echam
-
-coupled_setup: True
-
+general:
+        model: awicm0
+        include_models:
+                - echam
+        coupled_setup: True
+        
 echam:
         restart:
                 firstlast: "'first'"

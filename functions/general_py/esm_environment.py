@@ -20,9 +20,11 @@ import esm_parser
 
 class environment_infos:
     def __init__(self):
+
         self.machine_file=esm_parser.determine_computer_from_hostname()
         self.config = esm_parser.yaml_file_to_dict(self.machine_file)
-    
+        esm_parser.choose_blocks(self.config) 
+        self.config()
 
     def write_dummy_script(self):
         with open("dummy_script.sh", "w") as script_file:
@@ -44,4 +46,5 @@ class environment_infos:
                 newfile.write(command + "\n")
         return name+"_script.sh"
 
-
+    def output():
+        esm_parser.pprint_config(self.config)

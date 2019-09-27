@@ -452,26 +452,23 @@ def remove_entry_from_chapter(
 
 
 def remove_entries_from_chapter_in_config(
-    model_config, valid_model_names, setup_config, valid_setup_names
+    config, model_names
 ):
-    for model_names, config in zip(
-        [valid_model_names, valid_setup_names], [model_config, setup_config]
-    ):
-        for model in model_names:
-            logging.debug(model)
-            all_removes_for_model = find_remove_entries_in_config(config[model], model)
-            for remove_chapter, remove_entries in all_removes_for_model:
-                model_to_remove_from = remove_chapter.split(".")[0].replace(
-                    "remove_", ""
-                )
-                remove_entry_from_chapter(
-                    remove_chapter,
-                    remove_entries,
-                    model_to_remove_from,
-                    model,
-                    model_config,
-                    setup_config,
-                )
+    for model in model_names:
+        logging.debug(model)
+        all_removes_for_model = find_remove_entries_in_config(config[model], model)
+        for remove_chapter, remove_entries in all_removes_for_model:
+            model_to_remove_from = remove_chapter.split(".")[0].replace(
+                "remove_", ""
+            )
+            remove_entry_from_chapter(
+                remove_chapter,
+                remove_entries,
+                model_to_remove_from,
+                model,
+                config,
+                config,
+            )
 
 
 def find_add_entries_in_config(mapping, model_name):
@@ -563,24 +560,21 @@ def add_entry_to_chapter(
 
 
 def add_entries_to_chapter_in_config(
-    model_config, valid_model_names, setup_config, valid_setup_names
+    config, model_names
 ):
-    for model_names, config in zip(
-        [valid_model_names, valid_setup_names], [model_config, setup_config]
-    ):
-        for model in model_names:
-            logging.debug(model)
-            all_adds_for_model = find_add_entries_in_config(config[model], model)
-            for add_chapter, add_entries in all_adds_for_model:
-                model_to_add_to = add_chapter.split(".")[0].replace("add_", "")
-                add_entry_to_chapter(
-                    add_chapter,
-                    add_entries,
-                    model_to_add_to,
-                    model,
-                    model_config,
-                    setup_config,
-                )
+    for model in model_names:
+        logging.debug(model)
+        all_adds_for_model = find_add_entries_in_config(config[model], model)
+        for add_chapter, add_entries in all_adds_for_model:
+            model_to_add_to = add_chapter.split(".")[0].replace("add_", "")
+            add_entry_to_chapter(
+                add_chapter,
+                add_entries,
+                model_to_add_to,
+                model,
+                config,
+                config,
+            )
 
 
 def merge_dicts(*dict_args):
@@ -1356,6 +1350,46 @@ def unmark_dates(tree, rhs, config):
     return entry
 
 
+def choose_blocks(config, isblacklist=True):
+    #valid_setup_names = config["general"]["valid_setup_names"]
+    #valid_model_names = config["general"]["valid_model_names"]
+    all_set_variables = {}
+
+    all_names = list(config.keys())
+    #valid_setup_names + valid_model_names
+    for name in all_names:
+        while True:
+            all_set_variables[name] = {}
+            name_chooses = list_all_keys_starting_with_choose(
+                config[name], name, gray_list, isblacklist
+            )
+            if name_chooses == []:
+                break
+            for key, block in name_chooses:
+                all_set_variables[name][
+                    key
+                ] = determine_set_variables_in_choose_block(block, all_names, name)
+
+            task_list = model_with_choose, choose_key = find_one_independent_choose(
+                all_set_variables
+            )
+            logging.debug("The task list is: %s", task_list)
+            logging.debug("all_set_variables: %s", all_set_variables)
+            resolve_choose(model_with_choose, choose_key, config)
+            del all_set_variables[model_with_choose][choose_key]
+            for key in list(all_set_variables):
+                if not all_set_variables[key]:
+                    del all_set_variables[key]
+            logging.debug("Remaining all_set_variables=%s", all_set_variables)
+
+    add_entries_to_chapter_in_config(
+        config, all_names
+    )
+    remove_entries_from_chapter_in_config(
+        config, all_names
+    )
+
+
 class GeneralConfig(dict):
     """ All configs do this! """
 
@@ -1423,46 +1457,9 @@ class ConfigSetup(GeneralConfig):
         check_conflicting_model_and_setup_names(self.config)
         update_models_from_setup(self.config)
 
-        self.choose_blocks(self.config)
+        choose_blocks(self.config)
         self.run_recursive_functions(self.config)
 
-    def choose_blocks(self, config, isblacklist=True):
-        valid_setup_names = config["general"]["valid_setup_names"]
-        valid_model_names = config["general"]["valid_model_names"]
-        all_set_variables = {}
-
-        all_names = valid_setup_names + valid_model_names
-        for name in all_names:
-            while True:
-                all_set_variables[name] = {}
-                name_chooses = list_all_keys_starting_with_choose(
-                    config[name], name, gray_list, isblacklist
-                )
-                if name_chooses == []:
-                    break
-                for key, block in name_chooses:
-                    all_set_variables[name][
-                        key
-                    ] = determine_set_variables_in_choose_block(block, all_names, name)
-
-                task_list = model_with_choose, choose_key = find_one_independent_choose(
-                    all_set_variables
-                )
-                logging.debug("The task list is: %s", task_list)
-                logging.debug("all_set_variables: %s", all_set_variables)
-                resolve_choose(model_with_choose, choose_key, config)
-                del all_set_variables[model_with_choose][choose_key]
-                for key in list(all_set_variables):
-                    if not all_set_variables[key]:
-                        del all_set_variables[key]
-                logging.debug("Remaining all_set_variables=%s", all_set_variables)
-
-        add_entries_to_chapter_in_config(
-            config, valid_model_names, config, valid_setup_names
-        )
-        remove_entries_from_chapter_in_config(
-            config, valid_model_names, config, valid_setup_names
-        )
 
     def run_recursive_functions(self, config, isblacklist=True):
         logging.debug("Top of run recursive functions")

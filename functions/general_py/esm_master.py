@@ -338,11 +338,11 @@ class software_package:
 
 class task:
     def __init__(self, raw, setup_info, vcs, general):
-        if type(raw) == list:
-            str_arg = ""
-            for arg in raw:
-                str_arg=str_arg + " " + arg
-            raw = str_arg.strip()
+#        if type(raw) == list:
+#            str_arg = ""
+#            for arg in raw:
+#                str_arg=str_arg + " " + arg
+#            raw = str_arg.strip()
         if raw == "default":
             raw = ""
         if raw == "drytestall":

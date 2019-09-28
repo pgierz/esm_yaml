@@ -8,6 +8,9 @@ module unload netcdf
 module load netcdf_c/4.3.2-gcc48
 module unload cmake
 module load cmake/3.5.2
+module unload intelmpi
+module load intel/18.0.1 intelmpi/2018.1.163
+module load autoconf/2.69
 
 export I_MPI_FABRICS=shm:dapl
 export I_MPI_FALLBACK=disable
@@ -35,11 +38,16 @@ export ESM_NETCDF_C_DIR=/sw/rhel6-x64/netcdf/netcdf_c-4.4.0-parallel-impi-intel1
 export ESM_NETCDF_F_DIR=/sw/rhel6-x64/netcdf/netcdf_fortran-4.4.3-parallel-impi-intel14/
 export PERL5LIB=/usr/lib64/perl5
 export SZIPROOT=/sw/rhel6-x64/sys/libaec-0.3.2-gcc48
-export LAPACK_LIB=-mkl=sequential
-export LAPACK_LIB_DEFAULT=-L/sw/rhel6-x64/intel/intel-18.0.1/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_core -lmkl_sequential
-export OASIS3MCT_FC_LIB=-L$NETCDFFROOT/lib -lnetcdff
-export MPIROOT=$(${mpifc} -show | perl -lne 'm{ -I(.*?)/include } and print $1')
-export MPI_LIB=$(${mpifc} -show |sed -e 's/^[^ ]*//' -e 's/-[I][^ ]*//g')
+export LAPACK_LIB="-mkl=sequential"
+export LAPACK_LIB_DEFAULT="-L/sw/rhel6-x64/intel/intel-18.0.1/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_core -lmkl_sequential"
+export OASIS3MCT_FC_LIB="-L$NETCDFFROOT/lib -lnetcdff"
+export FC=mpiifort
+export F77=mpiifort
+export MPIFC=mpiifort
+export CC=mpiicc
+export CXX=mpiicpc
+export MPIROOT=$(mpiifort -show | perl -lne 'm{ -I(.*?)/include } and print $1')
+export MPI_LIB=$(mpiifort -show |sed -e 's/^[^ ]*//' -e 's/-[I][^ ]*//g')
 export PATH=/sw/rhel6-x64/gcc/binutils-2.24-gccsys/bin:${PATH}
 export LD_LIBRARY_PATH=/sw/rhel6-x64/grib_api/grib_api-1.15.0-intel14/lib:${NETCDFF_ROOT}/lib:${HDF5ROOT}/lib:${NETCDF_ROOT}/lib:${SZIPROOT}/lib:$LD_LIBRARY_PATH
 

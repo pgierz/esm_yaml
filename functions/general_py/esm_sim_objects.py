@@ -3,13 +3,16 @@ Documentation goes here
 """
 import logging
 import os
+import pdb
 import shutil
 import sys
 
+import externals
 import f90nml
 import six
 import tqdm
 import yaml
+
 
 from esm_calendar import Date
 import esm_parser
@@ -27,7 +30,6 @@ class SimulationSetup(object):
 
         self.config = esm_parser.ConfigSetup(name, user_config)
 
-        self.config["general"]["base_dir"] = self.config["general"]["BASE_DIR"]
         self.config["general"]["expid"] = "test"
 
         components = []
@@ -61,18 +63,17 @@ class SimulationSetup(object):
         ) as config_file:
             yaml.dump(self.config, config_file)
 
+        # pdb.set_trace()
         self._read_date_file()
         self._initialize_calendar()
-
-        esm_parser.pprint_config(self.config)
-        sys.exit()
-
         self._finalize_config()
         self._finalize_components()
         self._finalize_attributes()
         self._write_finalized_config()
-        self._copy_files_from_experiment_to_thisrun()
+        self._copy_preliminary_files_from_experiment_to_thisrun()
         self._show_simulation_info()
+        esm_parser.pprint_config(self.config)
+        sys.exit()
 
     def _show_simulation_info(self):
         six.print_(80 * "=")
@@ -112,6 +113,15 @@ class SimulationSetup(object):
             )
             if not os.path.exists(getattr(self, "thisrun_" + filetype + "_dir")):
                 os.makedirs(getattr(self, "thisrun_" + filetype + "_dir"))
+        self.run_datestamp = (
+            self.config["general"]["current_date"].format(
+                form=9, givenph=False, givenpm=False, givenps=False
+            )
+            + "-"
+            + self.config["general"]["end_date"].format(
+                form=9, givenph=False, givenpm=False, givenps=False
+            )
+        )
 
     def _write_finalized_config(self):
         with open(
@@ -128,7 +138,7 @@ class SimulationSetup(object):
             component.general_config = self.config["general"]
             component.finalize_attributes()
 
-    def _copy_files_from_experiment_to_thisrun(self):
+    def _copy_preliminary_files_from_experiment_to_thisrun(self):
         filelist = [
             (
                 "scripts",
@@ -203,10 +213,10 @@ class SimulationSetup(object):
         self.delta_date = (nyear, nmonth, nday, nhour, nminute, nsecond)
         self.config["general"]["current_date"] = self.current_date
         self.config["general"]["initial_date"] = Date(
-            self.config["general"]["INITIAL_DATE"]
+            self.config["general"]["initial_date"]
         )
         self.config["general"]["final_date"] = Date(
-            self.config["general"]["FINAL_DATE"]
+            self.config["general"]["final_date"]
         )
         self.config["general"]["prev_date"] = self.current_date.sub((0, 0, 1, 0, 0, 0))
 
@@ -229,7 +239,7 @@ class SimulationSetup(object):
         else:
             # Did the user give a value? If yes, keep it, if not, first run:
             for component in self.components:
-                user_lresume = component.config.get("LRESUME", False)
+                user_lresume = component.config.get("lresume", False)
                 component.config.setdefault("lresume", user_lresume)
 
     def _increment_date_and_run_number(self):
@@ -258,8 +268,43 @@ class SimulationSetup(object):
         for component in self.components:
             six.print_("-" * 80)
             six.print_("* %s" % component.config["model"], "\n")
-            all_files_to_copy += component.filesystem_to_experiment()
+            all_component_files, filetype_specific_dict = (
+                component.filesystem_to_experiment()
+            )
+            with open(
+                component.thisrun_config_dir
+                + "/"
+                + self.config["general"]["expid"]
+                + "_filelist_"
+                + self.run_datestamp,
+                "w",
+            ) as flist:
+                flist.write(
+                    "These files are used for \nexperiment %s\ncomponent %s\ndate %s"
+                    % (
+                        self.config["general"]["expid"],
+                        component.config["model"],
+                        self.run_datestamp,
+                    )
+                )
+                flist.write("\n")
+                flist.write(80 * "-")
+                for filetype in filetype_specific_dict:
+                    flist.write("\n" + filetype.upper() + ":\n")
+                    for source, exp_tree_name, work_dir_name in filetype_specific_dict[
+                        filetype
+                    ]:
+                        flist.write("\nSource: " + source)
+                        flist.write("\nExp Tree: " + exp_tree_name)
+                        flist.write("\nWork Dir: " + work_dir_name)
+                        flist.write("\n")
+                    flist.write("\n")
+                    flist.write(80 * "-")
+            esm_parser.pprint_config(filetype_specific_dict)
+            all_files_to_copy += all_component_files
         six.print_("\n" "- File lists populated, proceeding with copy...")
+        six.print_("- Note that you can see your file lists in the config folder")
+        six.print_("- You will be informed about missing files")
         self._prepare_copy_files(all_files_to_copy)
 
         # Load and modify namelists:
@@ -341,6 +386,7 @@ class SimulationComponent(object):
 
     def filesystem_to_experiment(self):
         all_files_to_process = []
+        filetype_files_for_list = {}
         for filetype in self.all_filetypes:
             filetype_files = []
             six.print_("- %s" % filetype)
@@ -394,7 +440,7 @@ class SimulationComponent(object):
                         ):
                             file_source = fname
                         else:
-                            continue  # PG: With the big loop?
+                            continue
                 if (
                     filetype + "_in_work" in self.config
                     and file_category in self.config[filetype + "_in_work"].keys()
@@ -421,8 +467,9 @@ class SimulationComponent(object):
                         file_target,
                     )
                 )
+            filetype_files_for_list[filetype] = filetype_files
             all_files_to_process += filetype_files
-        return all_files_to_process
+        return all_files_to_process, filetype_files_for_list
 
     def nmls_load(self):
         nmls = self.config.get("namelists", [])

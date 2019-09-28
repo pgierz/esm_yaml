@@ -39,7 +39,7 @@ components:
                 clean_command: "${defaults.clean_command}"
 
         "fesom":
-                install_bins: "bin/fesom.x"
+                install_bins: "bin/fesom"
                 choose_version: 
                         "1.4":
                                 git-repository: "https://gitlab.dkrz.de/modular_esm/fesom-1.4.git"

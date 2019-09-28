@@ -11,10 +11,8 @@ import sys
 
 import externals
 
-
 # Import from 3rd Party packages
 import coloredlogs
-
 
 # Import from this package
 import esm_backwards_compatability

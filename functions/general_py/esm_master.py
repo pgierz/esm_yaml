@@ -21,8 +21,8 @@ import esm_environment
 ######################################################################################
 
 
-components_yaml='functions/setups2models.yaml'
-config_yaml='functions/esm_master.yaml'
+components_yaml='functions/esm_master/setups2models.yaml'
+config_yaml='functions/esm_master/esm_master.yaml'
 vcs_folder='functions/vcs'
 
 overall_conf_file='~/.esm_master.conf'
@@ -157,7 +157,11 @@ class version_control_infos:
                 repo=package.repo
             if "https://gitlab.dkrz.de" in repo:
                 repo = "https://" + general.emc["GITLAB_DKRZ_USER_NAME"] +"@"+ repo.replace("https://", "")
-            raw_command = raw_command.replace("${repository}", repo) +" "+ package.raw_name
+            raw_command = raw_command.replace("${repository}", repo)
+            if package.destination:
+                raw_command = raw_command + " " + package.destination
+            else:
+                raw_command = raw_command + " " + package.raw_name
         else:
             raw_command = None
         return raw_command
@@ -213,6 +217,7 @@ class software_package:
             self.bin_type = None
             self.bin_names = [None]
             self.command_list = None
+            self.destination = None
 
     def fill_in_infos(self, setup_info, vcs, general):
 	 
@@ -220,6 +225,9 @@ class software_package:
         self.subpackages = self.get_subpackages(setup_info, vcs, general)
         self.complete_targets(setup_info)
         self.repo_type, self.repo, self.branch = self.get_repo_info(setup_info, vcs)
+        self.destination = setup_info.get_config_entry(self, "destination")
+        if not self.destination:
+            self.destination = self.raw_name
 
         self.repo = replace_var(self.repo, self.model+".version", self.version)
         self.branch = replace_var(self.branch, self.model+".version", self.version)
@@ -303,7 +311,7 @@ class software_package:
                 if type(commands) == str:
                     commands = [commands]
                 if not todo == "get":
-                    commands.insert(0, "cd "+self.raw_name)
+                    commands.insert(0, "cd "+self.destination)
                     commands.append("cd ..")
             command_list.update({todo: commands})
         return command_list
@@ -376,7 +384,7 @@ class task:
         self.folders_after_download=self.download_folders()
         self.binaries_after_compile=self.compile_binaries()
         self.dir_list=self.list_required_dirs()
-        self.command_list=self.assemble_command_list()
+        self.command_list, self.shown_command_list =self.assemble_command_list()
 
         if verbose > 1:
             self.output()
@@ -501,12 +509,12 @@ class task:
                     command_list.append("mkdir -p "+toplevel+"/"+task.package.bin_type)
                     real_command_list.append("mkdir -p "+toplevel+"/"+task.package.bin_type)
                     for binfile in task.package.bin_names:
-                        command_list.append("cp "+toplevel+"/"+task.package.raw_name+"/"+binfile + " "+ toplevel+"/"+task.package.bin_type)
-                        real_command_list.append("cp "+toplevel+"/"+task.package.raw_name+"/"+binfile + " "+ toplevel+"/"+task.package.bin_type)
+                        command_list.append("cp "+toplevel+"/"+task.package.destination+"/"+binfile + " "+ toplevel+"/"+task.package.bin_type)
+                        real_command_list.append("cp "+toplevel+"/"+task.package.destination+"/"+binfile + " "+ toplevel+"/"+task.package.bin_type)
         if self.package.kind in ["setups", "couplings"]:
             command_list.append("cd ..")
             real_command_list.append("cd ..")
-        return real_command_list
+        return real_command_list, command_list
             
 
     def check_if_target(self, setup_info):
@@ -582,7 +590,7 @@ class task:
     def output_steps(self):
         if not self.command_list == []:
             print ("    Executing commands in this order:")
-            for command in self.command_list:
+            for command in self.shown_command_list:
                 print ("        ", command)
 
 
@@ -852,7 +860,7 @@ def main(args):
 
     parser=argparse.ArgumentParser(prog="esm_master", description='tool for downloading, configuring and compiling.')
     parser.add_argument('target', metavar='target', nargs='?', type=str, help='name of the target (leave empty for full list of targets)')
-    parser.add_argument('--check', '-c', action='store_true', default='false', help='show what would be done, not doing anything')
+    parser.add_argument('--check', '-c', action='store_true', default=False, help='show what would be done, not doing anything')
     parser.add_argument('--verbose', '-v', action='count', default=0, help='toggle verbose mode')
     parser.add_argument('--version', action='version', version='%(prog)s 3.0 (Oct 01, 2019)')
     parsed_args=vars(parser.parse_args())

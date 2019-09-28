@@ -4,209 +4,68 @@ Tests for the ESM-Config YAML Parser
 import os
 import unittest
 
+try:
+    import unittest.mock as mock
+
+    mock_avail = True
+except ImportError:
+    try:
+        import mock
+
+        mock_avail = True
+    except ImportError:
+        mock_avail = False
+
 import esm_parser
 
 
-class Test_yaml_file_to_dict(unittest.TestCase):
-    def test_yaml_file_to_dict(self):
-        """Tests extension expansion and loading of YAML documents"""
-        document = """
-        model: PISM
-        nest:
-            Domains:
-                - nhem
-                - shem
-                - gris
-                - something
-            Resolutions:
-                - big
-                - small
-        """
-
-        for valid_extension in esm_parser.YAML_AUTO_EXTENSIONS:
-            with open("test" + valid_extension, "w") as test_file:
-                test_file.write(document)
-            result = esm_parser.yaml_file_to_dict("test")
-            try:
-                self.assertIsInstance(result, dict)
-            finally:
-                os.remove("test" + valid_extension)
-        with open("test.hjkl", "w") as bad_test_file:
-            bad_test_file.write(document)
-        try:
-            self.assertRaises(Exception, esm_parser.yaml_file_to_dict, "test")
-        finally:
-            os.remove("test.hjkl")
-
-
-class Test_attach_to_config_and_remove(unittest.TestCase):
-    def setUp(self):
-        self.config = {}
-
-    def test_skips_loop_if_attach_key_missing(self):
-        """Makes sure the loop is skipped if the attach_key is missing"""
-        attach_key = "some_key_not_in_dummy_config"
-        self.assertIs(
-            None, esm_parser.attach_to_config_and_remove(self.config, attach_key)
-        )
-
-    def test_attach_value_is_badtype(self):
-        """Makes sure a type error is raised if anything not a list or str is passed"""
-        for attach_key in [1, 1.0]:
-            self.config[attach_key] = attach_key
-            self.assertRaises(
-                TypeError,
-                esm_parser.attach_to_config_and_remove,
-                self.config,
-                attach_key,
-            )
-
-
-class OtherCrap:
-    def test_attach_to_config_and_reduce_keyword_typeerror(self):
-        config = {"model": "Earth", "include_files": "satellites"}
-        config_to_write_to = {}
-        full_keyword = "include_files"
-
-        self.assertRaises(
-            TypeError,
-            esm_parser.attach_to_config_and_reduce_keyword,
-            config,
-            config_to_write_to,
-            full_keyword,
-        )
-
-
-class Junk_I_do_not_understand(object):
-    def test_attach_to_config_and_reduce_keyword_nolevel(self):
-        config_to_read_from = {
-            "model": "Earth",
-            "added_stuff": ["test_echam.satellites"],
+class Test_resolve_basic_choose(unittest.TestCase):
+    def test_basic_choose_target_in_key(self):
+        t_dict_before = {
+            "echam": {
+                "choose_computer.cores_per_node": {
+                    36: {"a": "choice one"},
+                    42: {"a": "choice two"},
+                }
+            },
+            "computer": {"cores_per_node": 36},
         }
-        config_to_write_to = {}
-        full_keyword = "added_stuff"
 
-        echam_satellites = """
-        model: Luna
-        description: 'The Moon'
-        """
-        with open(
-            esm_parser.FUNCTION_PATH + "/test_echam/test_echam.satellites.yaml", "w"
-        ) as test_yaml:
-            test_yaml.write(echam_satellites)
-
-        try:
-            esm_parser.attach_to_config_and_reduce_keyword(
-                config_to_read_from,
-                config_to_write_to,
-                full_keyword,
-                reduced_keyword="files",
-            )
-            expected_answer = {
-                "files": ["test_echam.satellites"],
-                "Luna": {"model": "Luna", "description": "The Moon"},
-            }
-            self.assertEqual(config_to_write_to, expected_answer)
-        finally:
-            os.remove(
-                esm_parser.FUNCTION_PATH + "/test_echam/test_echam.satellites.yaml"
-            )
-
-    def test_attach_to_config_and_reduce_keyword_level(self):
-        config_to_read_from = {
-            "model": "Earth",
-            "added_stuff": ["test_echam.satellites"],
+        t_dict_after = {
+            "echam": {"a": "choice one"},
+            "computer": {"cores_per_node": 36},
         }
-        config_to_write_to = {"levelA": {}}
-        full_keyword = "added_stuff"
+        esm_parser.resolve_basic_choose(
+            t_dict_before, t_dict_before["echam"], "choose_computer.cores_per_node"
+        )
+        self.assertEqual(t_dict_before, t_dict_after)
 
-        echam_satellites = """
-        model: Luna
-        description: 'The Moon'
-        """
-        with open(
-            esm_parser.FUNCTION_PATH + "/test_echam/test_echam.satellites.yaml", "w"
-        ) as test_yaml:
-            test_yaml.write(echam_satellites)
+    def test_dirk_choose(self):
+        t_dict_before = {
+            "choose_useMPI": {
+                "intel": {"a": "choice one"},
+                "bull": {"a": "choice two"},
+            },
+            "useMPI": "intel",
+        }
 
-        try:
-            esm_parser.attach_to_config_and_reduce_keyword(
-                config_to_read_from,
-                config_to_write_to,
-                full_keyword,
-                reduced_keyword="files",
-                level_to_write_to="levelA",
-            )
-            expected_answer = {
-                "levelA": {"files": ["test_echam.satellites"]},
-                "Luna": {"model": "Luna", "description": "The Moon"},
-            }
-            self.assertEqual(config_to_write_to, expected_answer)
-        finally:
-            os.remove(
-                esm_parser.FUNCTION_PATH + "/test_echam/test_echam.satellites.yaml"
-            )
+        t_dict_after = {"a": "choice one", "useMPI": "intel"}
+        esm_parser.resolve_basic_choose(t_dict_before, t_dict_before, "choose_useMPI")
+        self.assertEqual(t_dict_before, t_dict_after)
 
-    def test_attach_to_config_and_remove_list(self):
-        document = """
-        further_reading:
-            - test_echam.some_file
-        """
-        some_file = """
-        stuff: things
-        """
-        try:
-            for f, c in zip(
-                [
-                    "../test_echam/example_test_echam.yaml",
-                    "../test_echam/test_echam.some_file.yaml",
-                ],
-                [document, some_file],
-            ):
-                with open(f, "w") as test_file:
-                    test_file.write(c)
-            config = esm_parser.yaml_file_to_dict(
-                "../test_echam/example_test_echam.yaml"
-            )
-            esm_parser.attach_to_config_and_remove(config, "further_reading")
-            expected_answer = {"stuff": "things"}
-            self.assertEqual(config, expected_answer)
-        finally:
-            for f in [
-                "../test_echam/example_test_echam.yaml",
-                "../test_echam/test_echam.some_file.yaml",
-            ]:
-                os.remove(f)
-
-    def test_attach_to_config_and_remove_simple(self):
-        document = """
-        further_reading: test_echam.some_file
-        """
-        some_file = """
-        stuff: things
-        """
-        try:
-            for f, c in zip(
-                [
-                    "../test_echam/example_test_echam.yaml",
-                    "../test_echam/test_echam.some_file.yaml",
-                ],
-                [document, some_file],
-            ):
-                with open(f, "w") as test_file:
-                    test_file.write(c)
-            config = esm_parser.yaml_file_to_dict(
-                "../test_echam/example_test_echam.yaml"
-            )
-            esm_parser.attach_to_config_and_remove(config, "further_reading")
-            expected_answer = {"stuff": "things"}
-            self.assertEqual(config, expected_answer)
-        finally:
-            for f in [
-                "../test_echam/example_test_echam.yaml",
-                "../test_echam/test_echam.some_file.yaml",
-            ]:
-                os.remove(f)
+    def test_add_chapter(self):
+        test_dict = {
+            "useMPI": "intelmpi",
+            "module_actions": ["purge", "load gcc/4.8.2"],
+            "choose_useMPI": {"intelmpi": {"add_module_actions": ["unload intelmpi"]}},
+        }
+        result_dict = {
+            "useMPI": "intelmpi",
+            "module_actions": ["purge", "load gcc/4.8.2", "unload intelmpi"],
+        }
+        esm_parser.resolve_basic_choose(test_dict, test_dict, "choose_useMPI")
+        print(test_dict)
+        self.assertEqual(test_dict, result_dict)
 
 
 if __name__ == "__main__":

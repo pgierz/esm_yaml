@@ -16,7 +16,8 @@ license_text: |
 
 pool_dir: "${computer.pool_directories.pool}/JSBACH"
 input_dir: "${pool_dir}/input/${dataset}"
-adj_input_dir: "${input_dir}/${resolution}"
+adj_input_dir: "${input_dir}/${echam.resolution}"
+
 
 dynamic_vegetations: True
 
@@ -30,7 +31,7 @@ version: "3.20"
 dataset: r0009
 
 forcing_sources:
-        lctlib: "${model_dir}/lctlib_nlct21.def"
+        lctlib: "${echam.model_dir}/lctlib_nlct21.def"
 config_sources:
         'namelist.jsbach': "${namelist_dir}/namelist.jsbach"
 
@@ -151,6 +152,8 @@ restart_sources:
                 # - "restart_${general.expid}_STREAM_${prev_date}.nc"
                 "restart_${general.expid}_${prev_date}_STREAM.nc"
 
+ym_date: "${current_date}!syear!smonth"
+
 restart_in_workdir:        
         "[[streams-->STREAM]]": "restart_${general.expid}_STREAM.nc"
 
@@ -158,25 +161,25 @@ restart_in_workdir:
         #"[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]": "STREAM_WHEN"
 
         #restart_targets:
-        #        "[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]_out": "restart_${general.expid}_STREAM_WHEN.nc"
-        #
+        #"[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]_out": "restart_${general.expid}_STREAM_WHEN.nc"
+        
         #restart_in_workdir:
-        #        "[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]_out": "restart_${general.expid}_STREAM_WHEN.nc"
-        #
+        #"[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]_out": "restart_${general.expid}_STREAM_WHEN.nc"
+        
         #output_targets:
-        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": ${general.expid}_echam6_STREAM_WHEN.grb
-        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": ${general.expid}_echam6_STREAM.codes
-        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": ${general.expid}_echam6_STREAM_WHEN.nc
-        #
+        "[[streams-->STREAM]]_[[ym_date-->WHEN]]_grb": ${general.expid}_echam6_STREAM_WHEN.grb
+        "[[streams-->STREAM]]_[[ym_date-->WHEN]]_codes": ${general.expid}_echam6_STREAM.codes
+        "[[streams-->STREAM]]_[[ym_date-->WHEN]]_nc": ${general.expid}_echam6_STREAM_WHEN.nc
+        
         #output_in_workdir:
-        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": ${general.expid}_WHEN_STREAM
-        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": ${general.expid}_WHEN_STREAM.codes
-        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": ${general.expid}_WHEN_STREAM.nc
-        #
+        "[[streams-->STREAM]]_[[ym_date-->WHEN]]_grb": ${general.expid}_WHEN_STREAM
+        "[[streams-->STREAM]]_[[ym_date-->WHEN]]_codes": ${general.expid}_WHEN_STREAM.codes
+        "[[streams-->STREAM]]_[[ym_date-->WHEN]]_nc": ${general.expid}_WHEN_STREAM.nc
+        
         #output_files:
-        #"[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": STREAM_WHEN_grd
-        #"[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": STREAM_WHEN_codes
-        #"[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": STREAM_WHEN_nc
+        "[[streams-->STREAM]]_[[ym_date-->WHEN]]_grb": STREAM_WHEN_grd
+        "[[streams-->STREAM]]_[[ym_date-->WHEN]]_codes": STREAM_WHEN_codes
+        "[[streams-->STREAM]]_[[ym_date-->WHEN]]_nc": STREAM_WHEN_nc
 
 namelists:
         - "namelist.jsbach"

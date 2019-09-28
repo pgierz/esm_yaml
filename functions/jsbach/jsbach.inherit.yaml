@@ -1,6 +1,6 @@
 # GET THIS INFORMATION DIRECTLY FROM ECHAM:
 
-repo_tag: ${echam.repo_tag}
+#repo_tag: ${echam.repo_tag}
 model_dir: ${echam.model_dir}
 resolution: ${echam.resolution}
 scenario: ${echam.scenario}

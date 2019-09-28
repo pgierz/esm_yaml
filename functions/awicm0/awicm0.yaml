@@ -19,7 +19,7 @@ echam:
                 - sic
 
 jsbach:
-        dynveg_file_ending: ""
+        #        dynveg_file_ending: ""
         namelist_changes:
                 namelist.jsbach:
                         hydrology_ctl:

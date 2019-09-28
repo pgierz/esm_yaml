@@ -31,7 +31,6 @@ ocean_resolution: 'GR15'
 disturbance: "1.000001"
 lresume: false
 
-
 parent_date: 22941231
 parent_expid: khw0030
 parent_dir: "${pool_dir}/MPIESM/restart/dev/${parent_expid}/restart/echam6"
@@ -277,6 +276,17 @@ choose_yr_perp_off:
         #true:
                 #"[year, co2vmr, ch4vmr, n2ovmr, cecc, cobld, clonp]": "<--grep(${start_date!year})-- ${forcing_table}"
 
+
+                                       
+                                        
+                                        
+bin_files:                                        
+        "echam_bin": "echam_bin"
+bin_sources:
+        "echam_bin": "${bin_dir}/echam6"
+bin_in_workdir:
+        "echam_bin": "echam6"
+
 input_in_workdir:
         "cldoptprops": "ECHAM6_CldOptProps.nc"
         "janspec": "unit.23"
@@ -315,9 +325,9 @@ streams:
 # Only for testing:
 prev_date: 18500101
 # BUG: PG Why do we need lists here?
-#restart_sources:
-#        "[[streams-->STREAM]]":
-#                - "restart_${expid}_STREAM_${prev_date}.nc"
+restart_sources:
+        "[[streams-->STREAM]]":
+                 "${parent_restart_dir}/restart_${parent_expid}_STREAM_${parent_date}.nc"
 #                - "restart_${expid}_${prev_date}_STREAM.nc"
 
 restart_in_workdir:
@@ -449,4 +459,4 @@ errors:
                         - "<--repair_job_after_windspeed--"
 
 further_reading:
-        - echam.datasets.yaml
+        - echam/echam.datasets.yaml

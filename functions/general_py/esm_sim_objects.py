@@ -87,6 +87,20 @@ class SimulationSetup(object):
 
     def _finalize_config(self):
         # esm_parser.psix.print_config(self.config["hdmodel"])
+        for component in self.components:
+            print (str(component.config["lresume"])+"     "+str(self.run_number))
+            if component.config["lresume"] == True and self.run_number == "1":
+                print ("beep")
+                component.config["parent_expid"] = component.config["ini_parent_exp_id"] 
+                component.config["parent_date"] = component.config["ini_parent_date"] 
+                component.config["parent_restart_dir"] = component.config["ini_restart_dir"]
+            else:
+                print("boop")
+                component.config["parent_expid"] = self.config["general"]["expid"] 
+                component.config["parent_date"] = self.config["general"]["prev_date"] 
+                component.config["parent_restart_dir"] = component.experiment_restart_dir
+
+            print (component.config["parent_restart_dir"])
         logging.debug("SECOND TIME!")
         self.config.choose_blocks(self.config, isblacklist=False)
         self.config.run_recursive_functions(self.config, isblacklist=False)
@@ -135,6 +149,7 @@ class SimulationSetup(object):
 
     def _finalize_components(self):
         for component in self.components:
+
             component.general_config = self.config["general"]
             component.finalize_attributes()
 
@@ -241,6 +256,8 @@ class SimulationSetup(object):
             for component in self.components:
                 user_lresume = component.config.get("lresume", False)
                 component.config.setdefault("lresume", user_lresume)
+
+
 
     def _increment_date_and_run_number(self):
         self.run_number += 1

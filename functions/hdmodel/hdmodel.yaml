@@ -46,7 +46,7 @@ restart_in_workdir:
         hdrestart: hdrestart.nc
 
 restart_sources:
-        hdrestart: hdrestart.nc
+        hdrestart: "${parent_restart_dir}/hdrestart.nc"
 
 
 log_in_workdir:

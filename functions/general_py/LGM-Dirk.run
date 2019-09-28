@@ -35,7 +35,7 @@ NMONTH_echam=0
 MODEL_DIR_echam=${HOME}/esm_yaml/echam-6.304p1
 echam_VERSION=6.304p1
 
-POOL_DIR_echam=/pool/data
+#POOL_DIR_echam=/pool/data
 ##########################
 ## ECHAM/JSBACH SECTION ##
 ##########################
@@ -58,7 +58,11 @@ nproca_echam=12
 nprocb_echam=24
 
 INI_RESTART_DIR_jsbach=/work/ab0246/a270064/esm-experiments/lgm_anm/restart/jsbach 
+INI_PARENT_DATE_jsbach=37991231 #, for example 24001231235640
+INI_PARENT_EXP_ID_jsbach=lgm_anm # of spinup experiment, for example TST
 INI_RESTART_DIR_hdmodel=/work/ab0246/a270064/esm-experiments/lgm_anm/restart/hdmodel
+INI_PARENT_DATE_hdmodel=37991231 #, for example 24001231235640
+INI_PARENT_EXP_ID_hdmodel=lgm_anm # of spinup experiment, for example TST
 
 JAN_SURF_echam=/work/ab0246/a270064/esm-experiments/lgm_anm/input/echam/T63LGM_jan_surf.nc
 VGRATCLIM_echam=/work/ab0246/a270064/esm-experiments/lgm_anm/input/echam/T63LGM_VGRATCLIM.nc

@@ -3,12 +3,12 @@
 input_sources:
         "cldoptprops": "${input_dir}/ECHAM6_CldOptProps.nc"
         "janspec": "${input_dir}/${resolution}/${resolution}${levels}_jan_spec.nc"
-        "jansurf": "${adj_input_dir}/${resolution}/${resolution}${ocean_resolution}_jan_surf.nc"
+        "jansurf": "${adj_input_dir}/${resolution}${ocean_resolution}_jan_surf.nc"
         "rrtmglw": "${input_dir}/rrtmg_lw.nc"
         "rrtmgsw": "${input_dir}/rrtmg_sw.nc"
         "tslclim": "${input_dir}/${resolution}/${resolution}_TSLCLIM.nc"
-        "vgratclim": "${adj_input_dir}/${resolution}/${resolution}${ocean_resolution}_VGRATCLIM.nc"
-        "vltclim": "${adj_input_dir}/${resolution}/${resolution}${ocean_resolution}_VLTCLIM.nc"
+        "vgratclim": "${adj_input_dir}/${resolution}${ocean_resolution}_VGRATCLIM.nc"
+        "vltclim": "${adj_input_dir}/${resolution}${ocean_resolution}_VLTCLIM.nc"
         "MAC-SP": "${input_dir}/MAC-SP.nc"
 
 # forcings
@@ -64,15 +64,15 @@ forcing_sources:
                 "${input_dir}/solar_irradiance/swflux_14band_@YEAR@.nc":
                         from: 1851
         # ozone
-                "histozone":
-                        "${forcing_dir}/ozone/${resolution}_ozone_historical_1850.nc":
-                                to: 1850
-                        "${forcing_dir}/ozone/${resolution}_ozone_historical_@YEAR@.nc":
-                                from: 1851
-                                to: 2008
-                "1850ozone": "${forcing_dir}/ozone/${resolution}_ozone_historical_1850.nc"
-                "1950ozone": "${forcing_dir}/ozone/${resolution}_ozone_historical_1950.nc"
-                "piozone": "${forcing_dir}/ozone/${resolution}_ozone_picontrol.nc"
+        "histozone":
+                "${forcing_dir}/ozone/${resolution}_ozone_historical_1850.nc":
+                        to: 1850
+                "${forcing_dir}/ozone/${resolution}_ozone_historical_@YEAR@.nc":
+                        from: 1851
+                        to: 2008
+        "1850ozone": "${forcing_dir}/ozone/${resolution}_ozone_historical_1850.nc"
+        "1950ozone": "${forcing_dir}/ozone/${resolution}_ozone_historical_1950.nc"
+        "piozone": "${forcing_dir}/ozone/${resolution}_ozone_picontrol.nc"
 
 
 choose_dataset:

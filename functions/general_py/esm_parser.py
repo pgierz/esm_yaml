@@ -115,8 +115,12 @@ gray_list = [
     r"choose_.*lresume",
     r"lresume",
     r".*date$",
-    r".*date!(year|month|day|hour|minute|second)",
+    r".*date!(year|month|day|hour|minute|second)"
+    r"parent_date",
+    r"parent_expid",
+    r"parent_restart_dir"
 ]
+
 gray_list = [re.compile(entry) for entry in gray_list]
 
 constant_blacklist = [r"PATH", r"LD_LIBRARY_PATH", r"NETCDFF_ROOT"]
@@ -1246,22 +1250,22 @@ def find_variable(tree, rhs, full_config, white_or_black_list, isblacklist):
             not determine_regex_list_match(var, constant_blacklist)
         ):
             var_result = actually_find_variable(tree, var, full_config)
-            if var_result:
+            #if var_result:
                 # BUG/FIXME: Note that this means that we **always** will get
                 # back a string if a variable is replaced!
-                ok_part, var_result, more_rest = (
-                    str(ok_part),
-                    str(var_result),
-                    str(new_raw),
-                )
-                logger.debug("Will replace again: %s", ok_part + var_result + more_rest)
-                return find_variable(
-                    tree,
-                    ok_part + var_result + more_rest,
-                    full_config,
-                    white_or_black_list,
-                    isblacklist,
-                )
+            ok_part, var_result, more_rest = (
+                str(ok_part),
+                str(var_result),
+                str(new_raw),
+            )
+            logger.debug("Will replace again: %s", ok_part + var_result + more_rest)
+            return find_variable(
+                tree,
+                ok_part + var_result + more_rest,
+                full_config,
+                white_or_black_list,
+                isblacklist,
+            )
 
                 # if new_raw:
                 #    more_rest = find_variable(
@@ -1623,6 +1627,11 @@ class ConfigSetup(GeneralConfig):  # pragma: no cover
             attach_to_config_and_reduce_keyword(
                 model_config[model], model_config, "include_models", "models"
             )
+        print ("hhhhhhhhhhhhhhh" + str(setup_config["general"]["models"]))
+        for model in list(model_config):
+            for attachment in CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE:
+                print ("jjjmjjjjjjjjjjj" + attachment + model)
+                attach_to_config_and_remove(model_config[model], attachment)
         setup_config["general"] = {"esm_master_dir": esm_master_dir, "expid": "test"}
         setup_config["general"]["valid_setup_names"] = valid_setup_names = list(
             setup_config

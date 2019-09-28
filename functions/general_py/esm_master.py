@@ -158,10 +158,11 @@ class version_control_infos:
             if "https://gitlab.dkrz.de" in repo:
                 repo = "https://" + general.emc["GITLAB_DKRZ_USER_NAME"] +"@"+ repo.replace("https://", "")
             raw_command = raw_command.replace("${repository}", repo)
-            if package.destination:
-                raw_command = raw_command + " " + package.destination
-            else:
-                raw_command = raw_command + " " + package.raw_name
+            if todo == "get":
+                if package.destination:
+                    raw_command = raw_command + " " + package.destination
+                else:
+                    raw_command = raw_command + " " + package.raw_name
         else:
             raw_command = None
         return raw_command
@@ -459,17 +460,22 @@ class task:
     def download_folders(self):
         if self.package.kind in ["setups", "couplings"]:
             dir_list = [self.package.raw_name]
+            for task in self.ordered_tasks:
+                if self.package.raw_name+"/"+task.package.destination not in dir_list:
+                    dir_list.append(self.package.raw_name+"/"+task.package.destination)
         else:
             dir_list = []
-        for task in self.ordered_tasks:
-            dir_list.append(self.package.raw_name+"/"+task.package.raw_name)
+            for task in self.ordered_tasks:
+                if task.package.destination not in dir_list:
+                    dir_list.append(task.package.destination)
         return dir_list
     
     def compile_binaries(self):
         file_list = []
         for task in self.ordered_tasks:
             for binfile in task.package.bin_names:
-                file_list.append(self.package.raw_name+"/"+task.package.bin_type+"/"+binfile.split("/")[-1])
+                if self.package.raw_name+"/"+task.package.bin_type+"/"+binfile.split("/")[-1] not in file_list:
+                    file_list.append(self.package.raw_name+"/"+task.package.bin_type+"/"+binfile.split("/")[-1])
         return file_list
 
     def list_required_dirs(self):
@@ -509,8 +515,13 @@ class task:
                     command_list.append("mkdir -p "+toplevel+"/"+task.package.bin_type)
                     real_command_list.append("mkdir -p "+toplevel+"/"+task.package.bin_type)
                     for binfile in task.package.bin_names:
-                        command_list.append("cp "+toplevel+"/"+task.package.destination+"/"+binfile + " "+ toplevel+"/"+task.package.bin_type)
-                        real_command_list.append("cp "+toplevel+"/"+task.package.destination+"/"+binfile + " "+ toplevel+"/"+task.package.bin_type)
+                        command_list.append("cp "+task.package.destination+"/"+binfile + " "+ toplevel+"/"+task.package.bin_type)
+                        real_command_list.append("cp "+task.package.destination+"/"+binfile + " "+ toplevel+"/"+task.package.bin_type)
+            elif task.todo == "clean":
+                if task.package.bin_names:
+                    for binfile in task.package.bin_names:
+                        command_list.append("rm "+toplevel+"/"+task.package.bin_type+"/"+binfile.split("/", -1)[-1])
+                        real_command_list.append("rm "+toplevel+"/"+task.package.bin_type+"/"+binfile.split("/", -1)[-1])
         if self.package.kind in ["setups", "couplings"]:
             command_list.append("cd ..")
             real_command_list.append("cd ..")
@@ -528,7 +539,7 @@ class task:
             return True
         requirements = self.folders_after_download
         for folder in requirements:
-            if not os.path.isfile(folder):
+            if not os.path.isdir(folder):
                 print ()
                 print ("Missing folder "+ folder + " detected. Please run 'make get-"+self.package.raw_name+ "' first.")
                 print ()

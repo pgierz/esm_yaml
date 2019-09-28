@@ -13,8 +13,8 @@ license_text: |
         Please make sure you have a licence to use echam. In case you are
         unsure, please contact redmine....
 
-pool_dir: "${computer.pool_directories.pool}/HD"
-input_dir: "${echam.input_dir}"
+pool_dir: "${computer.pool_directories.pool}/JSBACH/input/${jsbach.dataset}/HD"
+input_dir: "${pool_dir}"
 
 executable: NONE
 

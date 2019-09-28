@@ -56,7 +56,7 @@ forcings:
         LU_trans: LU_trans
 
 
-scenario: RCP85
+scenario: ${echam.scenario}
 choose_scenario:
         PI-CTRL:
                 forcings:

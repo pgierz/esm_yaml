@@ -21,7 +21,7 @@ license_text: |
 
 
 executable: echam6
-version: 6.3.04p1
+version: 6.304p1
 resolution: T63
 scenario: "PI-CTRL"
 postprocessing_stream: 'BOT ATM LOG'
@@ -91,7 +91,7 @@ choose_resolution:
                 _ny: 192
 
 choose_version:
-        6.3.04p1:
+        6.304p1:
                 repo_tag: 6.304p1
                 dataset: r0007
 
@@ -210,7 +210,7 @@ choose_lresume:
                                         dt_start: "remove_from_namelist"
 
 
-start_date: 18500101
+                                        #start_date: 18500101
 # PG: Still a problem: can't use ! in a choose block
 # Not sure what Dirk is thinking here
 #start_date_year: ${start_date}!year

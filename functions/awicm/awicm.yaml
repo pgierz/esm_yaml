@@ -1,71 +1,39 @@
-# AWICM 1 YAML CONFIGURATION FILE
-#
-#
+#########################################################################################
+######################### AWICM 1 YAML CONFIGURATION FILE ###############################
+#########################################################################################
 
-model: awicm
-model_dir: ${esm_master_dir}/awicm-${version}
+general:
+        model: awicm
+        model_dir: ${esm_master_dir}/awicm-${version}
 
-include_models:
-        - fesom
-        - echam
-        - oasis3mct
+        coupled_setup: True
 
-version: "1.1"
-scenario: "PI-CTRL"
-time_step: 3600
-resolution: ${echam.resolution}_${fesom.resolution}
-lresume: true
-postprocessing: false
-post_time: "00:05:00"
+        include_models:
+                - fesom
+                - echam
+                - oasis3mct
 
-choose_versions:
-        1.1:
-                echam:
-                        version: "6.304p1"
-                jsbach:
-                        version: "3.20"
-                fesom:
-                        version: "1.4"
-        CMIP6:
-                echam:
-                        version: "6.304p1"
-                jsbach:
-                        version: "3.20"
-                fesom:
-                        version: "1.4"
-        2.0:
-                echam:
-                        version: "6.304p1"
-                jsbach:
-                        version: "3.20"
-                fesom:
-                        version: "2.0"
+        version: "1.1"
+        scenario: "PI-CTRL"
+        time_step: 3600
+        resolution: ${echam.resolution}_${fesom.resolution}
+        postprocessing: false
+        post_time: "00:05:00"
+        choose_general.resolution:
+                T63_CORE2:
+                        compute_time: "02:00:00"
+                T63_REF87K:
+                        compute_time: "02:00:00"
+                T63_REF:
+                        compute_time: "02:00:00"
 
-choose_resolution:
-        T63_CORE2:
-                echam:
-                        nproca: 24
-                        nprocb: 18
-                fesom:
-                        nproc: 288
-                compute_time: "02:00:00"
-        T63_REF87K:
-                echam:
-                        nproca: 24
-                        nprocb: 18
-                fesom:
-                        nproc: 216
-                compute_time: "02:00:00"
-        T63_REF:
-                echam:
-                        nproca: 24
-                        nprocb: 18
-                fesom:
-                        nproc: 128
-                compute_time: "02:00:00"
+        a2o_lag: "${echam.time_step}"
+        o2a_lag: "${fesom.time_step}"
 
 
-# necessary changes to submodels compared to standalone setups
+#########################################################################################
+########### necessary changes to submodels compared to standalone setups ################
+#########################################################################################
 
 echam:
         restart:
@@ -79,7 +47,23 @@ echam:
         remove_forcing_files:
                 - sst
                 - sic
+        version: "6.304p1"
 
+        choose_general.resolution:
+                T63_CORE2:
+                        nproca: 24
+                        nprocb: 18
+                T63_REF87K:
+                        nproca: 24
+                        nprocb: 18
+                T63_REF:
+                        nproca: 24
+                        nprocb: 18
+
+
+#########################################################################################
+
+                        
 jsbach:
         dynveg_file_ending: ""
         adj_input_dir: "${fesom.mesh_dir}/tarfiles${echam.resolution}/input/jsbach"
@@ -88,64 +72,75 @@ jsbach:
                         hydrology_ctl:
                                 gethd: "remove_from_namelist"
                                 puthd: "remove_from_namelist"
+        version: "3.20"
+
+
+
+#########################################################################################
+
+        
+fesom:
+        choose_general.version:
+                1.1:
+                        version: "1.4"
+                CMIP6:
+                        version: "1.4"
+                2.0:
+                        version: "2.0"
+        choose_general.resolution:
+                T63_CORE2:
+                        nproc: 288
+                T63_REF87K:
+                        nproc: 216
+                T63_REF:
+                        nproc: 128
+
+
+
+#########################################################################################
+
 oasis3mct:
-        model_dir:
-                ${model_dir}/oasis
+        model_dir: ${general.model_dir}/oasis
 
+        coupling_target_fields:
+                o2a_flux:
+                        - 'sst_atmo:sit_atmo:sie_atmo <--distwgt-- sst_feom:sit_feom:sie_feom'
+                        - 'snt_atmo <--distwgt-- snt_feom'
 
-# coupling / namcouple setup
+                a2o_flux:
+                        - 'taux_oce:tauy_oce:taux_ico:tauy_ico <--bicubic-- taux_atm:tauy_atm:taux_ica:tauy_ica'
+                        - 'prec_oce <--distwgt-- prec_atm'
+                        - 'snow_oce <--distwgt-- snow_atm'
+                        - 'evap_oce <--distwgt-- evap_atm'
+                        - 'subl_oce <--distwgt-- subl_atm'
+                        - 'heat_oce <--distwgt-- heat_atm'
+                        - 'heat_ico <--distwgt-- heat_ica'
+                        - 'heat_swo <--distwgt-- heat_swa'
+                        - 'hydr_oce <--distwgt-- hydr_atm'
 
-choose_lresume:
-        true:
-                output_exchanged_vars: false
-                a2o_lag: "${echam.time_step}"
-                o2a_lag: "${fesom.time_step}"
-                a2o_seq: 1
-        false:
-                output_exchanged_vars: true
-                a2o_lag: 0
-                o2a_lag: 0
-                a2o_seq: 2
+                          #coupling_methods:
+                          #'<--distwgt--':
+                          #implementation: '${coupler}.<--distwgt--'
+                          #bins: 15
+                          #other_number: 6
+                          #'<--bicubic--':
+                          #implementation: '${coupler}.<--bicubic--'
+                          #bins: 15
 
-coupling_target_fields:
-        o2a_flux:
-                - 'sst_atmo:sit_atmo:sie_atmo <--distwgt-- sst_feom:sit_feom:sie_feom'
-                - 'snt_atmo <--distwgt-- snt_feom'
-
-        a2o_flux:
-                - 'taux_oce:tauy_oce:taux_ico:tauy_ico <--bicubic-- taux_atm:tauy_atm:taux_ica:tauy_ica'
-                - 'prec_oce <--distwgt-- prec_atm'
-                - 'snow_oce <--distwgt-- snow_atm'
-                - 'evap_oce <--distwgt-- evap_atm'
-                - 'subl_oce <--distwgt-- subl_atm'
-                - 'heat_oce <--distwgt-- heat_atm'
-                - 'heat_ico <--distwgt-- heat_ica'
-                - 'heat_swo <--distwgt-- heat_swa'
-                - 'hydr_oce <--distwgt-- hydr_atm'
-
-coupling_methods:
-        '<--distwgt--':
-                implementation: '${coupler}.<--distwgt--'
-                bins: 15
-                other_number: 6
-        '<--bicubic--':
-                implementation: '${coupler}.<--bicubic--'
-                bins: 15
-
-coupling_directions:
-        'fesom->echam':
-                from: fesom
-                to: echam
-                'feom->atmo':
-                        from_grid: feom
-                        to_grid: atmo
-                        lag: o2a_lag
-                        seq: 1
-        'echam->fesom':
-                from: echam
-                to: fesom
-                'atmo->feom':
-                        from_grid: atmo
-                        to_grid: feom
-                        lag: $a2o_lag
-                        seq: $a2o_seq
+        coupling_directions:
+                'fesom->echam':
+                        from: fesom
+                        to: echam
+                        'feom->atmo':
+                                from_grid: feom
+                                to_grid: atmo
+                                lag: o2a_lag
+                                seq: 1
+                'echam->fesom':
+                        from: echam
+                        to: fesom
+                        'atmo->feom':
+                                from_grid: atmo
+                                to_grid: feom
+                                lag: $a2o_lag
+                                seq: $a2o_seq

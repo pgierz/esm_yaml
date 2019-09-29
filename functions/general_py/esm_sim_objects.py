@@ -16,7 +16,7 @@ import yaml
 
 from esm_calendar import Date
 import esm_parser
-
+import esm_coupler
 
 def date_representer(dumper, date):
     return dumper.represent_str("%s" % date.output())
@@ -73,7 +73,16 @@ class SimulationSetup(object):
         self._copy_preliminary_files_from_experiment_to_thisrun()
         self._show_simulation_info()
         self.prepare()
-        sys.exit()
+        for model in list(self.config):
+            print (model)
+            if model in esm_coupler.known_couplers:
+                print("beep")
+                coupler_config_dir=self.config["general"]["base_dir"] + "/" + self.config["general"]["expid"] + "/run_" + self.config["general"]["current_date"].format( form=9, givenph=False, givenpm=False, givenps=False ) + "-" + self.config["general"]["end_date"].format( form=9, givenph=False, givenpm=False, givenps=False) + "/config/" + model + "/"
+                print( coupler_config_dir)
+                self.coupler = esm_coupler.esm_coupler(self.config, model)
+                self.coupler.prepare(self.config, coupler_config_dir)
+                sys.exit()
+       
 
     def _show_simulation_info(self):
         six.print_(80 * "=")
@@ -88,19 +97,14 @@ class SimulationSetup(object):
     def _finalize_config(self):
         # esm_parser.psix.print_config(self.config["hdmodel"])
         for component in self.components:
-            print (str(component.config["lresume"])+"     "+str(self.run_number))
             if component.config["lresume"] == True and self.run_number == "1":
-                print ("beep")
                 component.config["parent_expid"] = component.config["ini_parent_exp_id"] 
                 component.config["parent_date"] = component.config["ini_parent_date"] 
                 component.config["parent_restart_dir"] = component.config["ini_restart_dir"]
             else:
-                print("boop")
                 component.config["parent_expid"] = self.config["general"]["expid"] 
                 component.config["parent_date"] = self.config["general"]["prev_date"] 
                 component.config["parent_restart_dir"] = component.experiment_restart_dir
-
-            print (component.config["parent_restart_dir"])
         logging.debug("SECOND TIME!")
         self.config.choose_blocks(self.config, isblacklist=False)
         self.config.run_recursive_functions(self.config, isblacklist=False)
@@ -171,7 +175,8 @@ class SimulationSetup(object):
                 method = shutil.copy2
             elif copy_or_link == "link":
                 method = os.symlink
-            method(source + "/" + filename, dest + "/" + filename)
+            if os.path.isfile(source + "/" + filename):
+                method(source + "/" + filename, dest + "/" + filename)
 
     def _read_date_file(self, date_file=None):
         if not date_file:
@@ -196,25 +201,26 @@ class SimulationSetup(object):
             write_file = True
         self.current_date = Date(date)
 
-        if write_file:
-            self._write_date_file()
+        # needs to happen AFTER a run!
+        #if write_file:
+        #    self._write_date_file()
 
         logging.info("current_date = %s", self.current_date)
         logging.info("run_number = %s", self.run_number)
 
     def _initialize_calendar(self):
         nyear, nmonth, nday, nhour, nminute, nsecond = 0, 0, 0, 0, 0, 0
-        nyear = self.config["general"].get("nyear", nyear)
+        nyear = int(self.config["general"].get("nyear", nyear))
         if not nyear:
-            nmonth = self.config["general"].get("nmonth", nmonth)
+            nmonth = int(self.config["general"].get("nmonth", nmonth))
         if not nyear and not nmonth:
-            nday = self.config["general"].get("nday", nday)
+            nday = int(self.config["general"].get("nday", nday))
         if not nyear and not nmonth and not nday:
-            nhour = self.config["general"].get("nhour", nhour)
+            nhour = int(self.config["general"].get("nhour", nhour))
         if not nyear and not nmonth and not nday and not nhour:
-            nminute = self.config["general"].get("nminute", nminute)
+            nminute = int(self.config["general"].get("nminute", nminute))
         if not nyear and not nmonth and not nday and not nhour and not nminute:
-            nsecond = self.config["general"].get("nsecond", nsecond)
+            nsecond = int(self.config["general"].get("nsecond", nsecond))
         if (
             not nyear
             and not nmonth
@@ -227,6 +233,7 @@ class SimulationSetup(object):
 
         self.delta_date = (nyear, nmonth, nday, nhour, nminute, nsecond)
         self.config["general"]["current_date"] = self.current_date
+        self.config["general"]["start_date"] = self.current_date
         self.config["general"]["initial_date"] = Date(
             self.config["general"]["initial_date"]
         )
@@ -255,8 +262,19 @@ class SimulationSetup(object):
             # Did the user give a value? If yes, keep it, if not, first run:
             for component in self.components:
                 user_lresume = component.config.get("lresume", False)
-                component.config.setdefault("lresume", user_lresume)
-
+                print(str(user_lresume), type(user_lresume))
+                if type(user_lresume) == str:
+                    if user_lresume == "0" or user_lresume.upper() == "FALSE":
+                        user_lresume = False
+                    elif user_lresume == "1" or user_lresume.upper() == "TRUE":
+                        user_lresume = True
+                elif type(user_lresume) == int:
+                    if user_lresume == 0:
+                        user_lresume = False
+                    elif user_lresume == 1:
+                        user_lresume = True
+                print(str(user_lresume), type(user_lresume))
+                component.config["lresume"]= user_lresume
 
 
     def _increment_date_and_run_number(self):

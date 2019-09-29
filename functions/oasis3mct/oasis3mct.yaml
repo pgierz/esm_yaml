@@ -1,59 +1,58 @@
-src_dir: $master_dir/oasis
-cf_name_dir: $src_dir
+model: oasis3mct
+model_dir: ${esm_master_dir}/oasis
+cf_name_dir: ${model_dir}
 
 
 config_files: 
-        namcouple:
-        cf_name_table.txt: $cf_name_dir
+        cf: cf
 
-
-header:
-
-transformations:
-        distwgt: 
-                bins1: 15
-                bins2: 6
-                appendtext: |
-#
-LOCTRANS SCRIPR
-DISTWGT U SCALAR LATITUDE $bins1 $bins2
-#
-                modify_files:
-                        namcouple: '<<--append-- ${appendtext}' 
-                                
-
-        bicubic: 
-                bins: 15
-                appendtext: |
-#
-LOCTRANS SCRIPR
-BICUBIC D SCALAR LATITUDE $bins
-#
-                modify_files:
-                        namcouple: '<<--append-- ${appendtext}' 
+config_in_work:
+        cf: "cf_name_table.txt"
+       
+config_sources:
+        cf: "${cf_name_dir}/cf_name_table.txt"
 
 
 
+        #transformations:
+        #distwgt: 
+        #        bins1: 15
+        #        bins2: 6
+        #        modify_files:
+        ###               namcouple: '<<--append-- |
+        #                        #
+        #                        LOCTRANS SCRIPR
+        #                        DISTWGT U SCALAR LATITUDE $bins1 $bins2
+        #                       #'
+        #                        
+        #
+        # bicubic: 
+        #        bins: 15
+        #       modify_files:
+        #                namcouple: '<<--append-- |
+        #                        #
+        #                         LOCTRANS SCRIPR
+        #                       BICUBIC D SCALAR LATITUDE $bins
+        #                        #'
+        #
+        #
+        #
+        ##                        #methods:
+        #                        #'<--append--':
+        #                        # implementations:
+        #                        #shell: |
+        #                        #cat >> ${lhs} << EOF
+        #                        #${rhs}
+        #                       #EOF'
+        #
+        ##                        
+        #choose_lresume:
+        #1:                      
 
-methods:
-        '<--append--':
-                implementations:
-                        shell: |
-cat >> ${lhs} << EOF
-${rhs}
-EOF'
-                        python: 
-open ${lhs}, a
-for line in rhs:
-        print ${}
-close ${lhs}
-
-
-
-coupled_vars: 
-                config_txt: |
-$snd $rcv $id $seq $lag $restart_file
-$from_grid $to_grid $from_grid.nx $from_grid.ny $to_grid.nx $to_grid.ny
-$transformation
+                                #coupled_vars: 
+                                #config_txt: |
+                                #$snd $rcv $id $seq $lag $restart_file
+                                #$from_grid $to_grid $from_grid.nx $from_grid.ny $to_grid.nx $to_grid.ny
+                                #$transformation
                 
 

@@ -57,3 +57,7 @@ choose_hdpara_file:
         "*":
                 input_sources:
                         hdpara: ${hdpara_file}
+
+
+further_reading:
+        - hdmodel/hdmodel.inherit.yaml

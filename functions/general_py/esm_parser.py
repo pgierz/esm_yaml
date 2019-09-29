@@ -115,7 +115,8 @@ gray_list = [
     r"choose_.*lresume",
     r"lresume",
     r".*date$",
-    r".*date!(year|month|day|hour|minute|second)"
+    r".*date!(year|month|day|hour|minute|second)",
+    r".*date!(syear|smonth|sday|shour|sminute|ssecond|sdoy)",
     r"parent_date",
     r"parent_expid",
     r"parent_restart_dir"
@@ -261,7 +262,7 @@ def attach_to_config_and_reduce_keyword(
                     )
         else:
             raise TypeError("The entries in %s must be a list!!" % full_keyword)
-    del config_to_read_from[full_keyword]
+        del config_to_read_from[full_keyword]
 
 
 def attach_single_config(config, path, attach_value):
@@ -406,7 +407,6 @@ def add_entries_from_chapter(config, add_chapter, add_entries):
             for entry in add_entries:
                 config[add_chapter].append(entry)
         elif type(config[add_chapter]) == dict:
-            print(config[add_chapter])
             dict_merge(config[add_chapter], add_entries)
     else:
         config[add_chapter] = add_entries
@@ -473,8 +473,7 @@ def remove_entries_from_chapter_in_config(
                 try:
                     del config[model][remove_chapter]
                 except:
-                    print("Fuck it")
-
+                    pass
 
 def basic_find_remove_entries_in_config(mapping):
     all_removes = []
@@ -619,7 +618,6 @@ def add_entries_to_chapter_in_config(
 ):
     config = model_config
     for model in list(config):
-        print("Mymodel = ", model)
         logging.debug(model)
         all_adds_for_model = find_add_entries_in_config(config[model], model)
         for add_chapter, add_entries in all_adds_for_model:
@@ -1246,6 +1244,7 @@ def find_variable(tree, rhs, full_config, white_or_black_list, isblacklist):
     if isinstance(raw_str, str) and "${" in raw_str:
         ok_part, rest = raw_str.split("${", 1)
         var, new_raw = rest.split("}", 1)
+        print(var)
         if ((determine_regex_list_match(var, white_or_black_list)) != isblacklist) and (
             not determine_regex_list_match(var, constant_blacklist)
         ):
@@ -1285,10 +1284,18 @@ def actually_find_variable(tree, rhs, full_config):
     if config_elements[0] not in valid_names:
         config_elements.insert(0, tree[0])
 
+    full_varname = config_elements[-1]
+    if "!" in full_varname:
+        var_name, var_attr = full_varname.split("!", 1)
+    else:
+        var_name, var_attr = full_varname, None
+
+    config_elements[-1] = var_name
     original_config_elements = copy.deepcopy(config_elements)
+    print(str(config_elements))
     try:
         var_result = recursive_get(full_config, config_elements)
-        return var_result
+        #return var_result
     except ValueError:
         # Maybe it is in the general:
         try:
@@ -1296,10 +1303,21 @@ def actually_find_variable(tree, rhs, full_config):
             logging.debug(config_elements)
             config_elements[0] = "general"
             var_result = recursive_get(full_config, config_elements)
-            return var_result
+            #return var_result
         except:
             raise ValueError("Sorry: %s not found" % (rhs))
 
+    if var_attr:
+        rentry=[]
+        if var_name.endswith("date"):
+            if not isinstance(var_result, Date):
+                entry = Date(var_result)
+            else:
+                entry = var_result
+            for attr in var_attr.split("!"):
+                rentry.append(str(getattr(entry, attr)))
+            return "".join(rentry)
+    return var_result
 
 def list_to_multikey(tree, rhs, config_to_search, ignore_list, isblacklist):
     """
@@ -1564,7 +1582,6 @@ def finish_priority_merge(config):
     all_keys = list(config)
     all_keys_with_priority_marker = list_all_keys_with_priority_marker(config)
     while all_keys_with_priority_marker:
-        print("I got in!")
         for key in all_keys:
             value = config[key]
             if isinstance(value, dict):
@@ -1616,6 +1633,8 @@ class ConfigSetup(GeneralConfig):  # pragma: no cover
         if "coupled_setup" not in self.config["general"]:
             setup_config["general"].update({"standalone": True})
         else:
+            user_config["general"].update(user_config[user_config["general"]["setup_name"]])
+            del user_config[user_config["general"]["setup_name"]]
             dict_merge(setup_config, self.config)
             #setup_config["general"] = self.config
             setup_config["general"].update({"standalone": False})
@@ -1627,12 +1646,10 @@ class ConfigSetup(GeneralConfig):  # pragma: no cover
             attach_to_config_and_reduce_keyword(
                 model_config[model], model_config, "include_models", "models"
             )
-        print ("hhhhhhhhhhhhhhh" + str(setup_config["general"]["models"]))
         for model in list(model_config):
             for attachment in CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE:
-                print ("jjjmjjjjjjjjjjj" + attachment + model)
                 attach_to_config_and_remove(model_config[model], attachment)
-        setup_config["general"] = {"esm_master_dir": esm_master_dir, "expid": "test"}
+        setup_config["general"] .update({"esm_master_dir": esm_master_dir, "expid": "test"})
         setup_config["general"]["valid_setup_names"] = valid_setup_names = list(
             setup_config
         )
@@ -1720,6 +1737,7 @@ class ConfigSetup(GeneralConfig):  # pragma: no cover
             gray_list,
             isblacklist=isblacklist,
         )
+        pprint_config(config)
         recursive_run_function([], config, "atomic", do_math_in_entry, config)
         recursive_run_function([], config, "atomic", marked_date_to_date_object, config)
         recursive_run_function([], config, "atomic", unmark_dates, config)

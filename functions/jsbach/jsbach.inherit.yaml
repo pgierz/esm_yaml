@@ -4,4 +4,4 @@
 model_dir: ${echam.model_dir}
 resolution: ${echam.resolution}
 scenario: ${echam.scenario}
-
+lresume: ${echam.lresume}

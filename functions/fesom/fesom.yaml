@@ -6,10 +6,6 @@ branch: master
 version: "2.0"
 
 
-further_reading:
-        - fesom-${version}.yaml
-
-
 restart:
         rate: "12"
         unit: "m"
@@ -24,17 +20,19 @@ with_part_format: false
 time_dimension: "time"
 
 model_dir: "${esm_master_dir}/fesom-${version}/"
-bin_dir: "${setup_dir}/bin"
+bin_dir: "${model_dir}/bin"
 climate_data_dir: "${pool_dir}/hydrography/"
 forcing_data_dir: "${pool_dir}/forcing/"
 ini_data_dir: "${pool_dir}/pool-data/"
-namelist_dir: "${esm_runscripts_dir}/namelists/fesom2"                        
+namelist_dir: "${esm_master_dir}/namelists/fesom2"                        
 
 steps_per_day: "$(( 86400 / ${time_step} ))"
 restart_date: "$(( ${start_date} - ${time_step} ))"
 
 
-
+namelists:
+        - namelist.config
+        - namelist.forcing
 
 executable: fvom.x
 leapyear: 0
@@ -75,11 +73,11 @@ choose_version:
                 restart_in_files:
                         oce_diag: oce_diag
                 restart_in_in_workdir:
-                        oce_restart: fesom.${restart_date.year}.oce.nc
-                        ice_restart: fesom.${restart_date.year}.ice.nc
+                        oce_restart: fesom.${restart_date}!syear.oce.nc
+                        ice_restart: fesom.${restart_date}!syear.ice.nc
                 restart_in_in_sources:
-                        oce_restart: fesom.${parent_date.year}.oce.nc
-                        ice_restart: fesom.${parent_date.year}.ice.nc
+                        oce_restart: fesom.${parent_date}!syear.oce.nc
+                        ice_restart: fesom.${parent_date}!syear.ice.nc
                 remove_from_namelist_changes:
                         namelist.forcing:
                                 namsbc:
@@ -94,7 +92,7 @@ choose_version:
                                         - nm_mslp_file
                                         - nm_runoff_file
                                         - nm_sss_data_file
-                namelist_changes:
+                add_namelist_changes:
                         namelist.config:
                                 inout:
                                         restart_length: "remove_from_namelist"
@@ -114,10 +112,10 @@ namelist_changes:
                 paths:
                         ForcingDataPath: "${forcing_data_dir}"
                         MeshPath: "${mesh_dir}"
-                        OpbndPath: "${opbnd_dir}"
+                        #OpbndPath: "${opbnd_dir}"
                         ClimateDataPath: "${climate_data_dir}"
-                        TideForcingPath: "${tide_forcing_dir}"
-                        ResultPath: "${work_dir}"
+                        #TideForcingPath: "${tide_forcing_dir}"
+                        #ResultPath: "${work_dir}"
                 timestep:
                         step_per_day: "${steps_per_day}"
                         run_length: "${restart.rate}"
@@ -125,7 +123,7 @@ namelist_changes:
                 inout: 
                         restartflag: "${restart.flag}"
                         output_length: "${restart.rate}"
-                        restart_length: "${restart.rate"
+                        restart_length: "${restart.rate}"
                         restart_length_unit: "${restart.unit}"
         namelist.forcing:
                 namsbc:
@@ -141,25 +139,25 @@ namelist_changes:
                         nm_runoff_file: "${forcing_data_dir}/runoff.nc"
                         nm_sss_data_file: "${forcing_data_dir}/PHC2_salx.nc"
 
+#lasttime: "$(( 86400 - ${time_step} ))"
+lasttme: "aaa"
+starttime: "86400.0000000000"
+startday: "$(( ${start_date!sdoy} - 1 ))"
+choose_startday:
+        1:
+                starttime: "0.0000000000000"
 
 choose_lresume:
         false:                                
                 config_create:
                         fesom.clock:
-                                - "<--append-- 0.0000000000000 ${initial_date.doy} ${initial_date.year}"  
-                                - "<--append-- 0.0000000000000 ${initial_date.doy} ${initial_date.year}"
+                                - "<--append-- 0.0000000000000 ${initial_date}!sdoy ${initial_date}!syear"  
+                                - "<--append-- 0.0000000000000 ${initial_date}!sdoy ${initial_date}!syear"
         true:   
-                lasttime: "$(( 86400 - ${time_step} ))"
-                starttime: "86400.0000000000"
-                startday: "$(( ${start_date.doy} - 1 ))"
-                choose_startday.doy:
-                        1:
-                                starttime: "0.0000000000000"
-                                startday: "1"
                 config_create:
                         fesom.clock: 
-                                - "<--append-- ${lasttime} ${restart_date.doy} ${restart_date.year}"
-                                - "<--append-- ${starttime} ${startday} ${start_date.year}"     
+                                - "<--append-- ${fesom.lasttme} ${restart_date}!sdoy ${restart_date}!syear"
+                                - "<--append-- ${starttime} ${startday} ${start_date}!syear"     
 
 
 
@@ -189,13 +187,13 @@ config_sources:
         #[[streams --> STREAM]]_[[write_output_dates --> WHEN]]: [[streams --> STREAM]]_[[write_output_dates --> WHEN]]
         #[[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2: [[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2
 
-output_targets:
-        "[[streams --> STREAM]]_[[write_output_dates --> WHEN]]": ${expid}_STREAM_fesom_WHEN.nc
-        "[[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2": ${expid}_STREAM.fesom.WHEN<--year--.nc
+        #output_targets:
+        #"[[streams --> STREAM]]_[[write_output_dates --> WHEN]]": ${expid}_STREAM_fesom_WHEN.nc
+        #"[[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2": ${expid}_STREAM.fesom.WHEN<--year--.nc
 
-output_in_work:
-        "[[streams --> STREAM]]_[[write_output_dates --> WHEN]]": STREAM_fesom_WHEN.nc
-        "[[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2": STREAM.fesom.WHEN<--year--.nc
+        #output_in_work:
+        #"[[streams --> STREAM]]_[[write_output_dates --> WHEN]]": STREAM_fesom_WHEN.nc
+        #"[[streams --> STREAM]]_[[write_output_dates --> WHEN]]_2": STREAM.fesom.WHEN<--year--.nc
 
 
         #restart_files:
@@ -203,18 +201,18 @@ output_in_work:
         #ice_restart: ice_restart
 
         #restart_in_workdir:
-        #oce_restart: fesom.${restart_date.year}.oce.restart.nc
-        #ice_restart: fesom.${restart_date.year}.ice.restart.nc
-        #oce_diag: fesom.${restart_date.year}.oce.diag.nc
+        #oce_restart: fesom.${restart_date}!syear.oce.restart.nc
+        #ice_restart: fesom.${restart_date}!syear.ice.restart.nc
+        #oce_diag: fesom.${restart_date}!syear.oce.diag.nc
 
 restart_sources:
-        oce_restart: fesom.${parent_date.year}.oce.restart.nc
-        ice_restart: fesom.${parent_date.year}.ice.restart.nc
-        oce_diag: fesom.${parent_date.year}.oce.diag.nc
+        oce_restart: fesom.${parent_date}!syear.oce.restart.nc
+        ice_restart: fesom.${parent_date}!syear.ice.restart.nc
+        oce_diag: fesom.${parent_date}!syear.oce.diag.nc
 
 restart_targets:
-        oce_restart: fesom.${end_date.year}.oce.restart.nc
-        ice_restart: fesom.${end_date.year}.ice.restart.nc
-        oce_diag: fesom.${end_date.year}.oce.diag.nc
+        oce_restart: fesom.${end_date}!syear.oce.restart.nc
+        ice_restart: fesom.${end_date}!syear.ice.restart.nc
+        oce_diag: fesom.${end_date}!syear.oce.diag.nc
 
 

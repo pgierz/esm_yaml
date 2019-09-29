@@ -308,8 +308,19 @@ class Date(object):
             str, ndate
         )
 
-        self._date_format = Dateformat(form, printhours, printminutes, printseconds)
         self._calendar = calendar
+        self.doy = self.day_of_year()
+        self.sdoy = str(self.day_of_year())
+
+        self._date_format = Dateformat(form, printhours, printminutes, printseconds)
+
+    @property
+    def sdoy(self):
+        return self.__sdoy
+
+    @sdoy.setter
+    def sdoy(self, sdoy):
+        self.__sdoy = str(self.doy)
 
     @property
     def syear(self):
@@ -656,8 +667,11 @@ class Date(object):
         int
             The day of the current year.
         """
-        date2 = Date(self[0] + "-01-01T00:00:00", self._calendar)
-        return self.time_between(date2, "days") + 1
+        if self[1] == self[2] == 1:
+            return 1
+        else:
+            date2 = Date(str(self[0]) + "-01-01T00:00:00", self._calendar)
+            return self.time_between(date2, "days") + 1
 
     def __str__(self):
         return (

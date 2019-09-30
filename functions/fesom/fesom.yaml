@@ -5,7 +5,6 @@ model: fesom
 branch: master
 version: "2.0"
 
-
 restart:
         rate: "12"
         unit: "m"
@@ -33,19 +32,13 @@ restart_date: "$(( ${start_date} - ${time_step} ))"
 namelists:
         - namelist.config
         - namelist.forcing
+        - namelist.oce
+        - namelist.ice
 
-executable: fvom.x
 leapyear: 0
-choose_resolution:
-        CORE2:
-                nx: 126858
-                mesh_dir: "${pool_dir}/meshes/mesh_CORE2_final/"
-        GLOB:
-                nx: 830305
-
 
 choose_version:
-        1.4:
+        "1.4":
                 executable: fesom
                 choose_resolution:
                         CORE2:
@@ -78,66 +71,79 @@ choose_version:
                 restart_in_in_sources:
                         oce_restart: fesom.${parent_date}!syear.oce.nc
                         ice_restart: fesom.${parent_date}!syear.ice.nc
-                remove_from_namelist_changes:
-                        namelist.forcing:
-                                namsbc:
-                                        - nm_xwind_file
-                                        - nm_ywind_file
-                                        - nm_humi_file
-                                        - nm_qsr_file
-                                        - nm_qlw_file
-                                        - nm_tair_file
-                                        - nm_prec_file
-                                        - nm_snow_file
-                                        - nm_mslp_file
-                                        - nm_runoff_file
-                                        - nm_sss_data_file
-                add_namelist_changes:
+                namelist_dir: "${esm_master_dir}/namelists/fesom"                        
+                remove_config_files:
+                        - namelist.io
+                namelist_changes:
                         namelist.config:
-                                inout:
+                                calendar:
+                                        include_fleapyear: ".${leapyear}."
+                                paths:
+                                        ForcingDataPath: "${forcing_data_dir}"
+                                        MeshPath: "${mesh_dir}"
+                                        #OpbndPath: "${opbnd_dir}"
+                                        ClimateDataPath: "${climate_data_dir}"
+                                        #TideForcingPath: "${tide_forcing_dir}"
+                                        #ResultPath: "${work_dir}"
+                                timestep:
+                                        step_per_day: "${steps_per_day}"
+                                        run_length: "${restart.rate}"
+                                        run_length_unit: "${restart.unit}"
+                                inout: 
+                                        restartflag: "${restart.flag}"
+                                        output_length: "${restart.rate}"
                                         restart_length: "remove_from_namelist"
                                         restart_length_unit: "remove_from_namelist"
                         namelist.oce:
                                 boundary:
                                         restore_s_surf: "1.929e-06"
-                namelist_dir: "${esm_runscripts_dir}/namelists/fesom"                        
-                remove_from_config_files:
+
+        "2.0":
+                executable: fvom.x
+                choose_resolution:
+                        CORE2:
+                                nx: 126858
+                                mesh_dir: "${pool_dir}/meshes/mesh_CORE2_final/"
+                        GLOB:
+                                nx: 830305
+                namelist_changes:
+                        namelist.config:
+                                calendar:
+                                        include_fleapyear: ".${leapyear}."
+                                paths:
+                                        ForcingDataPath: "${forcing_data_dir}"
+                                        MeshPath: "${mesh_dir}"
+                                        #OpbndPath: "${opbnd_dir}"
+                                        ClimateDataPath: "${climate_data_dir}"
+                                        #TideForcingPath: "${tide_forcing_dir}"
+                                        #ResultPath: "${work_dir}"
+                                timestep:
+                                        step_per_day: "${steps_per_day}"
+                                        run_length: "${restart.rate}"
+                                        run_length_unit: "${restart.unit}"
+                                inout: 
+                                        restartflag: "${restart.flag}"
+                                        output_length: "${restart.rate}"
+                                        restart_length: "${restart.rate}"
+                                        restart_length_unit: "${restart.unit}"
+                        namelist.forcing:
+                                namsbc:
+                                        nm_xwind_file: "${forcing_data_dir}/u_10."
+                                        nm_ywind_file: "${forcing_data_dir}/v_10."
+                                        nm_humi_file: "${forcing_data_dir}/q_10."
+                                        nm_qsr_file: "${forcing_data_dir}/ncar_rad."
+                                        nm_qlw_file: "${forcing_data_dir}/ncar_rad."
+                                        nm_tair_file: "${forcing_data_dir}/t_10."
+                                        nm_prec_file: "${forcing_data_dir}/ncar_precip."
+                                        nm_snow_file: "${forcing_data_dir}/ncar_precip."
+                                        nm_mslp_file: "${forcing_data_dir}/slp."
+                                        nm_runoff_file: "${forcing_data_dir}/runoff.nc"
+                                        nm_sss_data_file: "${forcing_data_dir}/PHC2_salx.nc"
+                add_namelists:
                         - namelist.io
 
 
-namelist_changes:
-        namelist.config:
-                calendar:
-                        include_fleapyear: ".${leapyear}."
-                paths:
-                        ForcingDataPath: "${forcing_data_dir}"
-                        MeshPath: "${mesh_dir}"
-                        #OpbndPath: "${opbnd_dir}"
-                        ClimateDataPath: "${climate_data_dir}"
-                        #TideForcingPath: "${tide_forcing_dir}"
-                        #ResultPath: "${work_dir}"
-                timestep:
-                        step_per_day: "${steps_per_day}"
-                        run_length: "${restart.rate}"
-                        run_length_unit: "${restart.unit}"
-                inout: 
-                        restartflag: "${restart.flag}"
-                        output_length: "${restart.rate}"
-                        restart_length: "${restart.rate}"
-                        restart_length_unit: "${restart.unit}"
-        namelist.forcing:
-                namsbc:
-                        nm_xwind_file: "${forcing_data_dir}/u_10."
-                        nm_ywind_file: "${forcing_data_dir}/v_10."
-                        nm_humi_file: "${forcing_data_dir}/q_10."
-                        nm_qsr_file: "${forcing_data_dir}/ncar_rad."
-                        nm_qlw_file: "${forcing_data_dir}/ncar_rad."
-                        nm_tair_file: "${forcing_data_dir}/t_10."
-                        nm_prec_file: "${forcing_data_dir}/ncar_precip."
-                        nm_snow_file: "${forcing_data_dir}/ncar_precip."
-                        nm_mslp_file: "${forcing_data_dir}/slp."
-                        nm_runoff_file: "${forcing_data_dir}/runoff.nc"
-                        nm_sss_data_file: "${forcing_data_dir}/PHC2_salx.nc"
+
 
 #lasttime: "$(( 86400 - ${time_step} ))"
 lasttme: "aaa"
@@ -215,4 +221,48 @@ restart_targets:
         ice_restart: fesom.${end_date}!syear.ice.restart.nc
         oce_diag: fesom.${end_date}!syear.oce.diag.nc
 
+
+coupling_fields:
+        sst_feom:
+                grid: feom
+        sit_feom:
+                grid: feom
+        sie_feom:
+                grid: feom
+        snt_feom:
+                grid: feom
+                #description: |
+                #       whatever snt means
+                #unit: kg m s
+                #standard_cf_name: 'shit no tuna?'
+                #cf_code: 42
+        taux_oce:
+                grid: feom
+        tauy_oce:
+                grid: feom
+        taux_ico:
+                grid: feom
+        tauy_ico:
+                grid: feom
+        prec_oce:
+                grid: feom
+        snow_oce:
+                grid: feom
+        evap_oce:
+                grid: feom
+        subl_oce:
+                grid: feom
+        heat_oce:
+                grid: feom
+        heat_ico:
+                grid: feom
+        heat_swo:
+                grid: feom
+        hydr_oce:
+                grid: feom
+
+grids:
+        feom:
+                nx: ${nx}
+                ny: 1
 

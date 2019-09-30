@@ -74,11 +74,8 @@ class SimulationSetup(object):
         self._show_simulation_info()
         self.prepare()
         for model in list(self.config):
-            print (model)
             if model in esm_coupler.known_couplers:
-                print("beep")
                 coupler_config_dir=self.config["general"]["base_dir"] + "/" + self.config["general"]["expid"] + "/run_" + self.config["general"]["current_date"].format( form=9, givenph=False, givenpm=False, givenps=False ) + "-" + self.config["general"]["end_date"].format( form=9, givenph=False, givenpm=False, givenps=False) + "/config/" + model + "/"
-                print( coupler_config_dir)
                 self.coupler = esm_coupler.esm_coupler(self.config, model)
                 self.coupler.prepare(self.config, coupler_config_dir)
                 sys.exit()

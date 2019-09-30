@@ -5,9 +5,19 @@ class esm_coupler:
 
     def __init__(self, full_config, name):
         self.name = name
+
+        self.process_ordering = full_config[name]["process_ordering"]
+        self.coupled_execs = []
+        for exe in self.process_ordering:
+            self.coupled_execs.append(full_config[exe]["executable"])
+        self.runtime=full_config["general"]["runtime"][5]
+        self.nb_of_couplings = 0
+        if "coupling_target_fields" in full_config[self.name]:
+            for restart_file in list(full_config[self.name]["coupling_target_fields"]):
+                self.nb_of_couplings += len(list(full_config[self.name]["coupling_target_fields"][restart_file]))
         if name == "oasis3mct":
             import oasis
-            self.coupler = oasis.oasis()
+            self.coupler = oasis.oasis(self.nb_of_couplings,  self.coupled_execs, self.runtime)
         else:
             print ("Unknown coupler :", name)
             sys.exit(0)
@@ -28,12 +38,12 @@ class esm_coupler:
                         if ":" in leftside:
                             lefts = leftside.split(":")
                         else:
-                            lefts = list(leftside)
+                            lefts = [leftside]
                             
                         if ":" in rightside:
                             rights = rightside.split(":")
                         else:
-                            rights = list(rightside)
+                            rights = [rightside]
 
                         if not len(lefts) == len(rights):
                             print ("Left and right side of coupling don't match: ", coupling)
@@ -41,20 +51,15 @@ class esm_coupler:
 
                          
                         left_grid = left_nx = left_ny = None
+                        right_grid = right_nx = right_ny = None
                         for left, right in zip(lefts, rights):
                             found_left = found_right = False
                             for model in list(full_config):
                                 if "coupling_fields" in full_config[model]:
-                                    print (full_config[model]["coupling_fields"])
                                     if left in full_config[model]["coupling_fields"]:
-                                        print ("found ", left)
                                         found_left = True
                                         if not left_grid:
-                                            print("jjjjjjjjjjjjjjjj")
-                                            print(model)
-                                            print(left)
                                             left_grid = full_config[model]["coupling_fields"][left]["grid"]
-                                            print(left_grid)
                                             left_nx = full_config[model]["grids"][left_grid]["nx"]
                                             left_ny = full_config[model]["grids"][left_grid]["ny"]
                                         else:

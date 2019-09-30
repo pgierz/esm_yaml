@@ -586,10 +586,10 @@ class Date(object):
 
     def __sub__(self, other):
         # FIXME / BUG -- d1 and d2 are actually modified in this function. That's bad.
-        d1 = copy.deepcopy(
+        d2 = copy.deepcopy(
             [self.year, self.month, self.day, self.hour, self.minute, self.second]
         )
-        d2 = copy.deepcopy(
+        d1 = copy.deepcopy(
             [other.year, other.month, other.day, other.hour, other.minute, other.second]
         )
 
@@ -819,6 +819,10 @@ class Date(object):
             logging.debug("Sub 1 from ndate[1], now %s", ndate)
             ndate[0] = ndate[0] + ndate[1] / 12
             logging.debug("Add month fracs to ndate[0], now %s", ndate)
+            while ndate[1] < 0:
+                logging.debug("Negative month makes no sense!")
+                ndate[1] += 13
+                logging.debug(ndate[1])
             ndate[1] = ndate[1] % 12
             logging.debug("Reset ndate[1], now %s", ndate)
             if ndate[1] == 0:

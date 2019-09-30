@@ -6,6 +6,7 @@ general:
         include_models:
                 - echam
         coupled_setup: True
+        model_dir: "${esm_master_dir}/awicm-test"
         
 echam:
         restart:
@@ -17,7 +18,6 @@ echam:
         remove_forcing_files:
                 - sst
                 - sic
-
 jsbach:
         #        dynveg_file_ending: ""
         namelist_changes:

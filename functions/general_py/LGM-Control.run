@@ -32,10 +32,10 @@ FINAL_DATE=3850-01-01 # final date of the experiment
 NYEAR_echam=1          # number of years per run
 NMONTH_echam=0
 
-MODEL_DIR_echam=${HOME}/esm-master/echam-test
-echam_VERSION=test
+#MODEL_DIR_echam=${HOME}/esm-master/echam-test
+#echam_VERSION=test
 
-POOL_DIR_echam=/pool/data
+#POOL_DIR_echam=/pool/data
 ##########################
 ## ECHAM/JSBACH SECTION ##
 ##########################
@@ -46,7 +46,7 @@ SCENARIO_echam=PALEO
 echam_DATASET=r0007
 jsbach_DATASET=r0009
 
-BIN_DIR_echam=${HOME}/esm-master/echam-test/bin 
+#BIN_DIR_echam=${HOME}/esm-master/echam-test/bin 
 
 # if you want to start from echam restarts, use:
 LRESUME_echam=1

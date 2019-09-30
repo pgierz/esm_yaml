@@ -26,7 +26,8 @@ ini_data_dir: "${pool_dir}/pool-data/"
 namelist_dir: "${esm_master_dir}/namelists/fesom2"                        
 
 steps_per_day: "$(( 86400 / ${time_step} ))"
-restart_date: "$(( ${start_date} - ${time_step} ))"
+restart_date : ${current_date}
+restart_dat: "$(( ${start_date!year} - ${time_step} ))"
 
 
 namelists:

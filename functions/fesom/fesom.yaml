@@ -169,11 +169,10 @@ choose_lresume:
 
 
 config_files:
-        config: namelist.config
-        forcing: namelist.forcing
-        ice:    namelist.ice
-        oce:    namelist.oce
-        io:     namelist.io
+        config: config
+        forcing: forcing
+        ice:    ice
+        oce:    oce
 
 config_sources:
         config: "${namelist_dir}/namelist.config"

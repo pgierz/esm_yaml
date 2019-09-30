@@ -49,4 +49,7 @@ class environment_infos:
                 newfile.write(dummy_file.read())
             for command in commands:
                 newfile.write(command + "\n")
-        return name + "_script.sh"
+        return name+"_script.sh"
+
+    def output():
+        esm_parser.pprint_config(self.config)

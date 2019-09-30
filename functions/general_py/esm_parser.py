@@ -404,15 +404,15 @@ def remove_entries_from_chapter(config, remove_chapter, remove_entries):
 
 
 def add_entries_from_chapter(config, add_chapter, add_entries):
+    my_entries = copy.deepcopy(add_entries)
     if add_chapter in config:
         if type(config[add_chapter]) == list:
-            for entry in add_entries:
+            for entry in my_entries:
                 config[add_chapter].append(entry)
         elif type(config[add_chapter]) == dict:
             dict_merge(config[add_chapter], add_entries)
     else:
         config[add_chapter] = add_entries
-
 
 def remove_entry_from_chapter(
     remove_chapter,
@@ -504,11 +504,13 @@ def basic_find_add_entries_in_config(mapping):
     mappings = [mapping]
     while mappings:
         mapping = mappings.pop()
-        try:
-            items = six.iteritems(mapping)
-        except AttributeError:
-            continue
-        for key, value in items:
+        #try:
+        #    items = six.iteritems(mapping)
+        #except AttributeError:
+        #    continue
+        for key in list(mapping):
+            value = mapping[key]
+        #for key, value in items:
             if isinstance(key, str) and key.startswith("add_"):
                 all_adds.append((key, value))
             if isinstance(value, dict):
@@ -616,7 +618,6 @@ def basic_add_entries_to_chapter_in_config(config):
     all_adds_for_model = basic_find_add_entries_in_config(config)
     for add_chapter, add_entries in all_adds_for_model:
         add_entries_from_chapter(config, add_chapter, add_entries)
-
 
 def basic_remove_entries_from_chapter_in_config(config):
     all_removes_for_model = basic_find_remove_entries_in_config(config)

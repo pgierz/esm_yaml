@@ -1,0 +1,30 @@
+# iterative coupling stuff
+
+jsbach_prepare_forcing()
+{
+        if [[ "x${iterative_coupling}" == "x1" ]]; then
+                if [ -f "${CONFIG_DIR_jsbach}/jsbach_init_override.dat" ]; then
+                        echo "PG: Sourcing ${CONFIG_DIR_jsbach}/jsbach_init_override.dat" 
+                        cat ${CONFIG_DIR_jsbach}/jsbach_init_override.dat
+                        source ${CONFIG_DIR_jsbach}/jsbach_init_override.dat
+                fi
+        fi
+}
+
+        if [[ "x$iterative_coupling" == "x1" ]]; then
+                # Check if: first run, first chunk, or chunk number isn't set yet"
+                if [[ "x${RUN_NUMBER_jsbach}" == "x1" ]] || [[ "x${CHUNK_NUMBER_jsbach}" == "x1" ]] || [[ "x${CHUNK_NUMBER_jsbach}" == "x" ]]; then
+                        mecho "PG: No updates in first run!"
+                else
+                        echo "                  Sourcing: ${CONFIG_DIR_jsbach}/jsbach_namelist_switches_${CHUNK_START_DATE_jsbach}-${CHUNK_END_DATE_jsbach}.dat"
+                        source ${CONFIG_DIR_jsbach}/jsbach_namelist_switches_${CHUNK_START_DATE_jsbach}-${CHUNK_END_DATE_jsbach}.dat
+                        echo "                  done, the following was sourced:"
+                        cat ${CONFIG_DIR_jsbach}/jsbach_namelist_switches_${CHUNK_START_DATE_jsbach}-${CHUNK_END_DATE_jsbach}.dat
+                fi
+        fi
+
+
+
+
+
+

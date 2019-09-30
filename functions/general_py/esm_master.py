@@ -21,9 +21,9 @@ import esm_environment
 ######################################################################################
 
 
-components_yaml = "functions/setups2models.yaml"
-config_yaml = "functions/esm_master.yaml"
-vcs_folder = "functions/vcs"
+components_yaml='functions/esm_master/setups2models.yaml'
+config_yaml='functions/esm_master/esm_master.yaml'
+vcs_folder='functions/vcs'
 
 overall_conf_file = "~/.esm_master.conf"
 local_conf_file = "esm_master.conf"
@@ -158,15 +158,13 @@ class version_control_infos:
             else:
                 repo = package.repo
             if "https://gitlab.dkrz.de" in repo:
-                repo = (
-                    "https://"
-                    + general.emc["GITLAB_DKRZ_USER_NAME"]
-                    + "@"
-                    + repo.replace("https://", "")
-                )
-            raw_command = (
-                raw_command.replace("${repository}", repo) + " " + package.raw_name
-            )
+                repo = "https://" + general.emc["GITLAB_DKRZ_USER_NAME"] +"@"+ repo.replace("https://", "")
+            raw_command = raw_command.replace("${repository}", repo)
+            if todo == "get":
+                if package.destination:
+                    raw_command = raw_command + " " + package.destination
+                else:
+                    raw_command = raw_command + " " + package.raw_name
         else:
             raw_command = None
         return raw_command
@@ -217,6 +215,8 @@ class software_package:
             self.bin_type = None
             self.bin_names = [None]
             self.command_list = None
+            self.destination = None
+            self.coupling_changes = None
 
     def fill_in_infos(self, setup_info, vcs, general):
 
@@ -224,9 +224,13 @@ class software_package:
         self.subpackages = self.get_subpackages(setup_info, vcs, general)
         self.complete_targets(setup_info)
         self.repo_type, self.repo, self.branch = self.get_repo_info(setup_info, vcs)
+        self.destination = setup_info.get_config_entry(self, "destination")
+        if not self.destination:
+            self.destination = self.raw_name
 
-        self.repo = replace_var(self.repo, self.model + ".version", self.version)
-        self.branch = replace_var(self.branch, self.model + ".version", self.version)
+        self.coupling_changes = self.get_coupling_changes(setup_info)
+        self.repo = replace_var(self.repo, self.model+".version", self.version)
+        self.branch = replace_var(self.branch, self.model+".version", self.version)
 
         self.bin_type, self.bin_names = self.get_comp_type(setup_info)
         self.command_list = self.get_command_list(setup_info, vcs, general)
@@ -245,6 +249,26 @@ class software_package:
                 if todo in package.targets:
                     if todo not in self.targets:
                         self.targets.append(todo)
+
+
+    def get_coupling_changes(self, setup_info):
+        config = setup_info.config
+        changes = []
+        if self.kind == "couplings":
+            these_changes = setup_info.get_config_entry(self, "coupling_changes")
+            if these_changes:
+                changes = changes + these_changes
+        elif self.kind == "setups":
+            couplings = setup_info.get_config_entry(self, "couplings")
+            if couplings:
+                for coupling in couplings: 
+                    changes = []
+                    if "coupling_changes" in config["couplings"][coupling]:
+                        these_changes = config["couplings"][coupling]["coupling_changes"]       
+                        if these_changes:
+                            changes = changes + these_changes
+        return changes
+        
 
     def get_subpackages(self, setup_info, vcs, general):
         subpackages = []
@@ -306,8 +330,13 @@ class software_package:
                 if type(commands) == str:
                     commands = [commands]
                 if not todo == "get":
-                    commands.insert(0, "cd " + self.raw_name)
+                    commands.insert(0, "cd "+self.destination)
                     commands.append("cd ..")
+            if todo == "get":
+                if self.coupling_changes:
+                    commands = []
+                    for change in self.coupling_changes:
+                        commands.append(change)
             command_list.update({todo: commands})
         return command_list
 
@@ -336,7 +365,13 @@ class software_package:
         if self.command_list:
             print("    Commands:")
             for todo in self.command_list.keys():
-                print("        ", todo, self.command_list[todo])
+                print ("        ", todo, self.command_list[todo])
+        if self.coupling_changes:
+            print ("    Coupling Changes:")
+            for todo in self.coupling_changes:
+                print ("        ", todo)
+    
+
 
 
 ######################################################################################
@@ -346,11 +381,6 @@ class software_package:
 
 class task:
     def __init__(self, raw, setup_info, vcs, general):
-        if type(raw) == list:
-            str_arg = ""
-            for arg in raw:
-                str_arg = str_arg + " " + arg
-            raw = str_arg.strip()
         if raw == "default":
             raw = ""
         if raw == "drytestall":
@@ -385,14 +415,14 @@ class task:
         if not self.todo in setup_info.meta_todos:
             self.check_if_target(setup_info)
 
-        self.subtasks = self.get_subtasks(setup_info, vcs, general)
-        self.only_subtask = self.validate_only_subtask()
-        self.ordered_tasks = self.order_subtasks(setup_info)
+        self.subtasks=self.get_subtasks(setup_info, vcs, general)
+        self.only_subtask=self.validate_only_subtask()
+        self.ordered_tasks=self.order_subtasks(setup_info, vcs, general)
         self.will_download = self.check_if_download_task(setup_info)
-        self.folders_after_download = self.download_folders()
-        self.binaries_after_compile = self.compile_binaries()
-        self.dir_list = self.list_required_dirs()
-        self.command_list = self.assemble_command_list()
+        self.folders_after_download=self.download_folders()
+        self.binaries_after_compile=self.compile_binaries()
+        self.dir_list=self.list_required_dirs()
+        self.command_list, self.shown_command_list =self.assemble_command_list()
 
         if verbose > 1:
             self.output()
@@ -459,7 +489,7 @@ class task:
                 sys.exit(0)
         return only
 
-    def order_subtasks(self, setup_info):
+    def order_subtasks(self, setup_info, vcs, general):
         subtasks = self.subtasks
         if self.only_subtask:
             if self.only_subtask == "NONE":
@@ -474,7 +504,7 @@ class task:
             todos = setup_info.meta_command_order[self.todo]
         else:
             todos = [self.todo]
-
+        
         ordered_tasks = []
         for todo in todos:
             for task in subtasks:
@@ -496,23 +526,22 @@ class task:
     def download_folders(self):
         if self.package.kind in ["setups", "couplings"]:
             dir_list = [self.package.raw_name]
+            for task in self.ordered_tasks:
+                if self.package.raw_name+"/"+task.package.destination not in dir_list:
+                    dir_list.append(self.package.raw_name+"/"+task.package.destination)
         else:
             dir_list = []
-        for task in self.ordered_tasks:
-            dir_list.append(self.package.raw_name + "/" + task.package.raw_name)
+            for task in self.ordered_tasks:
+                if task.package.destination not in dir_list:
+                    dir_list.append(task.package.destination)
         return dir_list
 
     def compile_binaries(self):
         file_list = []
         for task in self.ordered_tasks:
             for binfile in task.package.bin_names:
-                file_list.append(
-                    self.package.raw_name
-                    + "/"
-                    + task.package.bin_type
-                    + "/"
-                    + binfile.split("/")[-1]
-                )
+                if self.package.raw_name+"/"+task.package.bin_type+"/"+binfile.split("/")[-1] not in file_list:
+                    file_list.append(self.package.raw_name+"/"+task.package.bin_type+"/"+binfile.split("/")[-1])
         return file_list
 
     def list_required_dirs(self):
@@ -538,52 +567,52 @@ class task:
             toplevel = "."
         real_command_list = command_list.copy()
         for task in self.ordered_tasks:
-            if task.todo in ["conf", "comp"]:
-                if self.package.kind in ["setups", "couplings"]:
-                    real_command_list.append("cp ../" + task.raw_name + "_script.sh .")
-                real_command_list.append("./" + task.raw_name + "_script.sh")
-            else:
-                for command in task.package.command_list[task.todo]:
-                    real_command_list.append(command)
-            for command in task.package.command_list[task.todo]:
-                command_list.append(command)
-            if task.todo == "comp":
-                if task.package.bin_names:
-                    command_list.append(
-                        "mkdir -p " + toplevel + "/" + task.package.bin_type
-                    )
-                    real_command_list.append(
-                        "mkdir -p " + toplevel + "/" + task.package.bin_type
-                    )
-                    for binfile in task.package.bin_names:
-                        command_list.append(
-                            "cp "
-                            + toplevel
-                            + "/"
-                            + task.package.raw_name
-                            + "/"
-                            + binfile
-                            + " "
-                            + toplevel
-                            + "/"
-                            + task.package.bin_type
-                        )
-                        real_command_list.append(
-                            "cp "
-                            + toplevel
-                            + "/"
-                            + task.package.raw_name
-                            + "/"
-                            + binfile
-                            + " "
-                            + toplevel
-                            + "/"
-                            + task.package.bin_type
-                        )
+            if task.todo in ["get"]:
+                if not task.package.command_list[task.todo] == None:
+                    for command in task.package.command_list[task.todo]:
+                        command_list.append(command)
+                        real_command_list.append(command)
+
+        if self.package.coupling_changes:
+            for change in self.package.coupling_changes:
+                command_list.append(change)
+                real_command_list.append(change)
+
+
+
+
+
+
+        for task in self.ordered_tasks:
+            if not task.todo in ["get"]:
+                if task.todo in ["conf", "comp"]:
+                    if self.package.kind in ["setups", "couplings"]:
+                        real_command_list.append("cp ../"+task.raw_name+"_script.sh .")
+                    real_command_list.append("./"+task.raw_name+"_script.sh")
+                else:
+                    if not task.package.command_list[task.todo] == None:
+                        for command in task.package.command_list[task.todo]:
+                            real_command_list.append(command)
+                if not task.package.command_list[task.todo] == None:
+                    for command in task.package.command_list[task.todo]:
+                        command_list.append(command)
+                if task.todo == "comp":
+                    if task.package.bin_names:
+                        command_list.append("mkdir -p "+toplevel+"/"+task.package.bin_type)
+                        real_command_list.append("mkdir -p "+toplevel+"/"+task.package.bin_type)
+                        for binfile in task.package.bin_names:
+                            command_list.append("cp "+task.package.destination+"/"+binfile + " "+ toplevel+"/"+task.package.bin_type)
+                            real_command_list.append("cp "+task.package.destination+"/"+binfile + " "+ toplevel+"/"+task.package.bin_type)
+                elif task.todo == "clean":
+                    if task.package.bin_names:
+                        for binfile in task.package.bin_names:
+                            command_list.append("rm "+toplevel+"/"+task.package.bin_type+"/"+binfile.split("/", -1)[-1])
+                            real_command_list.append("rm "+toplevel+"/"+task.package.bin_type+"/"+binfile.split("/", -1)[-1])
         if self.package.kind in ["setups", "couplings"]:
             command_list.append("cd ..")
             real_command_list.append("cd ..")
-        return real_command_list
+        return real_command_list, command_list
+            
 
     def check_if_target(self, setup_info):
         if not setup_info.has_target2(self.package, self.todo):
@@ -595,16 +624,10 @@ class task:
             return True
         requirements = self.folders_after_download
         for folder in requirements:
-            if not os.path.isfile(folder):
-                print()
-                print(
-                    "Missing folder "
-                    + folder
-                    + " detected. Please run 'make get-"
-                    + self.package.raw_name
-                    + "' first."
-                )
-                print()
+            if not os.path.isdir(folder):
+                print ()
+                print ("Missing folder "+ folder + " detected. Please run 'make get-"+self.package.raw_name+ "' first.")
+                print ()
                 sys.exit(0)
         return True
 
@@ -658,9 +681,11 @@ class task:
 
     def output_steps(self):
         if not self.command_list == []:
-            print("    Executing commands in this order:")
-            for command in self.command_list:
-                print("        ", command)
+            print ("    Executing commands in this order:")
+            for command in self.shown_command_list:
+                print ("        ", command)
+
+
 
 
 ######################################################################################

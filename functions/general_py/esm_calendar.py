@@ -586,10 +586,10 @@ class Date(object):
 
     def __sub__(self, other):
         # FIXME / BUG -- d1 and d2 are actually modified in this function. That's bad.
-        d1 = copy.deepcopy(
+        d2 = copy.deepcopy(
             [self.year, self.month, self.day, self.hour, self.minute, self.second]
         )
-        d2 = copy.deepcopy(
+        d1 = copy.deepcopy(
             [other.year, other.month, other.day, other.hour, other.minute, other.second]
         )
 
@@ -809,38 +809,31 @@ class Date(object):
 
         while ndate[2] > self._calendar.day_in_month(ndate[0], ndate[1]):
             ndate[2] = ndate[2] - self._calendar.day_in_month(ndate[0], ndate[1])
-            ndate[0] = ndate[0] + ndate[1] / 12
-            ndate[1] = ndate[1] % 12
             ndate[1] = ndate[1] + 1
-        logging.debug("After first while: %s", ndate)
+
+        ndate[0] = ndate[0] + (ndate[1] - 1) / 12
+        ndate[1] = (ndate[1] - 1) % 12 + 1
 
         while ndate[2] <= 0:
             ndate[1] = ndate[1] - 1
-            logging.debug("Sub 1 from ndate[1], now %s", ndate)
-            ndate[0] = ndate[0] + ndate[1] / 12
-            logging.debug("Add month fracs to ndate[0], now %s", ndate)
-            ndate[1] = ndate[1] % 12
-            logging.debug("Reset ndate[1], now %s", ndate)
             if ndate[1] == 0:
                 ndate[1] = 12
-                logging.debug("Month 0 is actually month 12: %s", ndate)
                 ndate[0] = ndate[0] - 1
-                logging.debug("Take 1 off the year, %s", ndate)
-            logging.debug("Before day manipulation: %s", ndate)
-            logging.debug(
-                "day in month: %s", self._calendar.day_in_month(ndate[0], ndate[1])
-            )
             ndate[2] = ndate[2] + self._calendar.day_in_month(ndate[0], ndate[1])
-        logging.debug("After second while: %s", ndate)
 
-        ndate[0] = ndate[0] + ndate[1] / 12
-        ndate[1] = ndate[1] % 12
         if ndate[1] == 0:
             ndate[1] = 12
             ndate[0] = ndate[0] - 1
+
+        print ("888888888888888888888888888888888888888888888 ", str(ndate))
+
         self.year, self.month, self.day, self.hour, self.minute, self.second = map(
             int, ndate
         )
+        self.syear, self.smonth, self.sday, self.shour, self.sminute, self.ssecond = map(
+            str, ndate
+        )
+        print (str(self.day), self.sday)
 
     def add(self, to_add):
         """

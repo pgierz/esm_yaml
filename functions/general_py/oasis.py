@@ -13,7 +13,7 @@ class oasis:
         self.namcouple += ["###############################################################################"]
         self.namcouple += ["###############################################################################"]
 
-    def add_coupling(self, lefts, rights):
+    def add_coupling(self, lefts, lgrid, rights, rgrid, direction, transformation, restart_file, time_step, lresume):
         self.namcouple += ["#"]
 
         left = sep = ""
@@ -24,9 +24,36 @@ class oasis:
         right = sep = ""
         for righty in rights:
             right += sep + righty
-            sep = ":"
+            sep = ":" 
 
-        self.namcouple += [left + " " + right]
+        if lresume == False:
+            lag = str(0)
+            seq = str(1)
+            export_mode = "EXPOUT"
+        else:
+            lag = direction.get("lag", 0)
+            seq = direction.get("seq", 2)
+            export_mode = "EXPORTED"
+
+        self.namcouple += [right + " " + left + " 1 " + time_step + " " + seq + " " + restart_file+ " " + export_mode]
+        if lgrid and rgrid:
+            self.namcouple += [rgrid["nx"] + " " + rgrid["ny"] + " " + lgrid["nx"] + " " + lgrid["ny"] + " " + rgrid["name"] + " " + lgrid["name"] + " LAG=" + lag]
+        
+        self.namcouple += ["P  0  P  0"]
+    
+        if transformation["name"] == "distwgt":
+            bins = transformation.get("bins", 15)
+            other_number = transformation.get("other_number", 6)
+
+            self.namcouple += ["LOCTRANS SCRIPR"]
+            self.namcouple += ["INSTANT"]
+            self.namcouple += ["DISTWGT U SCALAR LATITUDE " + bins + " " + other_number]
+
+        elif transformation["name"] == "bicubic":
+            bins = transformation.get("bins", 15)
+            self.namcouple += ["LOCTRANS SCRIPR"]
+            self.namcouple += ["INSTANT"]
+            self.namcouple += ["BICUBIC D SCALAR LATITUDE " + bins]
 
         self.namcouple += ["#"]
         self.namcouple += ["#"]

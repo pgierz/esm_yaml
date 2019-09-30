@@ -35,6 +35,7 @@ class esm_coupler:
                         leftside=leftside.strip()
                         interpolation, rightside = rest.split("&")
                         rightside=rightside.strip()
+                        interpolation=interpolation.strip()
                         if ":" in leftside:
                             lefts = leftside.split(":")
                         else:
@@ -50,8 +51,9 @@ class esm_coupler:
                             sys.exit(0)
 
                          
-                        left_grid = left_nx = left_ny = None
-                        right_grid = right_nx = right_ny = None
+                        left_grid = lgrid_info = None
+                        right_grid = rgrid_info = None
+
                         for left, right in zip(lefts, rights):
                             found_left = found_right = False
                             for model in list(full_config):
@@ -60,8 +62,7 @@ class esm_coupler:
                                         found_left = True
                                         if not left_grid:
                                             left_grid = full_config[model]["coupling_fields"][left]["grid"]
-                                            left_nx = full_config[model]["grids"][left_grid]["nx"]
-                                            left_ny = full_config[model]["grids"][left_grid]["ny"]
+                                            lgrid_info = full_config[model]["grids"][left_grid]
                                         else:
                                             if not left_grid == full_config[model]["coupling_fields"][left]["grid"]: 
                                                 print ("All fields coupled together need to exist on same grid")
@@ -70,8 +71,7 @@ class esm_coupler:
                                         found_right =True
                                         if not right_grid:
                                             right_grid = full_config[model]["coupling_fields"][right]["grid"]
-                                            right_nx = full_config[model]["grids"][right_grid]["nx"]
-                                            right_ny = full_config[model]["grids"][right_grid]["ny"]
+                                            rgrid_info = full_config[model]["grids"][right_grid]
                                         else:
                                             if not right_grid == full_config[model]["coupling_fields"][right]["grid"]:
                                                 print ("All fields coupled together need to exist on same grid")
@@ -84,8 +84,19 @@ class esm_coupler:
                                 print("Coupling var not found: ", right)
                             if not found_left or not found_right:
                                 sys.exit(0)
-                            
-                        self.coupler.add_coupling(lefts, rights)
+                        
+                        direction_info = None
+                        if "coupling_directions" in full_config[self.name]:
+                            if right_grid+"->"+left_grid in full_config[self.name]["coupling_directions"]:
+                                direction_info=full_config[self.name]["coupling_directions"][right_grid+"->"+left_grid] 
+                        transf_info = None
+                        if "coupling_methods" in full_config[self.name]:
+                            if interpolation in full_config[self.name]["coupling_methods"]:
+                                transf_info=full_config[self.name]["coupling_methods"][interpolation]
+
+                        
+
+                        self.coupler.add_coupling(lefts, lgrid_info, rights, rgrid_info, direction_info, transf_info, restart_file, full_config[self.name]["coupling_time_step"], full_config[self.name]["lresume"])
 
     
     def finalize(self, destination_dir):

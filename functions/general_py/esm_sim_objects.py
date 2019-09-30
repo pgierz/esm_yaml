@@ -193,7 +193,7 @@ class SimulationSetup(object):
         else:
             logging.info("No date file found %s", date_file)
             logging.info("Initializing run_number=1 and date=18500101")
-            date = self.config["general"].get("INITIAL_DATE", "18500101")
+            date = self.config["general"].get("initial_date", "18500101")
             self.run_number = 1
             write_file = True
         self.current_date = Date(date)

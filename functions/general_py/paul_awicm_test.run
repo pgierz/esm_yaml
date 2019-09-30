@@ -23,7 +23,7 @@ SCENARIO_awicm="PI-CTRL"
 
 RES_fesom=CORE2
 
-MODEL_DIR_awicm=${HOME}/esm-master/awicm-CMIP6/
+MODEL_DIR_awicm=/pf/a/a270058/esm_yaml/awicm-CMIP6/
 
 #echam_VERSION=echam-6.304p1
 #LCTLIBDEF_jsbach=${MODEL_DIR_awicm}/${echam_VERSION}/lctlib_nlct21.def

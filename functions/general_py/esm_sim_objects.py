@@ -17,6 +17,7 @@ import yaml
 from esm_calendar import Date
 import esm_parser
 import esm_coupler
+import esm_methods
 
 
 def date_representer(dumper, date):
@@ -403,7 +404,7 @@ class SimulationSetup(object):
         six.print_("- Note that you can see your file lists in the config folder")
         six.print_("- You will be informed about missing files")
         self._prepare_copy_files(all_files_to_copy)
-
+        
         # Load and modify namelists:
         six.print_("\n" "- Setting up namelists for this run...")
         all_namelists = {}
@@ -421,6 +422,7 @@ class SimulationSetup(object):
             six.print_("Contents of ", nml_name, ":")
             nml.write(sys.stdout)
             six.print_("\n", 40 * "+ ")
+        self._prepare_modify_files()
 
     def _prepare_copy_files(self, flist):
         successful_files = []
@@ -444,6 +446,15 @@ class SimulationSetup(object):
             six.print_("--- WARNING: These files were missing:")
             for missing_file in missing_files:
                 six.print_("- %s" % missing_file)
+
+
+    def _prepare_modify_files(self):
+        for model in self.config['general']['valid_model_names']:
+            for filetype in self.all_model_filetypes: 
+                print(self.config[model].get(filetype+"_modifications"))
+                if filetype == "restart":
+                    print(self.config[model].get(filetype+"_in_modifications"))
+        sys.exit()
 
 
 class SimulationComponent(object):
@@ -485,11 +496,11 @@ class SimulationComponent(object):
         all_files_to_process = []
         filetype_files_for_list = {}
         for filetype in self.all_filetypes:
-            if filetype == "restart" and not self.config["lresume"]:
-                print("Restart files do not make sense for a cold start, skipping...")
-                continue
             filetype_files = []
             six.print_("- %s" % filetype)
+            if filetype == "restart" and not self.config["lresume"]:
+                six.print_("- restart files do not make sense for a cold start, skipping...")
+                continue
             if filetype + "_sources" not in self.config:
                 continue
             filedir_intermediate = getattr(self, "thisrun_" + filetype + "_dir")
@@ -597,7 +608,8 @@ class SimulationComponent(object):
         for remove in namelist_removes:
             namelist, change_chapter, key = remove
             logging.debug("Removing from %s: %s, %s", namelist, change_chapter, key)
-            del self.config["namelists"][namelist][change_chapter][key]
+            if key in self.config["namelists"][namelist][change_chapter]:
+                del self.config["namelists"][namelist][change_chapter][key]
 
     def nmls_modify(self):
         namelist_changes = self.config.get("namelist_changes", {})

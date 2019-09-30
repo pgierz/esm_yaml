@@ -74,7 +74,7 @@ choose_version:
                         ice_restart: fesom.${parent_date!syear}.ice.nc
                 namelist_dir: "${esm_master_dir}/namelists/fesom"                        
                 remove_config_files:
-                        - namelist.io
+                        - io
                 namelist_changes:
                         namelist.config:
                                 calendar:
@@ -168,12 +168,12 @@ choose_lresume:
 
 
 
-                                  #config_files:
-                                  #config: namelist.config
-                                  #forcing: namelist.forcing
-                                  #ice:    namelist.ice
-                                  #oce:    namelist.oce
-                                  #io:     namelist.io
+config_files:
+        config: namelist.config
+        forcing: namelist.forcing
+        ice:    namelist.ice
+        oce:    namelist.oce
+        io:     namelist.io
 
 config_sources:
         config: "${namelist_dir}/namelist.config"

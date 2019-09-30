@@ -1,5 +1,4 @@
 hist_fold: hist_harvest
-dynveg_file_ending: "_dynveg"
 
 forcing_sources:
         lctlib: "${echam.model_dir}/lctlib_nlct21.def"

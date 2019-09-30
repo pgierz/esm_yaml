@@ -199,7 +199,7 @@ choose_lresume:
         False:
                 restart_in_modifications:
                         "[[streams-->STREAM]]":
-                                - "vdate <--set_dim-- ${start_date}"
+                                - "vdate <--set_global_attr-- ${start_date!syear!smonth!sday}"
                                   # - fdate "<--set_dim--" ${year_before_date}
                                   # - ndate "<--set_dim--" ${steps_in_year_before}
         True:

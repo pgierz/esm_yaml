@@ -123,7 +123,7 @@ gray_list = [
 ]
 
 gray_list = [re.compile(entry) for entry in gray_list]
-
+gray_list = []
 constant_blacklist = [r"PATH", r"LD_LIBRARY_PATH", r"NETCDFF_ROOT"]
 
 constant_blacklist = [re.compile(entry) for entry in constant_blacklist]
@@ -1260,7 +1260,6 @@ def find_variable(tree, rhs, full_config, white_or_black_list, isblacklist):
     if isinstance(raw_str, str) and "${" in raw_str:
         ok_part, rest = raw_str.split("${", 1)
         var, new_raw = rest.split("}", 1)
-        print(var)
         if ((determine_regex_list_match(var, white_or_black_list)) != isblacklist) and (
             not determine_regex_list_match(var, constant_blacklist)
         ):
@@ -1308,7 +1307,6 @@ def actually_find_variable(tree, rhs, full_config):
 
     config_elements[-1] = var_name
     original_config_elements = copy.deepcopy(config_elements)
-    print(str(config_elements))
     try:
         var_result = recursive_get(full_config, config_elements)
         # return var_result
@@ -1327,6 +1325,7 @@ def actually_find_variable(tree, rhs, full_config):
         rentry = []
         if var_name.endswith("date"):
             if not isinstance(var_result, Date):
+                var_result = var_result.replace(DATE_MARKER, "")
                 entry = Date(var_result)
             else:
                 entry = var_result
@@ -1363,11 +1362,11 @@ def list_to_multikey(tree, rhs, config_to_search, ignore_list, isblacklist):
                 ok_part, rest = lhs.split(list_fence, 1)
                 actual_list, new_raw = rest.split(list_end, 1)
                 key_in_list, value_in_list = actual_list.split("-->", 1)
-                # FIXME: blacklist match
-                if isblacklist and not determine_regex_list_match(
-                    key_in_list, ignore_list
-                ):
-                    return {lhs: rhs}
+                # PG: THIS NEEDS TO BE OFF!!!
+                #if isblacklist and not determine_regex_list_match(
+                #    key_in_list, ignore_list
+                #):
+                #    return {lhs: rhs}
                 key_elements = key_in_list.split(".")
                 entries_of_key = actually_find_variable(
                     tree, key_in_list, config_to_search
@@ -1421,9 +1420,6 @@ def list_to_multikey(tree, rhs, config_to_search, ignore_list, isblacklist):
             ok_part, rest = rhs.split(list_fence, 1)
             actual_list, new_raw = rest.split(list_end, 1)
             key_in_list, value_in_list = actual_list.split("-->", 1)
-            # Blacklist match:
-            if isblacklist and not determine_regex_list_match(key_in_list, ignore_list):
-                return rhs
             key_elements = key_in_list.split(".")
             entries_of_key = actually_find_variable(tree, key_in_list, config_to_search)
             if isinstance(entries_of_key, str):
@@ -1655,10 +1651,11 @@ class ConfigSetup(GeneralConfig):  # pragma: no cover
         if "coupled_setup" not in self.config["general"]:
             setup_config["general"].update({"standalone": True})
         else:
-            user_config["general"].update(
-                user_config[user_config["general"]["setup_name"]]
-            )
-            del user_config[user_config["general"]["setup_name"]]
+            if user_config["general"]["setup_name"] in user_config:
+                user_config["general"].update(
+                    user_config[user_config["general"]["setup_name"]]
+                )
+                del user_config[user_config["general"]["setup_name"]]
             dict_merge(setup_config, self.config)
             # setup_config["general"] = self.config
             setup_config["general"].update({"standalone": False})
@@ -1685,16 +1682,62 @@ class ConfigSetup(GeneralConfig):  # pragma: no cover
         logging.debug("Valid Setup Names = %s", valid_setup_names)
         logging.debug("Valid Model Names = %s", valid_model_names)
 
-        blackdict = priority_merge_dicts(user_config, setup_config, priority="first")
+        self._blackdict = blackdict = priority_merge_dicts(
+            user_config, setup_config, priority="first"
+        )
         self.config = priority_merge_dicts(blackdict, model_config, priority="first")
+
+    def calendar(self):
+
+        # Last step: figure out if we are doing a cold start of a restart:
+        if self.__getitem__("general")["run_number"] != 1:
+            for model in self.__getitem__("general")["valid_model_names"]:
+                self.__setitem__("lresume", True)
+        else:
+            # Did the user give a value? If yes, keep it, if not, first run:
+            for model in self.__getitem__("general")["valid_model_names"]:
+                user_lresume = self.__getitem__(model).get("lresume", False)
+                if type(user_lresume) == str:
+                    if user_lresume == "0" or user_lresume.upper() == "FALSE":
+                        user_lresume = False
+                    elif user_lresume == "1" or user_lresume.upper() == "TRUE":
+                        user_lresume = True
+                elif type(user_lresume) == int:
+                    if user_lresume == 0:
+                        user_lresume = False
+                    elif user_lresume == 1:
+                        user_lresume = True
+                self.__getitem__(model)["lresume"] = user_lresume
+
+        for model in self.__getitem__("general")["valid_model_names"]:
+            if self.__getitem__(model)["lresume"] == True and self.run_number == "1":
+                self.__getitem__(model)["parent_expid"] = self.__getitem__(model)[
+                    "ini_parent_exp_id"
+                ]
+                self.__getitem__(model)["parent_date"] = self.__getitem__(model)[
+                    "ini_parent_date"
+                ]
+                self.__getitem__(model)["parent_restart_dir"] = self.__getitem__(model)[
+                    "ini_restart_dir"
+                ]
+            else:
+                self.__getitem__(model)["parent_expid"] = self.__getitem__("general")[
+                    "expid"
+                ]
+                self.__getitem__(model)["parent_date"] = self.__getitem__("general")[
+                    "prev_date"
+                ]
+                self.__getitem__(model)["parent_restart_dir"] = self.__getitem__(model)[
+                    "experiment_" + model + "_restart_dir"
+                ]
 
         # esm_runscripts.runscripts_check_conflicting_model_and_setup_names(self.config)
         # esm_runscripts.runscripts_update_models_from_setup(self.config)
 
-        # pprint_config(self.config)
-        self.choose_blocks(self.config, blackdict=blackdict)
-        # finish_priority_merge(self.config)
-        self.run_recursive_functions(self.config)
+    def finalize(self):
+        self.choose_blocks(self, blackdict=self._blackdict)
+        self.run_recursive_functions(self)
+        del self._blackdict
 
     def choose_blocks(self, config, blackdict={}, isblacklist=True):
         all_set_variables = {}
@@ -1763,7 +1806,6 @@ class ConfigSetup(GeneralConfig):  # pragma: no cover
             gray_list,
             isblacklist=isblacklist,
         )
-        pprint_config(config)
         recursive_run_function([], config, "atomic", do_math_in_entry, config)
         recursive_run_function([], config, "atomic", marked_date_to_date_object, config)
         recursive_run_function([], config, "atomic", unmark_dates, config)

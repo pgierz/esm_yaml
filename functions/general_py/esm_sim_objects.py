@@ -29,18 +29,49 @@ yaml.add_representer(Date, date_representer)
 class SimulationSetup(object):
     def __init__(self, name, user_config):
 
-        self.config = esm_parser.ConfigSetup(name, user_config)
+        if not "expid" in user_config["general"]:
+            user_config["general"]["expid"] = "test"
 
-        self.config["general"]["expid"] = "test"
-
-        components = []
-        for component in self.config["general"]["valid_model_names"]:
-            components.append(
-                SimulationComponent(self.config["general"], self.config[component])
+        if user_config["general"]["setup_name"] in user_config:
+            user_config["general"].update(
+                user_config[user_config["general"]["setup_name"]]
             )
-        del user_config
-        self.components = components
+            del user_config[user_config["general"]["setup_name"]]
 
+        self._read_date_file(user_config)
+        self._initialize_calendar(user_config)
+        self.config = esm_parser.ConfigSetup(name, user_config)
+        del user_config
+        self._add_all_folders()
+        self.config.calendar()
+        self.config.finalize()
+        self._initialize_components()
+
+
+        self._finalize_components()
+        self._finalize_attributes()
+        self._write_finalized_config()
+        self._copy_preliminary_files_from_experiment_to_thisrun()
+        self._show_simulation_info()
+        self.prepare()
+
+        for model in list(self.config):
+            if model in esm_coupler.known_couplers:
+                coupler_config_dir = (
+                    self.config["general"]["base_dir"]
+                    + "/"
+                    + self.config["general"]["expid"]
+                    + "/run_"
+                    + self.run_datestamp
+                    + "/config/"
+                    + model
+                    + "/"
+                )
+                self.coupler = esm_coupler.esm_coupler(self.config, model)
+                self.coupler.prepare(self.config, coupler_config_dir)
+                sys.exit()
+
+    def _add_all_folders(self):
         self.all_filetypes = ["analysis", "config", "log", "mon", "scripts"]
         for filetype in self.all_filetypes:
             setattr(
@@ -53,8 +84,88 @@ class SimulationSetup(object):
                 + filetype
                 + "/",
             )
+            setattr(
+                self,
+                "thisrun_" + filetype + "_dir",
+                self.config["general"]["base_dir"]
+                + "/"
+                + self.config["general"]["expid"]
+                + "/run_"
+                + self.run_datestamp
+                + "/"
+                + filetype
+                + "/",
+            )
+
+            self.config["general"]["experiment_" + filetype + "_dir"] = getattr(
+                self, "experiment_" + filetype + "_dir"
+            )
+            self.config["general"]["thisrun_" + filetype + "_dir"] = getattr(
+                self, "thisrun_" + filetype + "_dir"
+            )
+
+        self.all_model_filetypes = [
+            "analysis",
+            "bin",
+            "config",
+            "couple",
+            "forcing",
+            "input",
+            "log",
+            "mon",
+            "outdata",
+            "restart",
+            "viz",
+        ]
+        for model in self.config["general"]["valid_model_names"]:
+            for filetype in self.all_model_filetypes:
+                setattr(
+                    self,
+                    "experiment_" + model + "_" + filetype + "_dir",
+                    self.config["general"]["base_dir"]
+                    + "/"
+                    + self.config["general"]["expid"]
+                    + "/"
+                    + filetype
+                    + "/"
+                    + model
+                    + "/",
+                )
+                setattr(
+                    self,
+                    "thisrun_" + model + "_" + filetype + "_dir",
+                    self.config["general"]["base_dir"]
+                    + "/"
+                    + self.config["general"]["expid"]
+                    + "/run_"
+                    + self.run_datestamp
+                    + "/"
+                    + filetype
+                    + "/"
+                    + model
+                    + "/",
+                )
+                self.config[model][
+                    "experiment_" + model + "_" + filetype + "_dir"
+                ] = getattr(self, "experiment_" + model + "_" + filetype + "_dir")
+                self.config[model][
+                    "thisrun_" + model + "_" + filetype + "_dir"
+                ] = getattr(self, "thisrun_" + model + "_" + filetype + "_dir")
+
+    def _initialize_components(self):
+        components = []
+        for component in self.config["general"]["valid_model_names"]:
+            components.append(
+                SimulationComponent(self.config["general"], self.config[component])
+            )
+        self.components = components
+
+    def _create_folders(self):
+        for filetype in self.all_filetypes:
             if not os.path.exists(getattr(self, "experiment_" + filetype + "_dir")):
                 os.makedirs(getattr(self, "experiment_" + filetype + "_dir"))
+
+    def _dump_final_yaml(self):
         with open(
             self.experiment_config_dir
             + "/"
@@ -63,38 +174,6 @@ class SimulationSetup(object):
             "w",
         ) as config_file:
             yaml.dump(self.config, config_file)
-
-        # pdb.set_trace()
-        self._read_date_file()
-        self._initialize_calendar()
-        self._finalize_config()
-        self._finalize_components()
-        self._finalize_attributes()
-        self._write_finalized_config()
-        self._copy_preliminary_files_from_experiment_to_thisrun()
-        self._show_simulation_info()
-        self.prepare()
-        for model in list(self.config):
-            if model in esm_coupler.known_couplers:
-                coupler_config_dir = (
-                    self.config["general"]["base_dir"]
-                    + "/"
-                    + self.config["general"]["expid"]
-                    + "/run_"
-                    + self.config["general"]["current_date"].format(
-                        form=9, givenph=False, givenpm=False, givenps=False
-                    )
-                    + "-"
-                    + self.config["general"]["end_date"].format(
-                        form=9, givenph=False, givenpm=False, givenps=False
-                    )
-                    + "/config/"
-                    + model
-                    + "/"
-                )
-                self.coupler = esm_coupler.esm_coupler(self.config, model)
-                self.coupler.prepare(self.config, coupler_config_dir)
-                sys.exit()
 
     def _show_simulation_info(self):
         six.print_(80 * "=")
@@ -105,25 +184,6 @@ class SimulationSetup(object):
         for model in self.config["general"]["valid_model_names"]:
             six.print_("- %s" % model)
         six.print_("You are using the Python version.")
-
-    def _finalize_config(self):
-        # esm_parser.psix.print_config(self.config["hdmodel"])
-        for component in self.components:
-            if component.config["lresume"] == True and self.run_number == "1":
-                component.config["parent_expid"] = component.config["ini_parent_exp_id"]
-                component.config["parent_date"] = component.config["ini_parent_date"]
-                component.config["parent_restart_dir"] = component.config[
-                    "ini_restart_dir"
-                ]
-            else:
-                component.config["parent_expid"] = self.config["general"]["expid"]
-                component.config["parent_date"] = self.config["general"]["prev_date"]
-                component.config[
-                    "parent_restart_dir"
-                ] = component.experiment_restart_dir
-        logging.debug("SECOND TIME!")
-        self.config.choose_blocks(self.config, isblacklist=False)
-        self.config.run_recursive_functions(self.config, isblacklist=False)
 
     def _finalize_attributes(self):
         for filetype in self.all_filetypes:
@@ -194,14 +254,16 @@ class SimulationSetup(object):
             if os.path.isfile(source + "/" + filename):
                 method(source + "/" + filename, dest + "/" + filename)
 
-    def _read_date_file(self, date_file=None):
+    def _read_date_file(self, config, date_file=None):
         if not date_file:
             date_file = (
-                self.experiment_scripts_dir
+                config["general"]["base_dir"]
                 + "/"
-                + self.config["general"]["expid"]
+                + config["general"]["expid"]
+                + "/scripts/"
+                + config["general"]["expid"]
                 + "_"
-                + self.config["general"]["setup_name"]
+                + config["general"]["setup_name"]
                 + ".date"
             )
         if os.path.isfile(date_file):
@@ -212,9 +274,10 @@ class SimulationSetup(object):
         else:
             logging.info("No date file found %s", date_file)
             logging.info("Initializing run_number=1 and date=18500101")
-            date = self.config["general"].get("initial_date", "18500101")
+            date = config["general"].get("initial_date", "18500101")
             self.run_number = 1
             write_file = True
+        config["general"]["run_number"] = self.run_number
         self.current_date = Date(date)
 
         # needs to happen AFTER a run!
@@ -224,19 +287,19 @@ class SimulationSetup(object):
         logging.info("current_date = %s", self.current_date)
         logging.info("run_number = %s", self.run_number)
 
-    def _initialize_calendar(self):
+    def _initialize_calendar(self, config):
         nyear, nmonth, nday, nhour, nminute, nsecond = 0, 0, 0, 0, 0, 0
-        nyear = int(self.config["general"].get("nyear", nyear))
+        nyear = int(config["general"].get("nyear", nyear))
         if not nyear:
-            nmonth = int(self.config["general"].get("nmonth", nmonth))
+            nmonth = int(config["general"].get("nmonth", nmonth))
         if not nyear and not nmonth:
-            nday = int(self.config["general"].get("nday", nday))
+            nday = int(config["general"].get("nday", nday))
         if not nyear and not nmonth and not nday:
-            nhour = int(self.config["general"].get("nhour", nhour))
+            nhour = int(config["general"].get("nhour", nhour))
         if not nyear and not nmonth and not nday and not nhour:
-            nminute = int(self.config["general"].get("nminute", nminute))
+            nminute = int(config["general"].get("nminute", nminute))
         if not nyear and not nmonth and not nday and not nhour and not nminute:
-            nsecond = int(self.config["general"].get("nsecond", nsecond))
+            nsecond = int(config["general"].get("nsecond", nsecond))
         if (
             not nyear
             and not nmonth
@@ -248,49 +311,33 @@ class SimulationSetup(object):
             nyear = 1
 
         self.delta_date = (nyear, nmonth, nday, nhour, nminute, nsecond)
-        self.config["general"]["current_date"] = self.current_date
-        self.config["general"]["start_date"] = self.current_date
-        self.config["general"]["initial_date"] = Date(
-            self.config["general"]["initial_date"]
-        )
-        self.config["general"]["final_date"] = Date(
-            self.config["general"]["final_date"]
-        )
-        self.config["general"]["prev_date"] = self.current_date.sub((0, 0, 1, 0, 0, 0))
+        config["general"]["current_date"] = self.current_date
+        config["general"]["start_date"] = self.current_date
+        config["general"]["initial_date"] = Date(config["general"]["initial_date"])
+        config["general"]["final_date"] = Date(config["general"]["final_date"])
+        config["general"]["prev_date"] = self.current_date.sub((0, 0, 1, 0, 0, 0))
 
-        self.config["general"]["next_date"] = self.current_date.add(self.delta_date)
-        self.config["general"]["end_date"] = self.config["general"]["next_date"].sub(
+        config["general"]["next_date"] = self.current_date.add(self.delta_date)
+        config["general"]["end_date"] = config["general"]["next_date"].sub(
             (0, 0, 1, 0, 0, 0)
         )
-        self.config["general"]["runtime"] = (
-            self.config["general"]["next_date"] - self.config["general"]["current_date"]
+        config["general"]["runtime"] = (
+            config["general"]["next_date"] - config["general"]["current_date"]
         )
 
-        self.config["general"]["total_runtime"] = (
-            self.config["general"]["next_date"] - self.config["general"]["initial_date"]
+        config["general"]["total_runtime"] = (
+            config["general"]["next_date"] - config["general"]["initial_date"]
         )
 
-        # Last step: figure out if we are doing a cold start of a restart:
-        if self.run_number != 1:
-            for component in self.components:
-                component.config["lresume"] = True
-        else:
-            # Did the user give a value? If yes, keep it, if not, first run:
-            for component in self.components:
-                user_lresume = component.config.get("lresume", False)
-                print(str(user_lresume), type(user_lresume))
-                if type(user_lresume) == str:
-                    if user_lresume == "0" or user_lresume.upper() == "FALSE":
-                        user_lresume = False
-                    elif user_lresume == "1" or user_lresume.upper() == "TRUE":
-                        user_lresume = True
-                elif type(user_lresume) == int:
-                    if user_lresume == 0:
-                        user_lresume = False
-                    elif user_lresume == 1:
-                        user_lresume = True
-                print(str(user_lresume), type(user_lresume))
-                component.config["lresume"] = user_lresume
+        self.run_datestamp = (
+            config["general"]["current_date"].format(
+                form=9, givenph=False, givenpm=False, givenps=False
+            )
+            + "-"
+            + config["general"]["end_date"].format(
+                form=9, givenph=False, givenpm=False, givenps=False
+            )
+        )
 
     def _increment_date_and_run_number(self):
         self.run_number += 1
@@ -438,6 +485,9 @@ class SimulationComponent(object):
         all_files_to_process = []
         filetype_files_for_list = {}
         for filetype in self.all_filetypes:
+            if filetype == "restart" and not self.config["lresume"]:
+                print("Restart files do not make sense for a cold start, skipping...")
+                continue
             filetype_files = []
             six.print_("- %s" % filetype)
             if filetype + "_sources" not in self.config:

@@ -5,3 +5,5 @@ model_dir: ${echam.model_dir}
 resolution: ${echam.resolution}
 scenario: ${echam.scenario}
 lresume: ${echam.lresume}
+#ini_parent_exp_id: ${echam.ini_parent_exp_id}
+#ini_parent_date: ${echam.ini_parent_date}

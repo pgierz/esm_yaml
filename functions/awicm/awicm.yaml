@@ -15,7 +15,6 @@ general:
 
         version: "1.1"
         scenario: "PI-CTRL"
-        time_step: 3600
         resolution: ${echam.resolution}_${fesom.resolution}
         postprocessing: false
         post_time: "00:05:00"
@@ -26,9 +25,6 @@ general:
                         compute_time: "02:00:00"
                 T63_REF:
                         compute_time: "02:00:00"
-
-        a2o_lag: "${echam.time_step}"
-        o2a_lag: "${fesom.time_step}"
 
 
 #########################################################################################
@@ -106,6 +102,11 @@ oasis3mct:
                 - fesom
                 - echam
 
+        a2o_lag: "${echam.time_step}"
+        o2a_lag: "${fesom.time_step}"
+        a2o_seq: 2
+
+        coupling_time_step: 3600
         coupling_target_fields:
                 o2a_flux:
                         - 'sst_atmo:sit_atmo:sie_atmo <--distwgt-- sst_feom:sit_feom:sie_feom'
@@ -122,29 +123,24 @@ oasis3mct:
                         - 'heat_swo <--distwgt-- heat_swa'
                         - 'hydr_oce <--distwgt-- hydr_atm'
 
-                          #coupling_methods:
-                          #'<--distwgt--':
-                          #implementation: '${coupler}.<--distwgt--'
-                          #bins: 15
-                          #other_number: 6
-                          #'<--bicubic--':
-                          #implementation: '${coupler}.<--bicubic--'
-                          #bins: 15
 
         coupling_directions:
-                'fesom->echam':
-                        from: fesom
-                        to: echam
-                        'feom->atmo':
-                                from_grid: feom
-                                to_grid: atmo
-                                lag: o2a_lag
-                                seq: 1
-                'echam->fesom':
-                        from: echam
-                        to: fesom
-                        'atmo->feom':
-                                from_grid: atmo
-                                to_grid: feom
-                                lag: $a2o_lag
-                                seq: $a2o_seq
+                'feom->atmo':
+                        lag: ${o2a_lag}
+                        seq: 2
+                'atmo->feom':
+                        lag: ${a2o_lag}
+                        seq: ${a2o_seq}
+        
+
+        coupling_methods:
+                distwgt:
+                        name: distwgt
+                        bins: 15
+                        other_number: 6
+                bicubic:
+                        name: bicubic
+                        bins: 15
+
+
+

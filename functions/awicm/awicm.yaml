@@ -61,7 +61,7 @@ echam:
 
                         
 jsbach:
-        dynveg_file_ending: ""
+        #dynveg_file_ending: ""
         adj_input_dir: "${fesom.mesh_dir}/tarfiles${echam.resolution}/input/jsbach"
         namelist_changes:
                 namelist.jsbach:

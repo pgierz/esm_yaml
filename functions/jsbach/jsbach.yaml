@@ -19,7 +19,7 @@ input_dir: "${pool_dir}/input/${dataset}"
 adj_input_dir: "${input_dir}/${echam.resolution}"
 
 
-dynamic_vegetations: True
+dynamic_vegetations: False
 
 
 version: "3.20"
@@ -35,8 +35,10 @@ choose_version:
                         true:
                                 namelist_dir: "${general.esm_master_dir}/namelists/jsbach/${version}/${echam.scenario}/dynveg"
                                 dynveg: "_dynveg"
+                                dynveg_file_ending: "_dynveg"
                         false:
                                 namelist_dir: "${general.esm_master_dir}/namelists/jsbach/${version}/${echam.scenario}/no_dynveg"
+                                dynveg_file_ending: "_no-dynveg"
                                 dynveg: "_no_dynveg"
                 choose_echam.scenario:
                         PI-CTRL:
@@ -66,6 +68,7 @@ choose_version:
                                         a_nd_file: a_nd_file
                                         lightning: lightning
                                         popdens: popdens
+                                dynamic_vegetations: True
                         4CO2:
                                 forcing_files:
                                         jsbach: jsbach_1850

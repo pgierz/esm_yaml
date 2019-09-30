@@ -26,7 +26,8 @@ ini_data_dir: "${pool_dir}/pool-data/"
 namelist_dir: "${esm_master_dir}/namelists/fesom2"                        
 
 steps_per_day: "$(( 86400 / ${time_step} ))"
-restart_date: "$(( ${start_date} - ${time_step} ))"
+restart_date : ${current_date}
+restart_dat: "$(( ${start_date!year} - ${time_step} ))"
 
 
 namelists:
@@ -66,14 +67,14 @@ choose_version:
                 restart_in_files:
                         oce_diag: oce_diag
                 restart_in_in_workdir:
-                        oce_restart: fesom.${restart_date}!syear.oce.nc
-                        ice_restart: fesom.${restart_date}!syear.ice.nc
+                        oce_restart: fesom.${restart_date!syear}.oce.nc
+                        ice_restart: fesom.${restart_date!syear}.ice.nc
                 restart_in_in_sources:
-                        oce_restart: fesom.${parent_date}!syear.oce.nc
-                        ice_restart: fesom.${parent_date}!syear.ice.nc
+                        oce_restart: fesom.${parent_date!syear}.oce.nc
+                        ice_restart: fesom.${parent_date!syear}.ice.nc
                 namelist_dir: "${esm_master_dir}/namelists/fesom"                        
                 remove_config_files:
-                        - namelist.io
+                        - io
                 namelist_changes:
                         namelist.config:
                                 calendar:
@@ -157,22 +158,22 @@ choose_lresume:
         false:                                
                 config_create:
                         fesom.clock:
-                                - "<--append-- 0.0000000000000 ${initial_date}!sdoy ${initial_date}!syear"  
-                                - "<--append-- 0.0000000000000 ${initial_date}!sdoy ${initial_date}!syear"
+                                - "<--append-- 0.0000000000000 ${initial_date!sdoy} ${initial_date!syear}"  
+                                - "<--append-- 0.0000000000000 ${initial_date!sdoy} ${initial_date!syear}"
         true:   
                 config_create:
                         fesom.clock: 
-                                - "<--append-- ${fesom.lasttme} ${restart_date}!sdoy ${restart_date}!syear"
-                                - "<--append-- ${starttime} ${startday} ${start_date}!syear"     
+                                - "<--append-- ${fesom.lasttme} ${restart_date!sdoy} ${restart_date!syear}"
+                                - "<--append-- ${starttime} ${startday} ${start_date!syear}"     
 
 
 
-                                  #config_files:
-                                  #config: namelist.config
-                                  #forcing: namelist.forcing
-                                  #ice:    namelist.ice
-                                  #oce:    namelist.oce
-                                  #io:     namelist.io
+config_files:
+        config: namelist.config
+        forcing: namelist.forcing
+        ice:    namelist.ice
+        oce:    namelist.oce
+        io:     namelist.io
 
 config_sources:
         config: "${namelist_dir}/namelist.config"
@@ -212,14 +213,14 @@ config_sources:
         #oce_diag: fesom.${restart_date}!syear.oce.diag.nc
 
 restart_sources:
-        oce_restart: fesom.${parent_date}!syear.oce.restart.nc
-        ice_restart: fesom.${parent_date}!syear.ice.restart.nc
-        oce_diag: fesom.${parent_date}!syear.oce.diag.nc
+        oce_restart: fesom.${parent_date!syear}.oce.restart.nc
+        ice_restart: fesom.${parent_date!syear}.ice.restart.nc
+        oce_diag: fesom.${parent_date!syear}.oce.diag.nc
 
 restart_targets:
-        oce_restart: fesom.${end_date}!syear.oce.restart.nc
-        ice_restart: fesom.${end_date}!syear.ice.restart.nc
-        oce_diag: fesom.${end_date}!syear.oce.diag.nc
+        oce_restart: fesom.${end_date!syear}.oce.restart.nc
+        ice_restart: fesom.${end_date!syear}.ice.restart.nc
+        oce_diag: fesom.${end_date!syear}.oce.diag.nc
 
 
 coupling_fields:

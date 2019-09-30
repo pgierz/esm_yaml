@@ -825,7 +825,6 @@ class Date(object):
             ndate[1] = 12
             ndate[0] = ndate[0] - 1
 
-        print ("888888888888888888888888888888888888888888888 ", str(ndate))
 
         self.year, self.month, self.day, self.hour, self.minute, self.second = map(
             int, ndate
@@ -833,7 +832,6 @@ class Date(object):
         self.syear, self.smonth, self.sday, self.shour, self.sminute, self.ssecond = map(
             str, ndate
         )
-        print (str(self.day), self.sday)
 
     def add(self, to_add):
         """

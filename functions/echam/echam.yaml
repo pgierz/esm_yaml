@@ -51,7 +51,7 @@ restart:
 # default directories
 
 model_dir: "${general.model_dir}/echam-${version}"
-bin_dir: "${general.model_dir}/bin"
+bin_dir: "${model_dir}/bin"
 pool_dir: "${computer.pool_directories.pool}/ECHAM6"
 input_dir: "${pool_dir}/input/${dataset}"
 adj_input_dir: "${input_dir}/${resolution}"
@@ -199,7 +199,7 @@ choose_lresume:
         False:
                 restart_in_modifications:
                         "[[streams-->STREAM]]":
-                                - "vdate <--set_dim-- ${start_date}"
+                                - "vdate <--set_global_attr-- ${start_date!syear!smonth!sday}"
                                   # - fdate "<--set_dim--" ${year_before_date}
                                   # - ndate "<--set_dim--" ${steps_in_year_before}
         True:
@@ -358,7 +358,7 @@ restart_in_workdir:
         #        #"[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": "STREAM_WHEN_nc"
         #
 log_files:
-        atmout: ${general.expid}_echam6_atmout_${start_date}_${end_date}
+        atmout: ${general.expid}_echam6_atmout_${start_date!syear!smonth!sday}_${end_date!syear!smonth!sday}
 
 log_in_workdir:
         atmout: atmout
@@ -370,17 +370,17 @@ namelist_changes:
         namelist.echam:
                 runctl:
                         out_expname: '${general.expid}'
-                        dt_start:    '${pseudo_start_date}'
-                        dt_stop:     '${pseudo_end_date}'
-                        dt_resume:   '${pseudo_resume_date}'
+                        dt_start:    '${pseudo_start_date!syear}, ${pseudo_start_date!smonth}, ${pseudo_start_date!sday}'
+                        dt_stop:     '${pseudo_end_date!syear}, ${pseudo_end_date!smonth}, ${pseudo_start_date!sday}'
+                        dt_resume:   '${pseudo_resume_date!syear}, ${pseudo_resume_date!smonth}, ${pseudo_resume_date!sday}'
                         lresume: "${lresume}"
                         lcouple: ".false."
                         delta_time: "${time_step}"
                         putrerun: "${restart_rate}, ${restart_unit}, ${restart_firstlast}, 0"
+                        out_datapath: '${work_dir}'
                 parctl:
                         nproca: "nproca"
                         nprocb: "nprocb"
-                        out_datapath: "'${work_dir}'"
 
 
 coupling_fields:

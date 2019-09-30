@@ -1,1 +1,3 @@
 lresume: ${echam.lresume}
+#ini_parent_exp_id: ${echam.ini_parent_exp_id}
+#ini_parent_date: ${echam.ini_parent_date}

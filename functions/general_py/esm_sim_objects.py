@@ -18,6 +18,7 @@ from esm_calendar import Date
 import esm_parser
 import esm_coupler
 
+
 def date_representer(dumper, date):
     return dumper.represent_str("%s" % date.output())
 
@@ -75,11 +76,25 @@ class SimulationSetup(object):
         self.prepare()
         for model in list(self.config):
             if model in esm_coupler.known_couplers:
-                coupler_config_dir=self.config["general"]["base_dir"] + "/" + self.config["general"]["expid"] + "/run_" + self.config["general"]["current_date"].format( form=9, givenph=False, givenpm=False, givenps=False ) + "-" + self.config["general"]["end_date"].format( form=9, givenph=False, givenpm=False, givenps=False) + "/config/" + model + "/"
+                coupler_config_dir = (
+                    self.config["general"]["base_dir"]
+                    + "/"
+                    + self.config["general"]["expid"]
+                    + "/run_"
+                    + self.config["general"]["current_date"].format(
+                        form=9, givenph=False, givenpm=False, givenps=False
+                    )
+                    + "-"
+                    + self.config["general"]["end_date"].format(
+                        form=9, givenph=False, givenpm=False, givenps=False
+                    )
+                    + "/config/"
+                    + model
+                    + "/"
+                )
                 self.coupler = esm_coupler.esm_coupler(self.config, model)
                 self.coupler.prepare(self.config, coupler_config_dir)
                 sys.exit()
-       
 
     def _show_simulation_info(self):
         six.print_(80 * "=")
@@ -95,13 +110,17 @@ class SimulationSetup(object):
         # esm_parser.psix.print_config(self.config["hdmodel"])
         for component in self.components:
             if component.config["lresume"] == True and self.run_number == "1":
-                component.config["parent_expid"] = component.config["ini_parent_exp_id"] 
-                component.config["parent_date"] = component.config["ini_parent_date"] 
-                component.config["parent_restart_dir"] = component.config["ini_restart_dir"]
+                component.config["parent_expid"] = component.config["ini_parent_exp_id"]
+                component.config["parent_date"] = component.config["ini_parent_date"]
+                component.config["parent_restart_dir"] = component.config[
+                    "ini_restart_dir"
+                ]
             else:
-                component.config["parent_expid"] = self.config["general"]["expid"] 
-                component.config["parent_date"] = self.config["general"]["prev_date"] 
-                component.config["parent_restart_dir"] = component.experiment_restart_dir
+                component.config["parent_expid"] = self.config["general"]["expid"]
+                component.config["parent_date"] = self.config["general"]["prev_date"]
+                component.config[
+                    "parent_restart_dir"
+                ] = component.experiment_restart_dir
         logging.debug("SECOND TIME!")
         self.config.choose_blocks(self.config, isblacklist=False)
         self.config.run_recursive_functions(self.config, isblacklist=False)
@@ -199,7 +218,7 @@ class SimulationSetup(object):
         self.current_date = Date(date)
 
         # needs to happen AFTER a run!
-        #if write_file:
+        # if write_file:
         #    self._write_date_file()
 
         logging.info("current_date = %s", self.current_date)
@@ -271,8 +290,7 @@ class SimulationSetup(object):
                     elif user_lresume == 1:
                         user_lresume = True
                 print(str(user_lresume), type(user_lresume))
-                component.config["lresume"]= user_lresume
-
+                component.config["lresume"] = user_lresume
 
     def _increment_date_and_run_number(self):
         self.run_number += 1

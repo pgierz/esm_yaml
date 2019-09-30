@@ -119,7 +119,7 @@ gray_list = [
     r".*date!(syear|smonth|sday|shour|sminute|ssecond|sdoy)",
     r"parent_date",
     r"parent_expid",
-    r"parent_restart_dir"
+    r"parent_restart_dir",
 ]
 
 gray_list = [re.compile(entry) for entry in gray_list]
@@ -302,7 +302,9 @@ def attach_to_config_and_remove(config, attach_key):
         del config[attach_key]
 
 
-priority_marker=">>THIS_ONE<<"
+priority_marker = ">>THIS_ONE<<"
+
+
 def priority_merge_dicts(first_config, second_config, priority="first"):
     """Given two dictionaries, merge them together preserving either first or last entries.
 
@@ -328,7 +330,7 @@ def priority_merge_dicts(first_config, second_config, priority="first"):
         to_merge = first_config
     else:
         raise TypeError("Please use 'first' or 'second' for the priority!")
-    #for key in to_merge:
+    # for key in to_merge:
     #    for inner_key in list(to_merge[key]):
     #        if not priority_marker in inner_key:
     #            to_merge[key][inner_key+priority_marker] = to_merge[key][inner_key]
@@ -357,17 +359,17 @@ def dict_merge(dct, merge_dct):
             dct[k] = merge_dct[k]
 
 
-def deep_update(chapter, entries, config, blackdict = {}):
-    #if "remove_" in chapter:
+def deep_update(chapter, entries, config, blackdict={}):
+    # if "remove_" in chapter:
     #    remove_chapter = chapter.replace("remove_", "")
     #    remove_entries_from_chapter(config, remove_chapter, entries)
     #    del config[chapter]
 
-    #elif "add_" in chapter:
+    # elif "add_" in chapter:
     #    add_chapter = chapter.replace("add_", "")
     #    add_entries_from_chapter(config, add_chapter, entries)
     #    del config[chapter]
-    #else:
+    # else:
     if chapter not in blackdict:
         dict_merge(config, {chapter: entries})
 
@@ -426,27 +428,31 @@ def remove_entry_from_chapter(
     if model_to_remove_from in model_config:
         for entry in remove_entries:
             try:
-                del model_config[model_to_remove_from][remove_chapter.split(".")[-1]][entry]
+                del model_config[model_to_remove_from][remove_chapter.split(".")[-1]][
+                    entry
+                ]
             except:
                 pass
     elif model_to_remove_from in setup_config:
         for entry in remove_entries:
             try:
-                del setup_config[model_to_remove_from][remove_chapter.split(".")[-1]][entry]
+                del setup_config[model_to_remove_from][remove_chapter.split(".")[-1]][
+                    entry
+                ]
             except:
                 pass
     if model_with_remove_statement in model_config:
         try:
             del model_config[model_with_remove_statement][
-                    remove_chapter.replace(model_with_remove_statement + ".", "")
-                 ]
+                remove_chapter.replace(model_with_remove_statement + ".", "")
+            ]
         except:
             pass
     elif model_with_remove_statement in setup_config:
         try:
-                del setup_config[model_with_remove_statement][
-                 remove_chapter.replace(model_with_remove_statement + ".", "")
-                 ]
+            del setup_config[model_with_remove_statement][
+                remove_chapter.replace(model_with_remove_statement + ".", "")
+            ]
         except:
             pass
 
@@ -456,24 +462,23 @@ def remove_entries_from_chapter_in_config(
 ):
     config = model_config
     for model in valid_model_names:
-            logging.debug(model)
-            all_removes_for_model = find_remove_entries_in_config(config[model], model)
-            for remove_chapter, remove_entries in all_removes_for_model:
-                model_to_remove_from = remove_chapter.split(".")[0].replace(
-                    "remove_", ""
-                )
-                remove_entry_from_chapter(
-                    remove_chapter,
-                    remove_entries,
-                    model_to_remove_from,
-                    model,
-                    model_config,
-                    setup_config,
-                )
-                try:
-                    del config[model][remove_chapter]
-                except:
-                    pass
+        logging.debug(model)
+        all_removes_for_model = find_remove_entries_in_config(config[model], model)
+        for remove_chapter, remove_entries in all_removes_for_model:
+            model_to_remove_from = remove_chapter.split(".")[0].replace("remove_", "")
+            remove_entry_from_chapter(
+                remove_chapter,
+                remove_entries,
+                model_to_remove_from,
+                model,
+                model_config,
+                setup_config,
+            )
+            try:
+                del config[model][remove_chapter]
+            except:
+                pass
+
 
 def basic_find_remove_entries_in_config(mapping):
     all_removes = []
@@ -535,6 +540,8 @@ def find_add_entries_in_config(mapping, model_name):
 
 
 list_counter = 0
+
+
 def add_entry_to_chapter(
     add_chapter,
     add_entries,
@@ -583,7 +590,9 @@ def add_entry_to_chapter(
                 ],
                 list,
             ):
-                target_config[model_to_add_to][add_chapter.split(".")[-1].replace("add_", "")] += add_entries
+                target_config[model_to_add_to][
+                    add_chapter.split(".")[-1].replace("add_", "")
+                ] += add_entries
                 global list_counter
                 list_counter += 1
             elif isinstance(
@@ -592,10 +601,12 @@ def add_entry_to_chapter(
                 ],
                 dict,
             ):
-                target_config[model_to_add_to][add_chapter.split(".")[-1].replace("add_", "")].update(add_entries)
+                target_config[model_to_add_to][
+                    add_chapter.split(".")[-1].replace("add_", "")
+                ].update(add_entries)
     if list_counter > 1:
         pass
-        #pdb.set_trace()
+        # pdb.set_trace()
     logging.debug(model_with_add_statement)
     logging.debug(source_chapter)
     # del source_config[model_with_add_statement][source_chapter.replace("add_", "")]
@@ -621,15 +632,15 @@ def add_entries_to_chapter_in_config(
         logging.debug(model)
         all_adds_for_model = find_add_entries_in_config(config[model], model)
         for add_chapter, add_entries in all_adds_for_model:
-                model_to_add_to = add_chapter.split(".")[0].replace("add_", "")
-                add_entry_to_chapter(
-                    add_chapter,
-                    add_entries,
-                    model_to_add_to,
-                    model,
-                    model_config,
-                    setup_config,
-                )
+            model_to_add_to = add_chapter.split(".")[0].replace("add_", "")
+            add_entry_to_chapter(
+                add_chapter,
+                add_entries,
+                model_to_add_to,
+                model,
+                model_config,
+                setup_config,
+            )
 
 
 def merge_dicts(*dict_args):
@@ -1045,12 +1056,15 @@ def add_more_important_tasks(choose_keyword, all_set_variables, task_list):
     """
     keyword = choose_keyword.replace("choose_", "")
     if "cores_per_node" in keyword:
-            pass #pdb.set_trace()
+        pass  # pdb.set_trace()
     for model in all_set_variables:
         for choose_thing in all_set_variables[model]:
-            #logging.debug("Choose_thing = %s", choose_thing)
+            # logging.debug("Choose_thing = %s", choose_thing)
             for (host, keyword_that_is_set) in all_set_variables[model][choose_thing]:
-                if keyword_that_is_set == keyword or keyword_that_is_set == keyword.replace(model+".", ""):
+                if (
+                    keyword_that_is_set == keyword
+                    or keyword_that_is_set == keyword.replace(model + ".", "")
+                ):
                     if (model, choose_thing) not in task_list:
                         task_list.insert(0, (model, choose_thing))
                         add_more_important_tasks(
@@ -1211,7 +1225,9 @@ def recursive_get(config_to_search, config_elements):
     try:
         result = config_to_search[this_config]
     except:
-        raise ValueError("Exactly None! Couldn't find an answer for:", my_config_elements)
+        raise ValueError(
+            "Exactly None! Couldn't find an answer for:", my_config_elements
+        )
     # This looks dangerous too...
     if my_config_elements:
         return recursive_get(result, my_config_elements)
@@ -1249,9 +1265,9 @@ def find_variable(tree, rhs, full_config, white_or_black_list, isblacklist):
             not determine_regex_list_match(var, constant_blacklist)
         ):
             var_result = actually_find_variable(tree, var, full_config)
-            #if var_result:
-                # BUG/FIXME: Note that this means that we **always** will get
-                # back a string if a variable is replaced!
+            # if var_result:
+            # BUG/FIXME: Note that this means that we **always** will get
+            # back a string if a variable is replaced!
             ok_part, var_result, more_rest = (
                 str(ok_part),
                 str(var_result),
@@ -1266,14 +1282,14 @@ def find_variable(tree, rhs, full_config, white_or_black_list, isblacklist):
                 isblacklist,
             )
 
-                # if new_raw:
-                #    more_rest = find_variable(
-                #        tree, new_raw, full_config, white_or_black_list, isblacklist
-                #    )
-                # else:
-                #    more_rest = ""
-                ## Make sure everything is a string:
-                # return ok_part + var_result + more_rest
+            # if new_raw:
+            #    more_rest = find_variable(
+            #        tree, new_raw, full_config, white_or_black_list, isblacklist
+            #    )
+            # else:
+            #    more_rest = ""
+            ## Make sure everything is a string:
+            # return ok_part + var_result + more_rest
     return raw_str
 
 
@@ -1295,7 +1311,7 @@ def actually_find_variable(tree, rhs, full_config):
     print(str(config_elements))
     try:
         var_result = recursive_get(full_config, config_elements)
-        #return var_result
+        # return var_result
     except ValueError:
         # Maybe it is in the general:
         try:
@@ -1303,12 +1319,12 @@ def actually_find_variable(tree, rhs, full_config):
             logging.debug(config_elements)
             config_elements[0] = "general"
             var_result = recursive_get(full_config, config_elements)
-            #return var_result
+            # return var_result
         except:
             raise ValueError("Sorry: %s not found" % (rhs))
 
     if var_attr:
-        rentry=[]
+        rentry = []
         if var_name.endswith("date"):
             if not isinstance(var_result, Date):
                 entry = Date(var_result)
@@ -1318,6 +1334,7 @@ def actually_find_variable(tree, rhs, full_config):
                 rentry.append(str(getattr(entry, attr)))
             return "".join(rentry)
     return var_result
+
 
 def list_to_multikey(tree, rhs, config_to_search, ignore_list, isblacklist):
     """
@@ -1567,6 +1584,7 @@ def purify_booleans(tree, rhs, config):
         entry = eval(entry.capitalize())
     return entry
 
+
 def list_all_keys_with_priority_marker(config):
     all_keys = []
     for key in list(config):
@@ -1577,6 +1595,7 @@ def list_all_keys_with_priority_marker(config):
                 list_all_keys_with_priority_marker(config[key])
     logging.critical(all_keys)
     return all_keys
+
 
 def finish_priority_merge(config):
     all_keys = list(config)
@@ -1591,6 +1610,7 @@ def finish_priority_merge(config):
                 config[key.replace(priority_marker, "")] = value
         # Recreate the test list
         all_keys_with_priority_marker = list_all_keys_with_priority_marker(config)
+
 
 class GeneralConfig(dict):  # pragma: no cover
     """ All configs do this! """
@@ -1629,14 +1649,18 @@ class ConfigSetup(GeneralConfig):  # pragma: no cover
 
         model_config = {}
 
-        setup_config["general"]["include_models"] = self.config["general"]["include_models"]
+        setup_config["general"]["include_models"] = self.config["general"][
+            "include_models"
+        ]
         if "coupled_setup" not in self.config["general"]:
             setup_config["general"].update({"standalone": True})
         else:
-            user_config["general"].update(user_config[user_config["general"]["setup_name"]])
+            user_config["general"].update(
+                user_config[user_config["general"]["setup_name"]]
+            )
             del user_config[user_config["general"]["setup_name"]]
             dict_merge(setup_config, self.config)
-            #setup_config["general"] = self.config
+            # setup_config["general"] = self.config
             setup_config["general"].update({"standalone": False})
         del self.config
         attach_to_config_and_reduce_keyword(
@@ -1649,7 +1673,9 @@ class ConfigSetup(GeneralConfig):  # pragma: no cover
         for model in list(model_config):
             for attachment in CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE:
                 attach_to_config_and_remove(model_config[model], attachment)
-        setup_config["general"] .update({"esm_master_dir": esm_master_dir, "expid": "test"})
+        setup_config["general"].update(
+            {"esm_master_dir": esm_master_dir, "expid": "test"}
+        )
         setup_config["general"]["valid_setup_names"] = valid_setup_names = list(
             setup_config
         )
@@ -1661,13 +1687,13 @@ class ConfigSetup(GeneralConfig):  # pragma: no cover
 
         blackdict = priority_merge_dicts(user_config, setup_config, priority="first")
         self.config = priority_merge_dicts(blackdict, model_config, priority="first")
-        
-        #esm_runscripts.runscripts_check_conflicting_model_and_setup_names(self.config)
-        #esm_runscripts.runscripts_update_models_from_setup(self.config)
 
-        #pprint_config(self.config)
+        # esm_runscripts.runscripts_check_conflicting_model_and_setup_names(self.config)
+        # esm_runscripts.runscripts_update_models_from_setup(self.config)
+
+        # pprint_config(self.config)
         self.choose_blocks(self.config, blackdict=blackdict)
-        #finish_priority_merge(self.config)
+        # finish_priority_merge(self.config)
         self.run_recursive_functions(self.config)
 
     def choose_blocks(self, config, blackdict={}, isblacklist=True):
@@ -1675,46 +1701,46 @@ class ConfigSetup(GeneralConfig):  # pragma: no cover
 
         all_names = list(config)
         while True:
-                for name in all_names:
-                        all_set_variables[name] = {}
-                        name_chooses = list_all_keys_starting_with_choose(
-                            config[name], name, gray_list, isblacklist
-                        )
-                        if name_chooses == []:
-                            continue
-                        for key, block in name_chooses:
-                            all_set_variables[name][
-                                key
-                            ] = determine_set_variables_in_choose_block(block, all_names, name)
-                        
-                        task_list = model_with_choose, choose_key = find_one_independent_choose(
-                            all_set_variables
-                        )
-                
-                for key in list(all_set_variables):
-                    if not all_set_variables[key]:
-                        del all_set_variables[key]
-                if not all_set_variables:
-                        break
-                if "jsbach.scenario" in choose_key:
-                        pass
-                        #pdb.set_trace()
-                logging.debug("The task list is: %s", task_list)
-                logging.debug("all_set_variables: %s", all_set_variables)
-                if model_with_choose in list(blackdict):
-                        resolve_basic_choose(config, config[model_with_choose], choose_key, blackdict[model_with_choose])
-                else:
-                        resolve_basic_choose(config, config[model_with_choose], choose_key, {})
-                del all_set_variables[model_with_choose][choose_key]
-                logging.debug("Remaining all_set_variables=%s", all_set_variables)
-        
+            for name in all_names:
+                all_set_variables[name] = {}
+                name_chooses = list_all_keys_starting_with_choose(
+                    config[name], name, gray_list, isblacklist
+                )
+                if name_chooses == []:
+                    continue
+                for key, block in name_chooses:
+                    all_set_variables[name][
+                        key
+                    ] = determine_set_variables_in_choose_block(block, all_names, name)
 
-        add_entries_to_chapter_in_config(
-            config, all_names, config, all_names
-        )
-        remove_entries_from_chapter_in_config(
-            config, all_names, config, all_names
-        )
+                task_list = model_with_choose, choose_key = find_one_independent_choose(
+                    all_set_variables
+                )
+
+            for key in list(all_set_variables):
+                if not all_set_variables[key]:
+                    del all_set_variables[key]
+            if not all_set_variables:
+                break
+            if "jsbach.scenario" in choose_key:
+                pass
+                # pdb.set_trace()
+            logging.debug("The task list is: %s", task_list)
+            logging.debug("all_set_variables: %s", all_set_variables)
+            if model_with_choose in list(blackdict):
+                resolve_basic_choose(
+                    config,
+                    config[model_with_choose],
+                    choose_key,
+                    blackdict[model_with_choose],
+                )
+            else:
+                resolve_basic_choose(config, config[model_with_choose], choose_key, {})
+            del all_set_variables[model_with_choose][choose_key]
+            logging.debug("Remaining all_set_variables=%s", all_set_variables)
+
+        add_entries_to_chapter_in_config(config, all_names, config, all_names)
+        remove_entries_from_chapter_in_config(config, all_names, config, all_names)
 
     def run_recursive_functions(self, config, isblacklist=True):
         logging.debug("Top of run recursive functions")

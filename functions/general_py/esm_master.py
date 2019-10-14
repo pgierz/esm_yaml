@@ -976,7 +976,7 @@ def main(args):
         "--check",
         "-c",
         action="store_true",
-        default="false",
+        default=False,
         help="show what would be done, not doing anything",
     )
     parser.add_argument(

@@ -617,12 +617,12 @@ def add_entry_to_chapter(
 def basic_add_entries_to_chapter_in_config(config):
     all_adds_for_model = basic_find_add_entries_in_config(config)
     for add_chapter, add_entries in all_adds_for_model:
-        add_entries_from_chapter(config, add_chapter, add_entries)
+        add_entries_from_chapter(config, add_chapter.replace("add_", ""), add_entries)
 
 def basic_remove_entries_from_chapter_in_config(config):
     all_removes_for_model = basic_find_remove_entries_in_config(config)
     for remove_chapter, remove_entries in all_removes_for_model:
-        remove_entries_from_chapter(config, remove_chapter, remove_entries)
+        remove_entries_from_chapter(config, remove_chapter.replace("remove_", ""), remove_entries)
 
 
 def add_entries_to_chapter_in_config(

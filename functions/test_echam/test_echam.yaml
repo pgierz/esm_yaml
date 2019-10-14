@@ -21,11 +21,11 @@ license_text: |
 pool_dir: "${computer.pool_directories.pool}/ECHAM6"
 
 executable: echam6
-version: 6.304p1
+version: 6.3.04p1
 
 choose_version:
-        6.304p1:
-                repo_tag: 6.304p1
+        6.3.04p1:
+                repo_tag: 6.3.04p1
                 dataset: r0007               
 
 input_parent_date: 22941231 

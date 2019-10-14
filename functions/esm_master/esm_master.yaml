@@ -3,15 +3,16 @@ install_meta_command:
         - conf
         - comp
 
-#recomp_meta_command:
-#        - conf
-#        - clean
-#        - comp
+recomp_meta_command:
+        - conf
+        - clean
+        - comp
 
 
 display_kinds:
         - setups
         - components
+        - esm-software
 
 basic_infos:
         "GITLAB_DKRZ_USER_NAME": 

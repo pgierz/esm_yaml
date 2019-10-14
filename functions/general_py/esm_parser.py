@@ -152,7 +152,7 @@ def yaml_file_to_dict(filepath):
     for extension in YAML_AUTO_EXTENSIONS:
         try:
             with open(filepath + extension) as yaml_file:
-                return yaml.load(yaml_file)  # , Loader=yaml.FullLoader)
+                return yaml.load(yaml_file, Loader=yaml.FullLoader)
         except IOError as error:
             logger.debug(
                 "IOError (%s) File not found with %s, trying another extension pattern.",

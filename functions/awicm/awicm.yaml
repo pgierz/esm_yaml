@@ -43,7 +43,7 @@ echam:
         remove_forcing_files:
                 - sst
                 - sic
-        version: "6.304p1"
+        version: "6.3.04p1"
 
         choose_general.resolution:
                 T63_CORE2:

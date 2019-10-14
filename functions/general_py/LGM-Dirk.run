@@ -32,8 +32,8 @@ FINAL_DATE=3850-01-01 # final date of the experiment
 NYEAR_echam=1          # number of years per run
 NMONTH_echam=0
 
-MODEL_DIR_echam=${HOME}/esm_yaml/echam-6.304p1
-echam_VERSION=6.304p1
+MODEL_DIR_echam=${HOME}/esm_yaml/echam-6.3.04p1
+echam_VERSION=6.3.04p1
 
 #POOL_DIR_echam=/pool/data
 ##########################

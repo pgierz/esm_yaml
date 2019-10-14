@@ -34,7 +34,7 @@ executable: NONE #component model of echam, internally coupled
 
 versions:
         3.20:
-                repo_tag: 6.304p1
+                repo_tag: 6.3.04p1
                 dataset: r0010               
                 forcings:
                         lctlib: "@MODEL_DIR@/echam-6.3.04p1/lctlib_nlct21.def"

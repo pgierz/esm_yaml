@@ -21,7 +21,7 @@ license_text: |
 
 
 executable: echam6
-version: 6.304p1
+version: 6.3.04p1
 resolution: T63
 scenario: "PI-CTRL"
 postprocessing_stream: 'BOT ATM LOG'
@@ -91,8 +91,8 @@ choose_resolution:
                 _ny: 192
 
 choose_version:
-        6.304p1:
-                repo_tag: 6.304p1
+        6.3.04p1:
+                repo_tag: 6.3.04p1
                 dataset: r0007
 
 choose_scenario:

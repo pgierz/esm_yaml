@@ -451,9 +451,10 @@ class SimulationSetup(object):
     def _prepare_modify_files(self):
         for model in self.config['general']['valid_model_names']:
             for filetype in self.all_model_filetypes: 
-                print(self.config[model].get(filetype+"_modifications"))
+                #print(self.config[model].get(filetype+"_modifications"))
                 if filetype == "restart":
-                    print(self.config[model].get(filetype+"_in_modifications"))
+                    nothing = "nothing"
+                    #print(self.config[model].get(filetype+"_in_modifications"))
         sys.exit()
 
 

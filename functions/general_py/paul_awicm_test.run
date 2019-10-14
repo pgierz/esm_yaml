@@ -25,7 +25,7 @@ RES_fesom=CORE2
 
 MODEL_DIR_awicm=/pf/a/a270058/esm_yaml/awicm-CMIP6/
 
-#echam_VERSION=echam-6.304p1
+#echam_VERSION=echam-6.3.04p1
 #LCTLIBDEF_jsbach=${MODEL_DIR_awicm}/${echam_VERSION}/lctlib_nlct21.def
 #CF_NAME_TABLE_oasis3mct=${MODEL_DIR_awicm}/oasis/cf_name_table.txt
 

@@ -4,6 +4,8 @@ model: echam
 repository: https://gitlab.dkrz.de/modular_esm/echam6
 type: atmosphere
 
+bla: 999
+
 standalone_model: True
 
 include_models:
@@ -42,10 +44,9 @@ pseudo_resume_date: ${start_date}
 #year_before_length: $((${start_date} - ${year_before_date} ))
 #steps_in_year_before: $(( ${year_before_length} / ${time_step} - 1 ))
 
-restart:
-        frequency: 1
-        unit: "months"
-        firstlast: "last"
+restart_rate: 1
+restart_unit: "months"
+restart_firstlast: "last"
 
 
 # default directories
@@ -138,7 +139,7 @@ choose_scenario:
                         aerofin: piaerofin
                         aerofarir: piaerofarir
                         ozone: 1950ozone
-                input_files:
+                add_input_files:
                         MAC-SP: MAC-SP
         HIST:
                 greenhouse_dir: "${forcing_dir}"
@@ -153,7 +154,7 @@ choose_scenario:
                         volcanir: histvolcanir
                         volcsw: histvolcsw
                         swflux: histswflux
-                input_files:
+                add_input_files:
                         MAC-SP: MAC-SP
         RCP26:
                 greenhouse_dir: "${forcing_dir}"
@@ -166,7 +167,7 @@ choose_scenario:
                         volcanir: histvolcanir
                         volcsw: histvolcsw
                         swflux: histswflux
-                input_files:
+                add_input_files:
                         MAC-SP: MAC-SP
         RCP45:
                 greenhouse_dir: "${forcing_dir}"
@@ -179,7 +180,7 @@ choose_scenario:
                         volcanir: histvolcanir
                         volcsw: histvolcsw
                         swflux: histswflux
-                input_files:
+                add_input_files:
                         MAC-SP: MAC-SP
         RCP85:
                 greenhouse_dir: "${forcing_dir}"
@@ -192,7 +193,7 @@ choose_scenario:
                         volcanir: histvolcanir
                         volcsw: histvolcsw
                         swflux: histswflux
-                input_files:
+                add_input_files:
                         MAC-SP: MAC-SP
 
 
@@ -285,10 +286,20 @@ bin_files:
         "echam_bin": "echam_bin"
 bin_sources:
         "echam_bin": "${bin_dir}/echam6"
-bin_in_workdir:
+bin_in_work:
         "echam_bin": "echam6"
 
-input_in_workdir:
+input_files:
+        "cldoptprops": "cldoptprops"
+        "janspec": "janspec"
+        "jansurf": "jansurf"
+        "rrtmglw": "rrtmglw"
+        "rrtmgsw": "rrtmgsw"
+        "tslclim": "tslclim"
+        "vgratclim": "vgratclim"
+        "vltclim": "vltclim"
+
+input_in_work:
         "cldoptprops": "ECHAM6_CldOptProps.nc"
         "janspec": "unit.23"
         "jansurf": "unit.24"
@@ -299,7 +310,7 @@ input_in_workdir:
         "vltclim": "unit.90"
         "MAC-SP": "MAC-SP.nc"
 
-forcing_in_workdir:
+forcing_in_work:
         sic: "unit.96"
         sst: "unit.20"
         aerocoarse: "aero_coarse_@YEAR@.nc"
@@ -331,7 +342,7 @@ restart_sources:
                  "${parent_restart_dir}/restart_${parent_expid}_STREAM_${parent_date}.nc"
 #                - "restart_${expid}_${prev_date}_STREAM.nc"
 
-restart_in_workdir:
+restart_in_work:
         "[[streams-->STREAM]]": "restart_${expid}_STREAM.nc"
 
         #restart_out_files:
@@ -361,7 +372,7 @@ restart_in_workdir:
 log_files:
         atmout: ${general.expid}_echam6_atmout_${start_date!syear!smonth!sday}_${end_date!syear!smonth!sday}
 
-log_in_workdir:
+log_in_work:
         atmout: atmout
 
 namelists:
@@ -370,18 +381,31 @@ namelists:
 namelist_changes:
         namelist.echam:
                 runctl:
-                        out_expname: '${general.expid}'
-                        dt_start:    '${pseudo_start_date!syear}, ${pseudo_start_date!smonth}, ${pseudo_start_date!sday}'
-                        dt_stop:     '${pseudo_end_date!syear}, ${pseudo_end_date!smonth}, ${pseudo_start_date!sday}'
-                        dt_resume:   '${pseudo_resume_date!syear}, ${pseudo_resume_date!smonth}, ${pseudo_resume_date!sday}'
+                        out_expname: ${general.expid}
+                        dt_start:    
+                                - ${pseudo_start_date!year}
+                                - ${pseudo_start_date!month}
+                                - ${pseudo_start_date!day}
+                        dt_stop:     
+                                - ${pseudo_end_date!syear}
+                                - ${pseudo_end_date!smonth}
+                                - ${pseudo_start_date!sday}
+                        dt_resume:   
+                                - ${pseudo_resume_date!syear}
+                                - ${pseudo_resume_date!smonth}
+                                - ${pseudo_resume_date!sday}
                         lresume: "${lresume}"
                         lcouple: ".false."
-                        delta_time: "${time_step}"
-                        putrerun: "${restart_rate}, ${restart_unit}, ${restart_firstlast}, 0"
+                        delta_time: ${time_step}
+                        putrerun: 
+                                - ${restart_rate}
+                                - ${restart_unit}
+                                - ${restart_firstlast}
+                                - 0
                         out_datapath: '${work_dir}'
                 parctl:
-                        nproca: "nproca"
-                        nprocb: "nprocb"
+                        nproca: "${nproca}"
+                        nprocb: "${nprocb}"
 
 
 coupling_fields:
@@ -429,10 +453,6 @@ grids:
                 ny: "${_ny}"
 
 
-# restart_control:
-restart_rate: 1
-restart_unit: years
-restart_firstlast: first
 
 # Work dir:
 work_dir: "."

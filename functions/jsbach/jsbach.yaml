@@ -42,80 +42,90 @@ choose_version:
                                 dynveg: "_no_dynveg"
                 choose_echam.scenario:
                         PI-CTRL:
-                                forcing_files:
+                                add_input_files:
                                         jsbach: jsbach_1850
+                                forcing_files:
                                         LU: LU_1850
-                                        LU_trans: LU_trans
+                                        LU_trans: LU_trans_none
                                         Ndepo: Ndepo_1850
                                         a_nd_file: a_nd_file
                                         lightning: lightning
                                         popdens: popdens
                         1850:
-                                forcing_files:
+                                add_input_files:
                                         jsbach: jsbach_1850
+                                forcing_files:
                                         LU: LU_1850
-                                        LU_trans: LU_trans
+                                        LU_trans: LU_trans_none
                                         Ndepo: Ndepo_1850
                                         a_nd_file: a_nd_file
                                         lightning: lightning
                                         popdens: popdens
                         PALEO:
-                                forcing_files:
+                                add_input_files:
                                         jsbach: jsbach_1850
+                                forcing_files:
                                         LU: LU_1850
-                                        LU_trans: LU_trans
+                                        LU_trans: LU_trans_none
                                         Ndepo: Ndepo_1850
                                         a_nd_file: a_nd_file
                                         lightning: lightning
                                         popdens: popdens
                                 dynamic_vegetations: True
                         4CO2:
-                                forcing_files:
+                                add_input_files:
                                         jsbach: jsbach_1850
+                                forcing_files:
                                         LU: LU_1850
-                                        LU_trans: LU_trans
+                                        LU_trans: LU_trans_none
                                         Ndepo: Ndepo_1850
                                         a_nd_file: a_nd_file
                                         lightning: lightning
                                         popdens: popdens
                         1percCO2:
-                                forcing_files:
+                                add_input_files:
                                         jsbach: jsbach_1850
+                                forcing_files:
                                         LU: LU_1850
-                                        LU_trans: LU_trans
+                                        LU_trans: LU_trans_none
                                         Ndepo: Ndepo_1850
                                         a_nd_file: a_nd_file
                                         lightning: lightning
                                         popdens: popdens
                         RCP26:
-                                forcing_files:
+                                add_input_files:
                                         jsbach: jsbach_1850
+                                forcing_files:
                                         LU: LU_RCP26
-                                        LU_trans: LU_trans
+                                        LU_trans: LU_trans_none
                                         cover_fract: cover_fract_HIST
                         RCP45:
-                                forcing_files:
+                                add_input_files:
                                         jsbach: jsbach_1850
+                                forcing_files:
                                         LU: LU_RCP45
-                                        LU_trans: LU_trans
+                                        LU_trans: LU_trans_none
                                         cover_fract: cover_fract_HIST
                         RCP85:
-                                forcing_files:
+                                add_input_files:
                                         jsbach: jsbach_1850
+                                forcing_files:
                                         LU: LU_RCP85
-                                        LU_trans: LU_trans
+                                        LU_trans: LU_trans_none
                                         cover_fract: cover_fract_HIST
                         HIST:
-                                forcing_files:
+                                add_input_files:
                                         jsbach: jsbach_1850
+                                forcing_files:
                                         LU: LU_HIST
-                                        LU_trans: LU_trans
+                                        LU_trans: LU_trans_none
                                         cover_fract: cover_fract_HIST
                         1950:                
-                                forcing_files:
+                                add_input_files:
                                         jsbach: jsbach_1976
+                                forcing_files:
                                         LU: LU_1950
-                                        LU_trans: LU_trans
+                                        LU_trans: LU_trans_none
                         
                         
                         
@@ -129,85 +139,99 @@ choose_version:
                                 dynveg: "_no_dynveg"
                 choose_echam.scenario:
                         PI-CTRL:
-                                forcing_files:
+                                add_input_files:
                                         jsbach: jsbach_1850
+                                forcing_files:
                                         LU: LU_1850
-                                        LU_trans: LU_trans
+                                        LU_trans: LU_trans_none
                                         Ndepo: Ndepo_1850
                                         a_nd_file: a_nd_file
                                         lightning: lightning
                                         popdens: popdens
                         1850:
-                                forcing_files:
+                                add_input_files:
                                         jsbach: jsbach_1850
+                                forcing_files:
                                         LU: LU_1850
-                                        LU_trans: LU_trans
+                                        LU_trans: LU_trans_none
                                         Ndepo: Ndepo_1850
                                         a_nd_file: a_nd_file
                                         lightning: lightning
                                         popdens: popdens
                         PALEO:
-                                forcing_files:
+                                add_input_files:
                                         jsbach: jsbach_1850
+                                forcing_files:
                                         LU: LU_1850
-                                        LU_trans: LU_trans
+                                        LU_trans: LU_trans_none
                                         Ndepo: Ndepo_1850
                                         a_nd_file: a_nd_file
                                         lightning: lightning
                                         popdens: popdens
                         4CO2:
-                                forcing_files:
+                                add_input_files:
                                         jsbach: jsbach_1850
+                                forcing_files:
                                         LU: LU_1850
-                                        LU_trans: LU_trans
+                                        LU_trans: LU_trans_none
                                         Ndepo: Ndepo_1850
                                         a_nd_file: a_nd_file
                                         lightning: lightning
                                         popdens: popdens
                         1percCO2:
-                                forcing_files:
+                                add_input_files:
                                         jsbach: jsbach_1850
+                                forcing_files:
                                         LU: LU_1850
-                                        LU_trans: LU_trans
+                                        LU_trans: LU_trans_none
                                         Ndepo: Ndepo_1850
                                         a_nd_file: a_nd_file
                                         lightning: lightning
                                         popdens: popdens
                         RCP26:
-                                forcing_files:
+                                add_input_files:
                                         jsbach: jsbach_1850
+                                forcing_files:
                                         LU: LU_RCP26
-                                        LU_trans: LU_trans
+                                        LU_trans: LU_trans_none
                                         cover_fract: cover_fract_HIST
                         RCP45:
-                                forcing_files:
+                                add_input_files:
                                         jsbach: jsbach_1850
+                                forcing_files:
                                         LU: LU_RCP45
-                                        LU_trans: LU_trans
+                                        LU_trans: LU_trans_none
                                         cover_fract: cover_fract_HIST
                         RCP85:
-                                forcing_files:
+                                add_input_files:
                                         jsbach: jsbach_1850
+                                forcing_files:
                                         LU: LU_RCP85
-                                        LU_trans: LU_trans
+                                        LU_trans: LU_trans_none
                                         cover_fract: cover_fract_HIST
                         HIST:
-                                forcing_files:
+                                add_input_files:
                                         jsbach: jsbach_1850
+                                forcing_files:
                                         LU: LU_HIST
-                                        LU_trans: LU_trans
+                                        LU_trans: LU_trans_none
                                         cover_fract: cover_fract_HIST
                         1950:                
-                                forcing_files:
+                                add_input_files:
                                         jsbach: jsbach_1976
+                                forcing_files:
                                         LU: LU_1950
-                                        LU_trans: LU_trans
+                                        LU_trans: LU_trans_none
 
 
+input_files:
+        "lctlib": "lctlib"
 
-forcing_in_workdir:
+input_in_work:
         "jsbach": "jsbach.nc"
         "lctlib": "lctlib_nclt21.def"
+
+forcing_in_work:
         "cover_fract": "cover_fract.@YEAR@.nc"
         "a_nd_file": "a_nd_file.nc"
         "lightning": "lightning.nc"
@@ -242,7 +266,7 @@ restart_sources:
 
 ym_date: "${current_date}!syear!smonth"
 
-restart_in_workdir:        
+restart_in_work:        
         "[[streams-->STREAM]]": "restart_${general.expid}_STREAM.nc"
 
         #restart_out_files:

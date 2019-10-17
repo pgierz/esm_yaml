@@ -1,9 +1,9 @@
-# FESOM YAML CONFIGURATION FILE
+# FESOM2 YAML CONFIGURATION FILE
 #
 
-model: fesom
+model: fesom2
 branch: master
-version: "1.4"
+version: "2.0"
 
 restart:
         rate: "12"
@@ -23,10 +23,7 @@ bin_dir: "${model_dir}/bin"
 climate_data_dir: "${pool_dir}/hydrography/"
 forcing_data_dir: "${pool_dir}/forcing/"
 ini_data_dir: "${pool_dir}/pool-data/"
-namelist_dir: "${esm_master_dir}/namelists/fesom"                        
-
-opbnd_dir: "somepath"
-tide_forcing_dir: "somepath"
+namelist_dir: "${esm_master_dir}/namelists/fesom2"                        
 
 steps_per_day: "$(( 86400 / ${time_step} ))"
 restart_date : ${current_date}
@@ -39,53 +36,28 @@ namelists:
         - namelist.oce
         - namelist.ice
         - namelist.diag
+        - namelist.io
 
-leapyear: false
+leapyear: 0
 
-executable: fesom
+executable: fvom.x
 choose_resolution:
         CORE2:
-                nx: 126859
-                mesh_dir: "${pool_dir}/meshes_default/core/"
+                nx: 126858
+                mesh_dir: "${pool_dir}/meshes/mesh_CORE2_final/"
         GLOB:
                 nx: 830305
-                mesh_dir: "${pool_dir}/meshes_default/glob/"
-        REF87K:
-                nx: 86803
-                mesh_dir: "${pool_dir}/meshes/mesh_ref87k/"
-        REF:
-                nx: 43943
-                mesh_dir: "${pool_dir}/meshes/mesh_ref/"
-        BOLD:
-                nx: 1306775
-                mesh_dir: "${pool_dir}/meshes_default/bold/"
-        fArc:
-                nx: 638387
-        PI-GRID:
-                nx: 3140
-                mesh_dir: "${pool_dir}/meshes_default/pi-grid/"
-        CAVCORE2:
-                nx: 72411
-restart_in_files:
-        oce_diag: oce_diag
-restart_in_in_workdir:
-        oce_restart: fesom.${restart_date!syear}.oce.nc
-        ice_restart: fesom.${restart_date!syear}.ice.nc
-restart_in_in_sources:
-        oce_restart: fesom.${parent_date!syear}.oce.nc
-        ice_restart: fesom.${parent_date!syear}.ice.nc
-
 namelist_changes:
         namelist.config:
                 calendar:
-                        include_fleapyear: "${leapyear}"
+                        include_fleapyear: ".${leapyear}."
                 paths:
                         ForcingDataPath: "${forcing_data_dir}"
                         MeshPath: "${mesh_dir}"
-                        OpbndPath: "${opbnd_dir}"
+                        #OpbndPath: "${opbnd_dir}"
                         ClimateDataPath: "${climate_data_dir}"
-                        TideForcingPath: "${tide_forcing_dir}"
-                        ResultPath: "."
+                        #TideForcingPath: "${tide_forcing_dir}"
+                        #ResultPath: "${work_dir}"
                 timestep:
                         step_per_day: "${steps_per_day}"
                         run_length: "${restart.rate}"
@@ -93,15 +65,21 @@ namelist_changes:
                 inout: 
                         restartflag: "${restart.flag}"
                         output_length: "${restart.rate}"
-                        output_length_unit: "${restart.unit}"
-                        restart_length: "remove_from_namelist"
-                        restart_length_unit: "remove_from_namelist"
-        namelist.oce:
-                boundary:
-                        restore_s_surf: "1.929e-06"
-
-
-
+                        restart_length: "${restart.rate}"
+                        restart_length_unit: "${restart.unit}"
+        namelist.forcing:
+                namsbc:
+                        nm_xwind_file: "${forcing_data_dir}/u_10."
+                        nm_ywind_file: "${forcing_data_dir}/v_10."
+                        nm_humi_file: "${forcing_data_dir}/q_10."
+                        nm_qsr_file: "${forcing_data_dir}/ncar_rad."
+                        nm_qlw_file: "${forcing_data_dir}/ncar_rad."
+                        nm_tair_file: "${forcing_data_dir}/t_10."
+                        nm_prec_file: "${forcing_data_dir}/ncar_precip."
+                        nm_snow_file: "${forcing_data_dir}/ncar_precip."
+                        nm_mslp_file: "${forcing_data_dir}/slp."
+                        nm_runoff_file: "${forcing_data_dir}/runoff.nc"
+                        nm_sss_data_file: "${forcing_data_dir}/PHC2_salx.nc"
 lasttme: "aaa"
 starttime: "86400.0000000000"
 startday: "$(( ${start_date!sdoy} - 1 ))"
@@ -129,14 +107,15 @@ config_files:
         ice:     ice
         oce:     oce
         diag:    diag
+        io:      io
 
 config_sources:
         config:  "${namelist_dir}/namelist.config"
         forcing: "${namelist_dir}/namelist.forcing"
         ice:     "${namelist_dir}/namelist.ice"
         oce:     "${namelist_dir}/namelist.oce"
+        io:      "${namelist_dir}/namelist.io"
         diag:    "${namelist_dir}/namelist.diag"
-
 
 restart_sources:
         oce_restart: fesom.${parent_date!syear}.oce.restart.nc

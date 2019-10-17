@@ -137,7 +137,8 @@ class Namelist(OrderedDict):
         """
         output = StringIO()
         if all(isinstance(v, Namelist) for v in self.values()):
-            self._writestream(output)
+            #self._writestream(output)
+            print(repr(self), file=output)
         else:
             print(repr(self), file=output)
 
@@ -585,7 +586,6 @@ class Namelist(OrderedDict):
 
             val_line = ''
             for v_val in v_values:
-
                 v_header = v_name + v_idx_repr + ' = '
                 # Increase column width if the header exceeds this value
                 if len(self.indent + v_header) >= self.column_width:

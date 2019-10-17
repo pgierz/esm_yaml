@@ -65,7 +65,7 @@ ts_surfbd=.true.
 ref_sss_local=.true.		! cal. virtual salt flux from local SSS or ref_sss
 ref_sss=34.0                    ! ref. value for cal. virtual salt flux
 
-restore_s_surf=0. !1.929e-06  	! 50m/300day !6.43e-7!m/s 10./(180.*86400.) 6.43e-7
+restore_s_surf=1.929e-06  	! 50m/300day !6.43e-7!m/s 10./(180.*86400.) 6.43e-7
 restore_t_surf=0.
 
 balance_salt_water=.true.	! balance virtual-salt or freshwater flux or not 

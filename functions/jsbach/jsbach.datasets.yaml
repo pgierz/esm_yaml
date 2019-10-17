@@ -1,9 +1,11 @@
 hist_fold: hist_harvest
 
-forcing_sources:
+input_sources:
         lctlib: "${echam.model_dir}/lctlib_nlct21.def"
         "jsbach_1850": "${adj_input_dir}/jsbach_${echam.resolution}${echam.ocean_resolution}_11tiles_5layers_1850${dynveg_file_ending}.nc"
         "jsbach_1976": "${adj_input_dir}/jsbach_${echam.resolution}${echam.ocean_resolution}_11tiles_5layers_1850${dynveg_file_ending}.nc"
+
+forcing_sources:
         "LU_1850": "${input_dir}/${echam.resolution}/New_Hampshire_LCC/${hist_fold}/LUH_harvest_${echam.resolution}_1850.nc"
         "LU_1950": "${input_dir}/${echam.resolution}/New_Hampshire_LCC/${hist_fold}/LUH_harvest_${echam.resolution}_1950.nc"
         "LU_HIST":
@@ -48,6 +50,12 @@ choose_dataset:
                                 "${input_dir}/${echam.resolution}/New_Hampshire_LCC/rcp85/LUH_harvest_${echam.resolution}_rcp85_@YEAR@.nc":
                                         from: 2015
         r0009:
+                add_forcing_sources:
+                        "Ndepo_1850": "${input_dir}/${echam.resolution}/${echam.resolution}_ndepo_CMIP_NCAR_CCMI-1-0_gr_185001-185012-clim.nc"
+                        "a_nd_file": "${input_dir}/${echam.resolution}/spitfire/a_nd_${echam.resolution}.nc"
+                        "lightning": "${input_dir}/${echam.resolution}/spitfire/LISOTD_HRMC_V2.2_${echam.resolution}.nc"
+                        "popdens":   "${input_dir}/${echam.resolution}/spitfire/population_density_HYDE_${echam.resolution}.nc"
+        r0010:
                 add_forcing_sources:
                         "Ndepo_1850": "${input_dir}/${echam.resolution}/${echam.resolution}_ndepo_CMIP_NCAR_CCMI-1-0_gr_185001-185012-clim.nc"
                         "a_nd_file": "${input_dir}/${echam.resolution}/spitfire/a_nd_${echam.resolution}.nc"

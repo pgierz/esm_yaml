@@ -19,6 +19,8 @@ import esm_parser
 import esm_coupler
 import esm_methods
 
+import pprint
+pp = pprint.PrettyPrinter(indent=4)
 
 def date_representer(dumper, date):
     return dumper.represent_str("%s" % date.output())
@@ -56,21 +58,6 @@ class SimulationSetup(object):
         self._show_simulation_info()
         self.prepare()
 
-        for model in list(self.config):
-            if model in esm_coupler.known_couplers:
-                coupler_config_dir = (
-                    self.config["general"]["base_dir"]
-                    + "/"
-                    + self.config["general"]["expid"]
-                    + "/run_"
-                    + self.run_datestamp
-                    + "/config/"
-                    + model
-                    + "/"
-                )
-                self.coupler = esm_coupler.esm_coupler(self.config, model)
-                self.coupler.prepare(self.config, coupler_config_dir)
-                sys.exit()
 
     def _add_all_folders(self):
         self.all_filetypes = ["analysis", "config", "log", "mon", "scripts"]
@@ -85,6 +72,12 @@ class SimulationSetup(object):
                 + filetype
                 + "/",
             )
+            self.config["general"]["experiment_" + filetype + "_dir"] = getattr(
+                self, "experiment_" + filetype + "_dir"
+            )
+
+        self.all_filetypes.append("work")
+        for filetype in self.all_filetypes:
             setattr(
                 self,
                 "thisrun_" + filetype + "_dir",
@@ -98,9 +91,6 @@ class SimulationSetup(object):
                 + "/",
             )
 
-            self.config["general"]["experiment_" + filetype + "_dir"] = getattr(
-                self, "experiment_" + filetype + "_dir"
-            )
             self.config["general"]["thisrun_" + filetype + "_dir"] = getattr(
                 self, "thisrun_" + filetype + "_dir"
             )
@@ -219,6 +209,7 @@ class SimulationSetup(object):
         )
 
     def _write_finalized_config(self):
+        pp.pprint(self.config)
         with open(
             self.thisrun_config_dir
             + "/"
@@ -424,6 +415,33 @@ class SimulationSetup(object):
             six.print_("\n", 40 * "+ ")
         self._prepare_modify_files()
 
+        for model in list(self.config):
+            if model in esm_coupler.known_couplers:
+                coupler_config_dir = (
+                    self.config["general"]["base_dir"]
+                    + "/"
+                    + self.config["general"]["expid"]
+                    + "/run_"
+                    + self.run_datestamp
+                    + "/config/"
+                    + model
+                    + "/"
+                )
+                self.coupler = esm_coupler.esm_coupler(self.config, model)
+                self.coupler.prepare(self.config, coupler_config_dir)
+                coupler_filename="namcouple"  # needs to be set by function above
+                all_files_to_copy.append(
+                    (
+                        "",
+                        "",
+                        coupler_config_dir + "/" + coupler_filename,
+                    )
+                )
+                print (coupler_config_dir + "/" + coupler_filename)
+        self._prepare_copy_files_to_work(all_files_to_copy)
+
+
+
     def _prepare_copy_files(self, flist):
         successful_files = []
         missing_files = []
@@ -447,6 +465,28 @@ class SimulationSetup(object):
             for missing_file in missing_files:
                 six.print_("- %s" % missing_file)
 
+    def _prepare_copy_files_to_work(self, flist):
+        successful_files = []
+        missing_files = []
+        # TODO: Check if we are on login node or elsewhere for the progress
+        # bar, it doesn't make sense on the compute nodes:
+        for ftuple in tqdm.tqdm(
+            flist,
+            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]",
+        ):
+            logging.debug(ftuple)
+            (file_source, file_intermediate, file_target) = ftuple
+            file_in_work = self.thisrun_work_dir + "/" + file_target.split("/", -1)[-1]
+            try:
+                shutil.copy2(file_target, file_in_work)
+                successful_files.append(file_target)
+            except IOError:
+                missing_files.append(file_target)
+        if missing_files:
+            six.print_("--- WARNING: These files were missing:")
+            for missing_file in missing_files:
+                six.print_("- %s" % missing_file)
+        sys.exit()
 
     def _prepare_modify_files(self):
         for model in self.config['general']['valid_model_names']:
@@ -455,7 +495,6 @@ class SimulationSetup(object):
                 if filetype == "restart":
                     nothing = "nothing"
                     #print(self.config[model].get(filetype+"_in_modifications"))
-        sys.exit()
 
 
 class SimulationComponent(object):
@@ -621,6 +660,11 @@ class SimulationComponent(object):
         for nml_name, nml_obj in six.iteritems(self.config.get("namelists", {})):
             with open(os.path.join(self.thisrun_config_dir, nml_name), "w") as nml_file:
                 nml_obj.write(nml_file)
+            #if nml_name == "namelist.echam":
+            #    pp.pprint(nml_obj)
+            #    print(80*"*")
+            #    pp.pprint(str(nml_obj))
+            #    sys.exit(1)
             all_nmls[nml_name] = nml_obj  # PG or a string representation?
 
     def finalize_attributes(self):

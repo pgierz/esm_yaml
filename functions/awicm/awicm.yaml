@@ -32,12 +32,11 @@ general:
 #########################################################################################
 
 echam:
-        restart:
-                firstlast: "'first'"
+        restart_firstlast: "first"
         namelist_changes:
                 namelist.echam:
                         runctl:
-                                lcouple: '.true.'
+                                lcouple: .true.
         adj_input_dir: "${fesom.mesh_dir}/tarfiles${echam.resolution}/input/echam6"
         model_dir: ${general.model_dir}/echam-${echam.version}
         setup_dir: ${general.model_dir}
@@ -93,6 +92,13 @@ fesom:
                 T63_REF:
                         nproc: 128
 
+        opbnd_dir: ""
+        tide_forcing_dir: ""
+
+        add_namelist_changes:
+                namelist.oce:
+                        boundary:
+                                restore_s_surf: 0.0
 
 
 #########################################################################################

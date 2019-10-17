@@ -35,9 +35,9 @@ class oasis:
             seq = direction.get("seq", 2)
             export_mode = "EXPORTED"
 
-        self.namcouple += [right + " " + left + " 1 " + time_step + " " + seq + " " + restart_file+ " " + export_mode]
+        self.namcouple += [right + " " + left + " 1 " + str(time_step) + " " + seq + " " + restart_file+ " " + export_mode]
         if lgrid and rgrid:
-            self.namcouple += [rgrid["nx"] + " " + rgrid["ny"] + " " + lgrid["nx"] + " " + lgrid["ny"] + " " + rgrid["name"] + " " + lgrid["name"] + " LAG=" + lag]
+            self.namcouple += [str(rgrid["nx"]) + " " + str(rgrid["ny"]) + " " + str(lgrid["nx"]) + " " + str(lgrid["ny"]) + " " + rgrid["name"] + " " + lgrid["name"] + " LAG=" + str(lag)]
         
         self.namcouple += ["P  0  P  0"]
     
@@ -47,13 +47,13 @@ class oasis:
 
             self.namcouple += ["LOCTRANS SCRIPR"]
             self.namcouple += ["INSTANT"]
-            self.namcouple += ["DISTWGT U SCALAR LATITUDE " + bins + " " + other_number]
+            self.namcouple += ["DISTWGT U SCALAR LATITUDE " + str(bins) + " " + str(other_number)]
 
         elif transformation["name"] == "bicubic":
             bins = transformation.get("bins", 15)
             self.namcouple += ["LOCTRANS SCRIPR"]
             self.namcouple += ["INSTANT"]
-            self.namcouple += ["BICUBIC D SCALAR LATITUDE " + bins]
+            self.namcouple += ["BICUBIC D SCALAR LATITUDE " + str(bins)]
 
         self.namcouple += ["#"]
         self.namcouple += ["#"]

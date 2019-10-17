@@ -1290,6 +1290,7 @@ def find_variable(tree, rhs, full_config, white_or_black_list, isblacklist):
             #    more_rest = ""
             ## Make sure everything is a string:
             # return ok_part + var_result + more_rest
+            raw_str = convert(raw_str)
     return raw_str
 
 
@@ -1515,7 +1516,7 @@ def do_math_in_entry(tree, rhs, config):
                     index += 1
         result = str(eval(math))
         entry = before_math + result + after_math
-    return entry.strip()
+    return convert(entry.strip())
 
 
 def mark_dates(tree, rhs, config):
@@ -1580,6 +1581,54 @@ def purify_booleans(tree, rhs, config):
     if entry in ["True", "true", "False", "false"]:
         entry = eval(entry.capitalize())
     return entry
+
+def to_boolean(value):
+    if type(value) == bool:
+        return value
+    elif value in ["True", "true", ".true."]:
+        return True
+    elif value in ["False", "false", ".false."]:
+        return False
+
+def could_be_bool(value):
+    if type(value) == bool:
+        return(True)
+    elif type(value) == str:
+        if value.strip() in ["True", "true", "False", "false", ".true.", ".false."]:
+            return(True)
+    return(False)    
+
+def could_be_int(value):
+    try:
+        int(value)
+        return(True)
+    except:
+        return(False)
+
+def could_be_float(value):
+    try:
+        float(value)
+        return(True)
+    except:
+        return(False)
+
+def could_be_complex(value):
+    try:
+        complex(value)
+        return(True)
+    except:
+        return(False)
+
+def convert(value):
+    if could_be_bool(value):
+        return to_boolean(value)
+    elif could_be_int(value):
+        return int(value)
+    elif could_be_float(value):
+        return float(value)
+    elif could_be_complex(value):
+        return complex(value)
+    return(value)
 
 
 def list_all_keys_with_priority_marker(config):

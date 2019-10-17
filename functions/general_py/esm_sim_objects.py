@@ -532,6 +532,42 @@ class SimulationComponent(object):
             if not os.path.exists(getattr(self, "experiment_" + filetype + "_dir")):
                 os.makedirs(getattr(self, "experiment_" + filetype + "_dir"))
 
+
+    def find_correct_source(self, file_source, year):
+        if isinstance(file_source, dict):
+            logging.debug(
+                "Checking which file to use for this year: %s",
+                year,
+            )
+            for fname, valid_years in six.iteritems(file_source):
+                logging.debug("Checking %s", fname)
+                min_year = float(valid_years.get("from", "-inf"))
+                max_year = float(valid_years.get("to", "inf"))
+                logging.debug("Valid from: %s", min_year)
+                logging.debug("Valid to: %s", max_year)
+                logging.debug(
+                    "%s <= %s --> %s",
+                    min_year,
+                    year,
+                    min_year <= year,
+                )
+                logging.debug(
+                    "%s <= %s --> %s",
+                    year,
+                    max_year,
+                    year <= max_year,
+                )
+                if (
+                    min_year <= year
+                    and year <= max_year
+                ):
+                    return fname
+                else:
+                    continue
+        return file_source
+
+
+
     def filesystem_to_experiment(self):
         all_files_to_process = []
         filetype_files_for_list = {}
@@ -562,62 +598,50 @@ class SimulationComponent(object):
                     file_category = file_descriptor
 
                 logging.debug(type(file_source))
-                if isinstance(file_source, dict):
-                    logging.debug(
-                        "Checking which file to use for this year: %s",
-                        self.general_config["current_date"].year,
-                    )
-                    for fname, valid_years in six.iteritems(file_source):
-                        logging.debug("Checking %s", fname)
-                        min_year = float(valid_years.get("from", "-inf"))
-                        max_year = float(valid_years.get("to", "inf"))
-                        logging.debug("Valid from: %s", min_year)
-                        logging.debug("Valid to: %s", max_year)
-                        logging.debug(
-                            "%s <= %s --> %s",
-                            min_year,
-                            self.general_config["current_date"].year,
-                            min_year <= self.general_config["current_date"].year,
-                        )
-                        logging.debug(
-                            "%s <= %s --> %s",
-                            self.general_config["current_date"].year,
-                            max_year,
-                            self.general_config["current_date"].year <= max_year,
-                        )
-                        if (
-                            min_year <= self.general_config["current_date"].year
-                            and self.general_config["current_date"].year <= max_year
-                        ):
-                            file_source = fname
-                        else:
-                            continue
+
+                # should be generalized to all sorts of dates on day
+
+                all_years = [self.general_config["current_date"].year]
+                if (
+                   filetype + "_additional_information" in self.config
+                   and file_category in self.config[filetype + "_additional_information"]
+                ):
+                    if (
+                       "need_timestep_before" in self.config[filetype + "_additional_information"][file_category]
+                    ):
+                        print("BEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEP")
+                        all_years.append(self.general_config["prev_date"].year)
+                    if (
+                       "need_timestep_after" in self.config[filetype + "_additional_information"][file_category]
+                    ):
+                        all_years.append(self.general_config["next_date"].year)
+
+                all_years = list(dict.fromkeys(all_years)) # removes duplicates
+
                 if (
                     filetype + "_in_work" in self.config
                     and file_category in self.config[filetype + "_in_work"].keys()
                 ):
-                    file_target = (
-                        filedir_intermediate
-                        + "/"
-                        + self.config[filetype + "_in_work"][file_category]
-                    )
+                    target_name = self.config[filetype + "_in_work"][file_category]
                 else:
-                    if isinstance(file_source, str):
-                        file_target = (
-                            filedir_intermediate + "/" + os.path.basename(file_source)
-                        )
-                    else:
-                        raise TypeError(
-                            "Don't know what to do, sorry. You gave %s" % file_source
-                        )
-                logging.debug(file_source)
-                filetype_files.append(
-                    (
-                        file_source,
-                        filedir_intermediate + "/" + os.path.basename(file_source),
-                        file_target,
+                    target_name = os.path.basename(file_source)
+
+                for year in all_years:
+
+                    this_target_name=target_name.replace("@YEAR@", str(year))
+                    source_name=self.find_correct_source(file_source, year)
+                    file_target = (
+                        filedir_intermediate + "/" + this_target_name
                     )
-                )
+
+                    filetype_files.append(
+                        (
+                            source_name,
+                            filedir_intermediate + "/" + os.path.basename(source_name),
+                            file_target,
+                        )
+                    )
+
             filetype_files_for_list[filetype] = filetype_files
             all_files_to_process += filetype_files
         return all_files_to_process, filetype_files_for_list

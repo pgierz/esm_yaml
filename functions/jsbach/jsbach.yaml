@@ -243,6 +243,19 @@ forcing_in_work:
 forcing_modifications:
         Ndepo:  "<--setyear-- @YEAR@"                
 
+
+forcing_additional_information:
+        "LU":
+                - need_timestep_before
+                - need_timestep_after
+        "LU_trans":
+                - need_timestep_before
+                - need_timestep_after
+        Ndepo:
+                - need_timestep_before
+                - need_timestep_after
+
+
 streams:
         - jsbach
         - jsbid

@@ -323,6 +323,20 @@ forcing_in_work:
         volcsw: "strat_aerosol_sw_@YEAR@.nc"
         swflux: "swflux_@YEAR@.nc"
 
+forcing_additional_information:
+        aerocoarse:
+                - need_timestep_before
+                - need_timestep_after
+        aerofin:
+                - need_timestep_before
+                - need_timestep_after
+        aerofarir:
+                - need_timestep_before
+                - need_timestep_after
+        ozone:
+                - need_timestep_before
+                - need_timestep_after
+
 streams:
         - echam
         - accw

@@ -269,7 +269,9 @@ def attach_single_config(config, path, attach_value):
     attachable_config = yaml_file_to_dict(
         FUNCTION_PATH + "/" + path + "/" + attach_value
     )
-    config.update(attachable_config)
+    #DB this is a try:
+    dict_merge(config, attachable_config)
+    #config.update(attachable_config)
 
 
 def attach_to_config_and_remove(config, attach_key):
@@ -1689,8 +1691,12 @@ class ConfigSetup(GeneralConfig):  # pragma: no cover
             "computer": yaml_file_to_dict(determine_computer_from_hostname()),
             "general": {},
         }
+        for attachment in CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE:
+            attach_to_config_and_remove(setup_config["computer"], attachment)
         # Add the fake "model" name to the computer:
         setup_config["computer"]["model"] = "computer"
+        #pprint_config(setup_config)
+        #sys.exit(0)
         logger.info("setup config is being updated with setup_relevant_configs")
 
         model_config = {}

@@ -9,7 +9,7 @@ set -e
 setup_name="awicm"		
 #check=1
 
-ACCOUNT=ab0995
+account=ab0995
 compute_time="00:25:00"
 ###############################################################################
 #Xsrun  I know what I am doing

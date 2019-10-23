@@ -9,8 +9,8 @@ general:
         coupled_setup: True
 
         include_models:
-                - fesom
                 - echam
+                - fesom
                 - oasis3mct
 
         version: "1.1"
@@ -94,6 +94,8 @@ fesom:
 
         opbnd_dir: ""
         tide_forcing_dir: ""
+        model_dir: ${general.model_dir}/fesom-${fesom.version}
+        setup_dir: ${general.model_dir}
 
         add_namelist_changes:
                 namelist.oce:

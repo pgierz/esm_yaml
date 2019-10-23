@@ -32,6 +32,8 @@ yaml.add_representer(Date, date_representer)
 class SimulationSetup(object):
     def __init__(self, name, user_config):
 
+        self.check = False
+
         if not "expid" in user_config["general"]:
             user_config["general"]["expid"] = "test"
 
@@ -41,10 +43,15 @@ class SimulationSetup(object):
             )
             del user_config[user_config["general"]["setup_name"]]
 
+
         self._read_date_file(user_config)
         self._initialize_calendar(user_config)
         self.config = esm_parser.ConfigSetup(name, user_config)
         del user_config
+
+        if "check" in self.config["general"]:
+            self.check = self.config["general"]["check"]
+
         self._add_all_folders()
         self.config.calendar()
         self.config.finalize()
@@ -56,7 +63,152 @@ class SimulationSetup(object):
         self._write_finalized_config()
         self._copy_preliminary_files_from_experiment_to_thisrun()
         self._show_simulation_info()
+        self.write_batch_system_hostfile()
         self.prepare()
+        self.write_simple_runscript()
+        if self.check:
+            sys.exit()
+        self.submit()
+
+
+
+    def submit(self):
+        six.print_("\n", 40 * "+ ")
+        print ("Submitting sad jobscript to batch system...")
+        for command in self.submit_command:
+            print (command)
+        six.print_("\n", 40 * "+ ")
+        for command in self.submit_command:
+            os.system(command)
+        sys.exit()
+
+
+    def write_batch_system_hostfile(self):
+        import esm_batch_system
+        self.batch = esm_batch_system.esm_batch_system(self.config, self.config["computer"]["batch_system"])
+
+
+
+
+
+    def get_sad_filename(self):
+        folder = self.config["general"]["thisrun_scripts_dir"]
+        expid = self.config["general"]["expid"]
+        startdate = self.config["general"]["current_date"]
+        enddate = self.config["general"]["end_date"]
+        return folder + "/" + expid+"_"+self.run_datestamp+".sad"
+
+
+    def get_environment(self):
+        environment = []
+        import esm_environment
+        env = esm_environment.environment_infos()
+        if "module_actions" in env.config:
+            for action in env.config["module_actions"]:
+                environment.append("module " + action)
+        environment.append("")
+        if "export_vars" in env.config:
+            for var in env.config["export_vars"].keys():
+                environment.append(
+                    "export " + var + "=" + env.config["export_vars"][var]
+                )
+        return environment
+
+
+    def calculate_requirements(self):
+        tasks = 0
+        for model in self.config["general"]["models"]:
+            if "nproc" in self.config[model]:
+                tasks += self.config[model]["nproc"]
+            elif "nproca" in self.config[model] and "nprocb" in self.config[model]:
+                tasks += self.config[model]["nproca"] * self.config[model]["nprocb"]
+        return tasks
+
+    def get_batch_header(self):
+        header = []
+        batch_system = self.config["computer"]
+
+        if "sh_interpreter" in batch_system:
+            header.append("#!"+batch_system["sh_interpreter"])
+
+        tasks = self.calculate_requirements()
+
+        replacement_tags = [("@tasks@", tasks)]
+
+        all_flags = ["partition_flag",
+                     "time_flag",
+                     "tasks_flag",
+                     "output_flags",
+                     "name_flag",
+                    ]
+    
+        conditional_flags = ["exclusive_flag",
+                             "accounting_flag",
+                             "notification_flag",
+                             "hyperthreading_flag",
+                             "additional_flags"
+                            ]
+
+        for flag in conditional_flags:
+            if flag in batch_system and not batch_system[flag].strip() == "":
+                all_flags.append(flag)
+
+        for flag in all_flags:
+            for (tag, repl) in replacement_tags:
+                batch_system[flag] = batch_system[flag].replace(tag, str(repl))
+            header.append(batch_system["header_start"] + " " + batch_system[flag])
+
+        return header
+
+
+    def get_run_commands(self):
+        commands = []
+        batch_system = self.config["computer"]
+
+        if "execution_command" in batch_system:
+            commands.append(batch_system["execution_command"])
+
+        return commands
+
+
+    def get_submit_command(self, sadfilename):
+        commands = []
+        batch_system = self.config["computer"]
+
+        if "submit" in batch_system:
+            commands.append("cd " + self.config["general"]["thisrun_scripts_dir"] + "; " + batch_system["submit"] + " " +sadfilename)
+        return commands
+
+
+
+    def write_simple_runscript(self):
+        sadfilename = self.get_sad_filename()
+        header = self.get_batch_header()
+        environment = self.get_environment()
+        commands = self.get_run_commands()
+
+        with open(sadfilename, "w") as sadfile:
+            for line in header:
+                sadfile.write(line + "\n")
+            sadfile.write("\n")
+            for line in environment:
+                sadfile.write(line + "\n")
+            sadfile.write("\n")
+            sadfile.write("cd "+ self.config["general"]["thisrun_work_dir"] + "\n")
+            for line in commands: 
+                sadfile.write(line + "\n")
+
+        self.submit_command = self.get_submit_command(sadfilename)
+
+        six.print_("\n", 40 * "+ ")
+        six.print_("Contents of ",sadfilename, ":")
+        with open(sadfilename, "r") as fin:
+            print (fin.read())
+        six.print_("\n", 40 * "+ ")
+        six.print_("Contents of ",self.batch.bs.filename, ":")
+        with open(self.batch.bs.path, "r") as fin:
+            print (fin.read())
+
 
 
     def _add_all_folders(self):
@@ -437,7 +589,15 @@ class SimulationSetup(object):
                         coupler_config_dir + "/" + coupler_filename,
                     )
                 )
-                print (coupler_config_dir + "/" + coupler_filename)
+                #print (coupler_config_dir + "/" + coupler_filename)
+                all_files_to_copy.append(
+                    (
+                        "",
+                        "",
+                        self.batch.bs.path,
+                    )
+                )
+
         self._prepare_copy_files_to_work(all_files_to_copy)
 
 
@@ -486,7 +646,7 @@ class SimulationSetup(object):
             six.print_("--- WARNING: These files were missing:")
             for missing_file in missing_files:
                 six.print_("- %s" % missing_file)
-        sys.exit()
+        #sys.exit()
 
     def _prepare_modify_files(self):
         for model in self.config['general']['valid_model_names']:

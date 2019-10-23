@@ -8,6 +8,7 @@ accounting: true
 "batch_system": "slurm"
 
 jobtype: compute
+sh_interpreter: "/bin/bash"
 
 choose_jobtype:
         post:
@@ -130,4 +131,7 @@ choose_useMPI:
                         MPIFC: mpif90
                         CC: mpicc
                         CXX: mpicxx
-                          
+
+
+further_reading:
+        - batch_system/slurm.yaml

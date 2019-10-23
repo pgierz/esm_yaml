@@ -101,8 +101,19 @@ if __name__ == "__main__":
         os.getcwd() + "/" + os.path.dirname(__file__) + "/../",
     )
 
-    Script = esm_backwards_compatability.ShellscriptToUserConfig(ARGS.runscript)
+    user_config = esm_backwards_compatability.ShellscriptToUserConfig(ARGS.runscript)
+    check = False
+    expid = "test"
+    parsed_args = vars(ARGS)
+    if "check" in parsed_args:
+        check = parsed_args["check"]
+    if "expid" in parsed_args:
+        expid = parsed_args["expid"]
+
+    user_config["general"]["check"] = check
+    user_config["general"]["expid"] = expid
+
     Setup = esm_sim_objects.SimulationSetup(
-        Script["general"]["setup_name"].replace("_standalone", ""), Script
+        user_config["general"]["setup_name"].replace("_standalone", ""), user_config
     )
-    Setup.prepare()
+    #Setup.prepare()

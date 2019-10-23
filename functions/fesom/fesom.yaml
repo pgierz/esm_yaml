@@ -19,7 +19,8 @@ with_part_format: false
 time_dimension: "time"
 
 model_dir: "${esm_master_dir}/fesom-${version}/"
-bin_dir: "${model_dir}/bin"
+setup_dir: "${model_dir}"
+bin_dir: "${setup_dir}/bin"
 climate_data_dir: "${pool_dir}/hydrography/"
 forcing_data_dir: "${pool_dir}/forcing/"
 ini_data_dir: "${pool_dir}/pool-data/"
@@ -47,6 +48,7 @@ choose_resolution:
         CORE2:
                 nx: 126859
                 mesh_dir: "${pool_dir}/meshes_default/core/"
+                nproc: 288
         GLOB:
                 nx: 830305
                 mesh_dir: "${pool_dir}/meshes_default/glob/"
@@ -122,6 +124,8 @@ choose_lresume:
                                 - "<--append-- ${starttime} ${startday} ${start_date!syear}"     
 
 
+bin_sources:
+        fesom: "${bin_dir}/${executable}"
 
 config_files:
         config:  config

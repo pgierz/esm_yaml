@@ -6,6 +6,7 @@ import os
 import pdb
 import shutil
 import sys
+from io import StringIO
 
 import externals
 import f90nml
@@ -37,21 +38,21 @@ class SimulationSetup(object):
         if not "expid" in user_config["general"]:
             user_config["general"]["expid"] = "test"
 
-        if user_config["general"]["setup_name"] in user_config:
-            user_config["general"].update(
-                user_config[user_config["general"]["setup_name"]]
-            )
-            del user_config[user_config["general"]["setup_name"]]
+      #  if user_config["general"]["setup_name"] in user_config:
+      #      user_config["general"].update(
+      #          user_config[user_config["general"]["setup_name"]]
+      #      )
+      #      del user_config[user_config["general"]["setup_name"]]
 
 
-        self._read_date_file(user_config)
-        self._initialize_calendar(user_config)
         self.config = esm_parser.ConfigSetup(name, user_config)
         del user_config
 
         if "check" in self.config["general"]:
             self.check = self.config["general"]["check"]
 
+        self._read_date_file(self.config)
+        self._initialize_calendar(self.config)
         self._add_all_folders()
         self.config.calendar()
         self.config.finalize()
@@ -112,6 +113,33 @@ class SimulationSetup(object):
                 environment.append(
                     "export " + var + "=" + env.config["export_vars"][var]
                 )
+        for model in self.config:
+            if not model == "computer":
+                if "module_actions" in self.config[model]:
+                    for action in self.config[model]["module_actions"]:
+                        environment.append("module " + action)
+                environment.append("")
+                if "export_vars" in self.config[model]:
+                    for var in self.config[model]["export_vars"].keys():
+                        if type(self.config[model]["export_vars"][var]) == dict:
+                            sys.stdout = mystdout = StringIO()
+                            esm_parser.pprint_config(self.config[model]["export_vars"][var])
+                            sys.stdout = sys.__stdout__
+                            exportvar = mystdout.getvalue()
+                            environment.append(
+                                "export " + var + "=$(cat << EOF"
+                            )
+                            environment.append(exportvar)
+                            environment.append("EOF")
+                            environment.append(")")
+                        else:
+                            #print(self.config[model]["export_vars"][var])
+                            environment.append(
+                                "export " + var + "=" + str(self.config[model]["export_vars"][var])
+                            )
+
+
+
         return environment
 
 
@@ -247,6 +275,8 @@ class SimulationSetup(object):
                 self, "thisrun_" + filetype + "_dir"
             )
 
+        self.config["general"]["work_dir"] =  self.config["general"]["thisrun_work_dir"] 
+
         self.all_model_filetypes = [
             "analysis",
             "bin",
@@ -361,7 +391,7 @@ class SimulationSetup(object):
         )
 
     def _write_finalized_config(self):
-        pp.pprint(self.config)
+        #pp.pprint(self.config)
         with open(
             self.thisrun_config_dir
             + "/"
@@ -568,6 +598,26 @@ class SimulationSetup(object):
         self._prepare_modify_files()
 
         for model in list(self.config):
+            for filetype in self.all_filetypes:
+                if "create_"+filetype in self.config[model]:
+                    filenames = self.config[model]["create_"+filetype].keys()
+                    for filename in filenames:
+                        with open(self.config["general"]["thisrun_" + filetype + "_dir"] + "/" +filename, "w") as createfile:
+                            actionlist = self.config[model]["create_"+filetype][filename]
+                            for action in actionlist:
+                                if "<--append--" in action:
+                                    appendtext = action.replace("<--append--", "")
+                                    createfile.write(appendtext.strip() + "\n")
+                        all_files_to_copy.append(
+                            (
+                                "",
+                                "",
+                                self.config["general"]["thisrun_" + filetype + "_dir"] + "/" +filename,
+                            )
+                        )
+
+
+        for model in list(self.config):
             if model in esm_coupler.known_couplers:
                 coupler_config_dir = (
                     self.config["general"]["base_dir"]
@@ -769,12 +819,19 @@ class SimulationComponent(object):
                     if (
                        "need_timestep_before" in self.config[filetype + "_additional_information"][file_category]
                     ):
-                        print("BEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEP")
                         all_years.append(self.general_config["prev_date"].year)
                     if (
                        "need_timestep_after" in self.config[filetype + "_additional_information"][file_category]
                     ):
                         all_years.append(self.general_config["next_date"].year)
+                    if (
+                       "need_year_before" in self.config[filetype + "_additional_information"][file_category]
+                    ):
+                        all_years.append(self.general_config["current_date"].year - 1)
+                    if (
+                       "need_year_after" in self.config[filetype + "_additional_information"][file_category]
+                    ):
+                        all_years.append(self.general_config["next_date"].year + 1 )
 
                 all_years = list(dict.fromkeys(all_years)) # removes duplicates
 

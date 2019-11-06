@@ -266,9 +266,17 @@ def attach_to_config_and_reduce_keyword(
 
 
 def attach_single_config(config, path, attach_value):
-    attachable_config = yaml_file_to_dict(
-        FUNCTION_PATH + "/" + path + "/" + attach_value
-    )
+    if os.path.isfile(FUNCTION_PATH + "/" + path + "/" + attach_value):
+        attachable_config = yaml_file_to_dict(
+            FUNCTION_PATH + "/" + path + "/" + attach_value
+        )
+    elif os.path.isfile(path + "/" + attach_value):
+        attachable_config = yaml_file_to_dict(
+            path + "/" + attach_value
+        )
+    else:
+        print ("Could not find ", path + "/" + attach_value)
+        sys.exit(1)
     #DB this is a try:
     dict_merge(config, attachable_config)
     #config.update(attachable_config)
@@ -294,7 +302,9 @@ def attach_to_config_and_remove(config, attach_key):
     The ``config`` is modified **in place**!
     """
     if attach_key in config:
-        attach_value = list(config[attach_key])
+        attach_value = config[attach_key]
+        if type(attach_value) == str:
+            attach_value = [attach_value]
         for attach_value in attach_value:
             try:
                 attach_path, attach_value = attach_value.rsplit("/", 1)
@@ -1605,7 +1615,11 @@ def could_be_int(value):
         int(value)
         return(True)
     except:
-        return(False)
+        try:
+            int(float(value)) # that is actually necessary, because of int("48.0")
+            return(True)
+        except:
+            return(False)
 
 def could_be_float(value):
     try:
@@ -1625,7 +1639,7 @@ def convert(value):
     if could_be_bool(value):
         return to_boolean(value)
     elif could_be_int(value):
-        return int(value)
+        return int(float(value))
     elif could_be_float(value):
         return float(value)
     elif could_be_complex(value):
@@ -1687,6 +1701,11 @@ class ConfigSetup(GeneralConfig):  # pragma: no cover
     """ Config Class for Setups """
 
     def _config_init(self, user_config):
+        # user_config should be ok already
+        # self.config contains first yaml file and further_readings
+
+        # setup_config:
+
         setup_config = {
             "computer": yaml_file_to_dict(determine_computer_from_hostname()),
             "general": {},
@@ -1695,46 +1714,77 @@ class ConfigSetup(GeneralConfig):  # pragma: no cover
             attach_to_config_and_remove(setup_config["computer"], attachment)
         # Add the fake "model" name to the computer:
         setup_config["computer"]["model"] = "computer"
-        #pprint_config(setup_config)
-        #sys.exit(0)
         logger.info("setup config is being updated with setup_relevant_configs")
 
-        model_config = {}
 
-        setup_config["general"]["include_models"] = self.config["general"][
-            "include_models"
-        ]
-        if "coupled_setup" not in self.config["general"]:
-            setup_config["general"].update({"standalone": True})
-        else:
-            if user_config["general"]["setup_name"] in user_config:
-                user_config["general"].update(
-                    user_config[user_config["general"]["setup_name"]]
+        # distribute self.config into setup_config
+
+        if "general" in self.config:
+            if "coupled_setup" in self.config["general"]:
+                setup_config["general"].update({"standalone": False})
+                setup_config["general"]["include_models"] = self.config["general"][
+                    "include_models"
+                ]
+        
+                # that should happen in Shell2Yaml
+                if user_config["general"]["setup_name"] in user_config:
+                    user_config["general"].update(
+                        user_config[user_config["general"]["setup_name"]]
+                    )
+                    del user_config[user_config["general"]["setup_name"]]
+                dict_merge(setup_config, self.config)
+
+
+                setup_config["general"]["valid_setup_names"] = valid_setup_names = list(
+                    setup_config
                 )
-                del user_config[user_config["general"]["setup_name"]]
-            dict_merge(setup_config, self.config)
-            # setup_config["general"] = self.config
-            setup_config["general"].update({"standalone": False})
-        del self.config
-        attach_to_config_and_reduce_keyword(
-            setup_config["general"], model_config, "include_models", "models"
-        )
-        for model in setup_config["general"]["models"]:
-            attach_to_config_and_reduce_keyword(
-                model_config[model], model_config, "include_models", "models"
+                setup_config["general"]["valid_model_names"] = valid_model_names = []
+        else:
+            setup_config["general"].update({"standalone": True})
+            setup_config["general"].update({"models": [self.config["model"]]})
+            
+            if "include_models" in self.config:
+                setup_config["general"]["include_models"] = self.config[
+                "include_models"
+            ]
+            setup_config[self.config["model"]]=self.config
+
+            setup_config["general"]["valid_setup_names"] = valid_setup_names = list(
+                setup_config
             )
-        for model in list(model_config):
-            for attachment in CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE:
-                attach_to_config_and_remove(model_config[model], attachment)
+            setup_config["general"]["valid_setup_names"].remove(self.config["model"])
+            setup_config["general"]["valid_model_names"] = valid_model_names = [self.config["model"]]
+
+        del self.config
+
         setup_config["general"].update(
             {"esm_master_dir": esm_master_dir, "expid": "test"}
         )
-        setup_config["general"]["valid_setup_names"] = valid_setup_names = list(
-            setup_config
+
+        # setup_config should be ok now
+        # model_config:
+
+        model_config = {}
+        attach_to_config_and_reduce_keyword(
+            setup_config["general"], model_config, "include_models", "models"
         )
-        setup_config["general"]["valid_model_names"] = valid_model_names = list(
-            model_config
-        )
+        if "models" in setup_config["general"]:
+            for model in setup_config["general"]["models"]:
+                if model in model_config:
+                    attach_to_config_and_reduce_keyword(
+                        model_config[model], model_config, "include_models", "models"
+                    )
+            for model in list(model_config):
+                for attachment in CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE:
+                    attach_to_config_and_remove(model_config[model], attachment)
+
+        for model in list(model_config):
+            setup_config["general"]["valid_model_names"].append(model)
+            #valid_model_names.append(list(model_config)) happens automatically
+
+        # model_config should be ok now
+        # merge everything    
+
         logging.debug("Valid Setup Names = %s", valid_setup_names)
         logging.debug("Valid Model Names = %s", valid_model_names)
 
@@ -1742,6 +1792,10 @@ class ConfigSetup(GeneralConfig):  # pragma: no cover
             user_config, setup_config, priority="first"
         )
         self.config = priority_merge_dicts(blackdict, model_config, priority="first")
+        #pprint_config(self.config)
+        #sys.exit(0)
+
+
 
     def calendar(self):
 

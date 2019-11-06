@@ -229,7 +229,7 @@ input_files:
 
 input_in_work:
         "jsbach": "jsbach.nc"
-        "lctlib": "lctlib_nclt21.def"
+        "lctlib": "lctlib.def"
 
 forcing_in_work:
         "cover_fract": "cover_fract.@YEAR@.nc"

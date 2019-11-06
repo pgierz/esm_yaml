@@ -94,6 +94,7 @@ fesom:
 
         opbnd_dir: ""
         tide_forcing_dir: ""
+        forcing_data_dir: ""
         model_dir: ${general.model_dir}/fesom-${fesom.version}
         setup_dir: ${general.model_dir}
 
@@ -101,6 +102,8 @@ fesom:
                 namelist.oce:
                         boundary:
                                 restore_s_surf: 0.0
+
+
 
 
 #########################################################################################

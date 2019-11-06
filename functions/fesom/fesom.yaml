@@ -5,11 +5,11 @@ model: fesom
 branch: master
 version: "1.4"
 
-restart:
-        rate: "12"
-        unit: "m"
-        first: 12
-        flag: "last"
+restart_rate: "12"
+restart_unit: "m"
+restart_first: 12
+restart_flag: "last"
+
 time_step: 1800
 resolution: CORE2
 
@@ -41,7 +41,7 @@ namelists:
         - namelist.ice
         - namelist.diag
 
-leapyear: false
+leapyear: true
 
 executable: fesom
 choose_resolution:
@@ -77,8 +77,11 @@ restart_in_in_sources:
         oce_restart: fesom.${parent_date!syear}.oce.nc
         ice_restart: fesom.${parent_date!syear}.ice.nc
 
+
 namelist_changes:
         namelist.config:
+                clockinit:
+                        yearnew: "${initial_date!syear}"
                 calendar:
                         include_fleapyear: "${leapyear}"
                 paths:
@@ -87,17 +90,19 @@ namelist_changes:
                         OpbndPath: "${opbnd_dir}"
                         ClimateDataPath: "${climate_data_dir}"
                         TideForcingPath: "${tide_forcing_dir}"
-                        ResultPath: "."
+                        ResultPath: "${work_dir}"
                 timestep:
                         step_per_day: "${steps_per_day}"
-                        run_length: "${restart.rate}"
-                        run_length_unit: "${restart.unit}"
+                        run_length: "${restart_rate}"
+                        run_length_unit: "${restart_unit}"
                 inout: 
-                        restartflag: "${restart.flag}"
-                        output_length: "${restart.rate}"
-                        output_length_unit: "${restart.unit}"
+                        restartflag: "${restart_flag}"
+                        output_length: "${restart_rate}"
+                        output_length_unit: "${restart_unit}"
                         restart_length: "remove_from_namelist"
                         restart_length_unit: "remove_from_namelist"
+                mesh_def:
+                        part_format: "remove_from_namelist"
         namelist.oce:
                 boundary:
                         restore_s_surf: "1.929e-06"
@@ -113,12 +118,12 @@ choose_startday:
 
 choose_lresume:
         false:                                
-                config_create:
+                create_config:
                         fesom.clock:
                                 - "<--append-- 0.0000000000000 ${initial_date!sdoy} ${initial_date!syear}"  
                                 - "<--append-- 0.0000000000000 ${initial_date!sdoy} ${initial_date!syear}"
         true:   
-                config_create:
+                create_config:
                         fesom.clock: 
                                 - "<--append-- ${fesom.lasttme} ${restart_date!sdoy} ${restart_date!syear}"
                                 - "<--append-- ${starttime} ${startday} ${start_date!syear}"     
@@ -151,6 +156,35 @@ restart_targets:
         oce_restart: fesom.${end_date!syear}.oce.restart.nc
         ice_restart: fesom.${end_date!syear}.ice.restart.nc
         oce_diag: fesom.${end_date!syear}.oce.diag.nc
+
+
+
+output_schedules:
+        -       
+                vars: [restart]
+                unit: ${restart_unit}
+                first: ${restart_first}
+                rate: ${restart_rate}
+        -       
+                vars: [evs,fsitherm,hfds,opottemptend,pbo,prlq,prsn,rsdo,siarean,siareas,sidmassevapsubl,sidmasssi,sidmassth,sidmasstranx,sidmasstrany,siextentn,siextents,sifllatstop,sisnconc,sisnmass,sisnthick,sispeed,sivol,sivoln,sivols,soga,thetaoga,u2o,uo,uso,uto,v2o,vo,volo,vso,vto,w2o,wfo,wo,wso,wto,zossq,rho,uhice,uhsnow,urho,uv,vhice,vhsnow,virtual_salt,vrho]
+                unit: m
+                rate: 1
+        - 
+                vars: [mlotst,omldamax,sic,sistrxdtop,sistrxubot,sistrydtop,sistryubot,sithick,sitimefrac,siu,siv,so,sos,tauuo,tauvo,thetao,tos,zos,flice,wnet,evap,runoff,thdgr,thdgrsn]
+                unit: d
+                rate: 1
+        - 
+                vars: [tso]
+                unit: s
+                rate: 12
+        - 
+                vars: [lwrd,olat,olwout,osen,relax_salt,shum,tair,uwind,vwind]
+                unit: y
+                first: 1000
+                rate: 1
+
+
+
 
 
 coupling_fields:

@@ -1,0 +1,29 @@
+export_vars:
+        AWI_FESOM_YAML:
+                output_schedules:
+                        -       
+                                vars: [restart]
+                                unit: ${restart_unit}
+                                first: ${restart_first}
+                                rate: ${restart_rate}
+                        - 
+                                vars: [tso]
+                                unit: "m"
+                                rate: 1
+                                first: 1
+                        -
+                                vars: [evs,fsitherm,hfds,opottemptend,pbo,prlq,prsn,rsdo,siarean,siareas,sidmassevapsubl,sidmasssi,sidmassth,sidmasstranx,sidmasstrany,siextentn,siextents,sifllatstop,sisnconc,sisnmass,sisnthick,sispeed,sivol,sivoln,sivols,soga,thetaoga,u2o,uo,uso,uto,v2o,vo,volo,vso,vto,w2o,wfo,wo,wso,wto,zossq,rho,uhice,uhsnow,urho,uv,vhice,vhsnow,virtual_salt,vrho]
+                                unit: "m"
+                                rate: 1
+                                first: 1
+                        -
+                                vars: [lwrd,olat,olwout,osen,relax_salt,shum,tair,uwind,vwind]
+                                unit: "m"
+                                rate: 1
+                                first: 1
+                        -
+                                vars: [mlotst,omldamax,sic,sistrxdtop,sistrxubot,sistrydtop,sistryubot,sithick,sitimefrac,siu,siv,so,sos,tauuo,tauvo,thetao,tos,zos,flice,wnet,evap,runoff,thdgr,thdgrsn]
+                                unit: "m"
+                                rate: 1
+                                first: 1
+

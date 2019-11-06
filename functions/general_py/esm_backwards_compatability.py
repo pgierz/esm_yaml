@@ -10,6 +10,7 @@ from __future__ import absolute_import
 # Python Standard Library imports
 import logging
 import os
+import sys
 import subprocess
 
 # Third party imports
@@ -27,7 +28,8 @@ def mini_recursive_run_func(config, func):
     func(config)
     for key, value in six.iteritems(config):
         if isinstance(value, dict):
-            mini_recursive_run_func(value, func)
+            if not key == "export_vars":
+                mini_recursive_run_func(value, func)
 
 
 # NOTE: Both of the next to blocks need to be recursive through the whole dictionary...
@@ -168,6 +170,11 @@ class ShellscriptToUserConfig(dict):
             value = user_config[key]
             if not value:
                 del user_config[key]
+
+        for attachment in esm_parser.CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE:
+            esm_parser.attach_to_config_and_remove(user_config, attachment)
+            for model in list(user_config):
+                esm_parser.attach_to_config_and_remove(user_config[model], attachment)
 
         # mini_recursive_run_func(user_config, remap_old_new_keys)
         mini_recursive_run_func(user_config, purify_cases)

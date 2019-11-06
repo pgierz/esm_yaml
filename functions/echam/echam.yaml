@@ -212,16 +212,6 @@ choose_lresume:
                                         dt_start: "remove_from_namelist"
 
 
-                                        #start_date: 18500101
-# PG: Still a problem: can't use ! in a choose block
-# Not sure what Dirk is thinking here
-#start_date_year: ${start_date}!year
-#choose_start_date_year:
-#        disturbed_years:
-#                namelist_changes:
-#                        namelist.echam:
-#                                dynctl:
-#                                        enstdif: "${disturbance}"
 
 choose_CO2:
         '*':
@@ -325,31 +315,24 @@ forcing_in_work:
 
 forcing_additional_information:
         aerocoarse:
-                - need_timestep_before
-                - need_timestep_after
+                - need_year_before
+                - need_year_after
         aerofin:
-                - need_timestep_before
-                - need_timestep_after
+                - need_year_before
+                - need_year_after
         aerofarir:
-                - need_timestep_before
-                - need_timestep_after
+                - need_year_before
+                - need_year_after
         ozone:
-                - need_timestep_before
-                - need_timestep_after
+                - need_year_before
+                - need_year_after
 
 streams:
         - echam
         - accw
         - co2
 
-          #ym_dates:
-          #- "[[write_output_dates-->WHEN]]<--year--WHEN<--month--.WHEN<--day--"
-
-          #restart_files:
-          #"[[streams-->STREAM]]": "STREAM"
-
-# Only for testing:
-prev_date: 18500101
+          #prev_date: 18500101
 # BUG: PG Why do we need lists here?
 restart_sources:
         "[[streams-->STREAM]]":
@@ -469,7 +452,7 @@ grids:
 
 
 # Work dir:
-work_dir: "."
+#work_dir: "."
 
 # Configuration Files:
 config_sources:

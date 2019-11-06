@@ -26,14 +26,14 @@ sys.path.append(FUNCTION_PATH + "/external_py/")
 import six
 
 if six.PY2:
-    sys.path.append(FUNCTION_PATH + "/external_py/pyyaml/lib")
-    sys.path.append(FUNCTION_PATH + "/external_py/pyyaml/lib/yaml")
+    sys.path.insert(0, FUNCTION_PATH + "/external_py/pyyaml/lib")
+    sys.path.insert(0, FUNCTION_PATH + "/external_py/pyyaml/lib/yaml")
     # Mock isn't available in py2
     sys.path.append(FUNCTION_PATH + "/external_py/mock/")
 
 elif six.PY3:
-    sys.path.append(FUNCTION_PATH + "/external_py/pyyaml/lib3")
-    sys.path.append(FUNCTION_PATH + "/external_py/pyyaml/lib3/yaml")
+    sys.path.insert(0, FUNCTION_PATH + "/external_py/pyyaml/lib3")
+    sys.path.insert(0, FUNCTION_PATH + "/external_py/pyyaml/lib3/yaml")
 
 
 if os.environ.get("RUNNING_CI") == "1":

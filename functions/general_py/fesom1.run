@@ -14,7 +14,7 @@ fesom_VERSION="CMIP6"
 POST_PROCESSING_fesom=0
 
 RES_fesom=CORE2
-MODEL_DIR_fesom=${HOME}/esm-master/fesom-1.4/
+MODEL_DIR_fesom=${HOME}/esm_yaml/fesom-1.4/
 
 BASE_DIR=/work/ab0995/a270058/esm_yaml_test/
 

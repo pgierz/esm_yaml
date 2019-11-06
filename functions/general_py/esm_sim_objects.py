@@ -640,14 +640,13 @@ class SimulationSetup(object):
                     )
                 )
                 #print (coupler_config_dir + "/" + coupler_filename)
-                all_files_to_copy.append(
-                    (
-                        "",
-                        "",
-                        self.batch.bs.path,
-                    )
-                )
-
+        all_files_to_copy.append(
+            (
+                "",
+                "",
+                self.batch.bs.path,
+            )
+        )
         self._prepare_copy_files_to_work(all_files_to_copy)
 
 

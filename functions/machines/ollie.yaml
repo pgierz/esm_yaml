@@ -63,9 +63,9 @@ export_vars:
 
         NETCDFFROOT: $NETCDF_DIR
         NETCDFROOT: $NETCDF_DIR
-        NETCDF_Fortran_INCLUDE_DIRECTORIES: ${NETCDFROOT}/include
-        NETCDF_CXX_INCLUDE_DIRECTORIES: ${NETCDFROOT}/include
-        NETCDF_CXX_LIBRARIES: ${NETCDFROOT}/lib
+        NETCDF_Fortran_INCLUDE_DIRECTORIES: $NETCDFROOT/include
+        NETCDF_CXX_INCLUDE_DIRECTORIES: $NETCDFROOT/include
+        NETCDF_CXX_LIBRARIES: $NETCDFROOT/lib
 
         PERL5LIB: "/usr/lib64/perl5"
         LAPACK_LIB: '"-lmkl_intel_lp64 -lmkl_core -mkl=sequential -lpthread -lm -ldl"'

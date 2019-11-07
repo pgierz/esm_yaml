@@ -94,7 +94,14 @@ class ShellscriptToUserConfig(dict):
         module_commands = [l for l in remaining_module_commands if "list" not in l]
         for module_command in module_commands:
             os.system(module_command)
-        env_before = os.environ
+        env_before = dict(os.environ)
+        # the next lines remove functions
+        all_keys = list(env_before.keys())
+        for key in all_keys:
+            if "()" in key:
+                del env_before[key]
+                good_lines.append("unset -f " + key.replace("()","").replace("BASH_FUNC_", ""))
+
         logging.debug("Got environment from the system %s", env_before)
         with open("cleaned_runscript", "w") as cleaned_runscript:
             for line in good_lines:
@@ -112,8 +119,9 @@ class ShellscriptToUserConfig(dict):
         for line in output.split("\n"):
             if line and "=" in line:
                 key, value = line.split("=", 1)
-                if value:
-                    env_after[key] = value
+                if "()" not in key:
+                      if value:
+                            env_after[key] = value
         os.remove("cleaned_runscript")
         diffs = list(set(env_after) - set(env_before))
 
@@ -154,7 +162,7 @@ class ShellscriptToUserConfig(dict):
         for diff in diffs:
             if diff in deprecated_diffs:
                 logging.warning(
-                    "You used a discontinued variable: %s. Please reconsider your life choices",
+                    "You used a discontinued variable: %s.",
                     diff,
                 )
             if diff not in deprecated_diffs:
@@ -181,3 +189,4 @@ class ShellscriptToUserConfig(dict):
 
         for key, value in six.iteritems(user_config):
             self.__setitem__(key, value)
+

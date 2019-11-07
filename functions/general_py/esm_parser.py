@@ -124,7 +124,7 @@ gray_list = [
 
 gray_list = [re.compile(entry) for entry in gray_list]
 gray_list = []
-constant_blacklist = [r"PATH", r"LD_LIBRARY_PATH", r"NETCDFF_ROOT"]
+constant_blacklist = [r"PATH", r"LD_LIBRARY_PATH", r"NETCDFF_ROOT", r"I_MPI_ROOT"]
 
 constant_blacklist = [re.compile(entry) for entry in constant_blacklist]
 

@@ -101,7 +101,6 @@ if __name__ == "__main__":
         os.getcwd() + "/" + os.path.dirname(__file__) + "/../",
     )
 
-    user_config = esm_backwards_compatability.ShellscriptToUserConfig(ARGS.runscript)
     check = False
     expid = "test"
     jobtype = "compute"
@@ -114,11 +113,11 @@ if __name__ == "__main__":
     if "task" in parsed_args:
         jobtype = parsed_args["task"]
 
-    user_config["general"]["check"] = check
-    user_config["general"]["expid"] = expid
-    user_config["general"]["jobtype"] = jobtype
+    command_line_config={}
+    command_line_config["check"] = check
+    command_line_config["expid"] = expid
+    command_line_config["jobtype"] = jobtype
+    command_line_config["scriptname"] = ARGS.runscript
 
-    Setup = esm_sim_objects.SimulationSetup(
-        user_config["general"]["setup_name"].replace("_standalone", ""), user_config
-    )
-    #Setup.prepare()
+    Setup = esm_sim_objects.SimulationSetup(command_line_config)
+    Setup()

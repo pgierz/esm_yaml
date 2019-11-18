@@ -133,6 +133,17 @@ if six.PY2:  # pragma: no cover
     FileNotFoundError = IOError
 
 
+
+
+
+def shell_file_to_dict(filepath):
+    import esm_backwards_compatability
+    config = esm_backwards_compatability.ShellscriptToUserConfig(filepath)
+    return config
+
+
+
+
 def yaml_file_to_dict(filepath):
     """
     Given a yaml file, returns a corresponding dictionary.
@@ -1616,8 +1627,11 @@ def could_be_int(value):
         return(True)
     except:
         try:
-            int(float(value)) # that is actually necessary, because of int("48.0")
-            return(True)
+            intval = int(float(value)) # that is actually necessary, because of int("48.0")
+            if intval - float(value) == 0.:
+                return(True)
+            else:
+                return(False)
         except:
             return(False)
 
@@ -1838,7 +1852,7 @@ class ConfigSetup(GeneralConfig):  # pragma: no cover
                     "prev_date"
                 ]
                 self.__getitem__(model)["parent_restart_dir"] = self.__getitem__(model)[
-                    "experiment_" + model + "_restart_dir"
+                    "experiment_restart_in_dir"
                 ]
 
         # esm_runscripts.runscripts_check_conflicting_model_and_setup_names(self.config)

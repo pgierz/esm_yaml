@@ -16,11 +16,7 @@ hyper_thread: ""
 mail1: ""
 mail2: ""
 
-choose_jobtype:
-        compute:
-                exclusive_flag: "--exclusive"
-        post:
-                exclusive_flag: ""
+exclusive_flag: "--exclusive"
 
 choose_accounting:
         True:

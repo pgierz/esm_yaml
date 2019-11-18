@@ -28,6 +28,12 @@ dataset: r0009
 config_sources:
         'namelist.jsbach': "${namelist_dir}/namelist.jsbach"
 
+no_dynveg_file_ending: "_no-dynveg"
+
+choose_computer.name:
+        ollie:
+                no_dynveg_file_ending: ""
+
 choose_version:
         "3.20":
                 dataset: r0010               
@@ -38,7 +44,7 @@ choose_version:
                                 dynveg_file_ending: "_dynveg"
                         false:
                                 namelist_dir: "${general.esm_master_dir}/namelists/jsbach/${version}/${echam.scenario}/no_dynveg"
-                                dynveg_file_ending: "_no-dynveg"
+                                dynveg_file_ending: "${no_dynveg_file_ending}"
                                 dynveg: "_no_dynveg"
                 choose_echam.scenario:
                         PI-CTRL:

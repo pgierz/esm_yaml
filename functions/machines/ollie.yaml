@@ -1,5 +1,7 @@
 # THE ollie.awi.de YAML config file
 
+name: ollie
+
 accounting: false
 batch_system: "slurm"
 
@@ -8,10 +10,13 @@ operating_system: "linux-centos"
 jobtype: compute
 sh_interpreter: "/usr/bin/bash"
 
+
 choose_jobtype:
         post:
                 partition: smp
         compute: 
+                partition: mpp
+        tidy_and_resubmit: 
                 partition: mpp
 
 choose_partition: 

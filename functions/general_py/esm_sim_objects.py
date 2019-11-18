@@ -31,25 +31,14 @@ yaml.add_representer(Date, date_representer)
 
 
 class SimulationSetup(object):
-    def __init__(self, name, user_config):
+    def __init__(self, command_line_config):
 
-        self.check = False
+        user_config = esm_parser.shell_file_to_dict(command_line_config["scriptname"])
+        user_config["general"].update(command_line_config)
 
-        if not "expid" in user_config["general"]:
-            user_config["general"]["expid"] = "test"
-
-      #  if user_config["general"]["setup_name"] in user_config:
-      #      user_config["general"].update(
-      #          user_config[user_config["general"]["setup_name"]]
-      #      )
-      #      del user_config[user_config["general"]["setup_name"]]
-
-
-        self.config = esm_parser.ConfigSetup(name, user_config)
+        self.config = esm_parser.ConfigSetup(user_config["general"]["setup_name"].replace("_standalone",""), user_config)
+        
         del user_config
-
-        if "check" in self.config["general"]:
-            self.check = self.config["general"]["check"]
 
         self.config["computer"]["jobtype"] = self.config["general"]["jobtype"]
 
@@ -60,35 +49,45 @@ class SimulationSetup(object):
         self.config.finalize()
         self._initialize_components()
 
-
-
+    def __call__(self):
         if self.config["general"]["jobtype"] == "compute": 
-            # make folders
-            self._finalize_components()
-            self._finalize_attributes()
-            # write config
-            self._write_finalized_config()
-            # copy date_file etc. into experiment
-            self._copy_preliminary_files_from_experiment_to_thisrun()
-            # little bit of output
-            self._show_simulation_info()
-            # assemble file lists and copy everything to thisrun
-            self.prepare()
-            # write sad file
-            self.write_simple_runscript()
-            if self.check:
-                sys.exit()
-            self.submit()
-            sys.exit()
-
+            self.compute()
         elif self.config["general"]["jobtype"] == "tidy_and_resubmit":
-            self._write_date_file()
+            self.tidy()
+
+
+    def compute(self):
+        # make folders
+        self._create_folders(self.config["general"], self.all_filetypes)
+        self._create_component_folders()
+        # write config
+        self._write_finalized_config()
+        # copy date_file etc. into experiment
+        self._copy_preliminary_files_from_experiment_to_thisrun()
+        # little bit of output
+        self._show_simulation_info()
+        # assemble file lists and copy everything to thisrun
+        self.prepare()
+        # write sad file
+        self.write_simple_runscript()
+        if self.config["general"]["check"]:
             sys.exit()
-            next_run_call = "./esm_pywrapper.py scriptname -e expid -t compute"
+        self.submit()
+        sys.exit()
+
+    def tidy(self):
+        filetypes=["bin", "config", "forcing", "input", "restart"]
+        all_files_to_copy=self.assemble_file_lists(filetypes)
+        self.copy_files_from_work_to_thisrun()
+        self._write_date_file()
+        new_sim = SimulationSetup(command_line_config)
+        sys.exit()
+
             
 
     def prepare(self):
-        all_files_to_copy = self.assemble_file_lists()
+        filetypes=["log", "mon", "outdata", "restart"]
+        all_files_to_copy = self.assemble_file_lists(filetypes)
         self.copy_files_to_thisrun(all_files_to_copy)
         self.modify_namelists()
         self.modify_files()  # ??? Doing nothing yet
@@ -108,38 +107,16 @@ class SimulationSetup(object):
 
     def _add_all_folders(self):
         self.all_filetypes = ["analysis", "config", "log", "mon", "scripts"]
-        for filetype in self.all_filetypes:
-            setattr(
-                self,
-                "experiment_" + filetype + "_dir",
-                self.config["general"]["base_dir"]
-                + "/"
-                + self.config["general"]["expid"]
-                + "/"
-                + filetype
-                + "/",
-            )
-            self.config["general"]["experiment_" + filetype + "_dir"] = getattr(
-                self, "experiment_" + filetype + "_dir"
-            )
         self.all_filetypes.append("work")
         for filetype in self.all_filetypes:
-            setattr(
-                self,
-                "thisrun_" + filetype + "_dir",
-                self.config["general"]["base_dir"]
-                + "/"
-                + self.config["general"]["expid"]
-                + "/run_"
-                + self.run_datestamp
-                + "/"
-                + filetype
-                + "/",
-            )
+            self.config["general"][
+                "experiment_" + filetype + "_dir"
+            ] = self.config["general"]["base_dir"] + "/" + self.config["general"]["expid"] + "/" + filetype + "/"
 
-            self.config["general"]["thisrun_" + filetype + "_dir"] = getattr(
-                self, "thisrun_" + filetype + "_dir"
-            )
+        for filetype in self.all_filetypes:
+            self.config["general"][
+                "thisrun_" + filetype + "_dir"
+            ] = self.config["general"]["base_dir"] + "/" + self.config["general"]["expid"] + "/run_" + self.run_datestamp + "/" + filetype + "/"
 
         self.config["general"]["work_dir"] =  self.config["general"]["thisrun_work_dir"] 
 
@@ -153,44 +130,22 @@ class SimulationSetup(object):
             "log",
             "mon",
             "outdata",
-            "restart",
+            "restart_in",
+            "restart_out",
             "viz",
         ]
         for model in self.config["general"]["valid_model_names"]:
-            for filetype in self.all_model_filetypes:
-                setattr(
-                    self,
-                    "experiment_" + model + "_" + filetype + "_dir",
-                    self.config["general"]["base_dir"]
-                    + "/"
-                    + self.config["general"]["expid"]
-                    + "/"
-                    + filetype
-                    + "/"
-                    + model
-                    + "/",
-                )
-                setattr(
-                    self,
-                    "thisrun_" + model + "_" + filetype + "_dir",
-                    self.config["general"]["base_dir"]
-                    + "/"
-                    + self.config["general"]["expid"]
-                    + "/run_"
-                    + self.run_datestamp
-                    + "/"
-                    + filetype
-                    + "/"
-                    + model
-                    + "/",
-                )
+             for filetype in self.all_model_filetypes:
+                if "restart" in filetype:
+                    filedir = "restart"
+                else:
+                    filedir = filetype
                 self.config[model][
-                    "experiment_" + model + "_" + filetype + "_dir"
-                ] = getattr(self, "experiment_" + model + "_" + filetype + "_dir")
-                self.config[model][
-                    "thisrun_" + model + "_" + filetype + "_dir"
-                ] = getattr(self, "thisrun_" + model + "_" + filetype + "_dir")
-
+                    "experiment_" + filetype + "_dir"
+                ] = self.config["general"]["base_dir"] + "/" + self.config["general"]["expid"] + "/" + filedir + "/" + model + "/" 
+                self.config[model][ "thisrun_" + filetype + "_dir"
+                ] = self.config["general"]["base_dir"] + "/" + self.config["general"]["expid"] + "/run_" + self.run_datestamp + "/" + filedir  + "/" + model + "/" 
+                self.config[model]["all_filetypes"] = self.all_model_filetypes
 
     def _read_date_file(self, config, date_file=None):
         if not date_file:
@@ -275,8 +230,7 @@ class SimulationSetup(object):
                      "output_flags",
                      "name_flag",
                     ]
-        conditional_flags = ["exclusive_flag",
-                             "accounting_flag",
+        conditional_flags = ["accounting_flag",
                              "notification_flag",
                              "hyperthreading_flag",
                              "additional_flags"
@@ -383,10 +337,12 @@ class SimulationSetup(object):
             )
         self.components = components
 
-    def _create_folders(self):
-        for filetype in self.all_filetypes:
-            if not os.path.exists(getattr(self, "experiment_" + filetype + "_dir")):
-                os.makedirs(getattr(self, "experiment_" + filetype + "_dir"))
+    def _create_folders(self, config, filetypes):
+        for filetype in filetypes:
+            if not os.path.exists(config["experiment_" + filetype + "_dir"]):
+                os.makedirs(config["experiment_" + filetype + "_dir"])
+            if not os.path.exists(config["thisrun_" + filetype + "_dir"]):
+                os.makedirs(config["thisrun_" + filetype + "_dir"])
 
     def _dump_final_yaml(self):
         with open(
@@ -408,42 +364,11 @@ class SimulationSetup(object):
             six.print_("- %s" % model)
         six.print_("You are using the Python version.")
 
-    def _finalize_attributes(self):
-        for filetype in self.all_filetypes:
-            setattr(
-                self,
-                "thisrun_" + filetype + "_dir",
-                self.config["general"]["base_dir"]
-                + "/"
-                + self.config["general"]["expid"]
-                + "/run_"
-                + self.config["general"]["current_date"].format(
-                    form=9, givenph=False, givenpm=False, givenps=False
-                  )
-                + "-"
-                + self.config["general"]["end_date"].format(
-                    form=9, givenph=False, givenpm=False, givenps=False
-                  )
-                + "/"
-                + filetype
-                + "/",
-            )
-            if not os.path.exists(getattr(self, "thisrun_" + filetype + "_dir")):
-                os.makedirs(getattr(self, "thisrun_" + filetype + "_dir"))
-        self.run_datestamp = (
-            self.config["general"]["current_date"].format(
-                form=9, givenph=False, givenpm=False, givenps=False
-            )
-            + "-"
-            + self.config["general"]["end_date"].format(
-                form=9, givenph=False, givenpm=False, givenps=False
-            )
-        )
 
     def _write_finalized_config(self):
         #pp.pprint(self.config)
         with open(
-            self.thisrun_config_dir
+            self.config["general"]["thisrun_config_dir"]
             + "/"
             + self.config["general"]["expid"]
             + "_finished_config.yaml",
@@ -451,11 +376,10 @@ class SimulationSetup(object):
         ) as config_file:
             yaml.dump(self.config, config_file)
 
-    def _finalize_components(self):
+    def _create_component_folders(self):
         for component in self.components:
-
-            component.general_config = self.config["general"]
-            component.finalize_attributes()
+            #component.general_config = self.config["general"]
+            self._create_folders(component.config, self.all_model_filetypes)
 
     def _copy_preliminary_files_from_experiment_to_thisrun(self):
         filelist = [
@@ -469,15 +393,14 @@ class SimulationSetup(object):
             )
         ]
         for filetype, filename, copy_or_link in filelist:
-            source = getattr(self, "experiment_" + filetype + "_dir")
-            dest = getattr(self, "thisrun_" + filetype + "_dir")
+            source = self.config["general"]["experiment_" + filetype + "_dir"]
+            dest = self.config["general"]["thisrun_" + filetype + "_dir"]
             if copy_or_link == "copy":
                 method = shutil.copy2
             elif copy_or_link == "link":
                 method = os.symlink
             if os.path.isfile(source + "/" + filename):
                 method(source + "/" + filename, dest + "/" + filename)
-
 
     def _initialize_calendar(self, config):
         nyear, nmonth, nday, nhour, nminute, nsecond = 0, 0, 0, 0, 0, 0
@@ -549,17 +472,17 @@ class SimulationSetup(object):
             date_file.write(self.current_date.output() + " " + str(self.run_number))
 
 
-    def assemble_file_lists(self):
+    def assemble_file_lists(self, filetypes):
         all_files_to_copy = []
         six.print_("\n" "- Generating file lists for this run...")
         for component in self.components:
             six.print_("-" * 80)
             six.print_("* %s" % component.config["model"], "\n")
             all_component_files, filetype_specific_dict = (
-                component.filesystem_to_experiment()
+                component.filesystem_to_experiment(filetypes)
             )
             with open(
-                component.thisrun_config_dir
+                component.config["thisrun_config_dir"]
                 + "/"
                 + self.config["general"]["expid"]
                 + "_filelist_"
@@ -724,7 +647,7 @@ class SimulationSetup(object):
         ):
             logging.debug(ftuple)
             (file_source, file_intermediate, file_target) = ftuple
-            file_in_work = self.thisrun_work_dir + "/" + file_target.split("/", -1)[-1]
+            file_in_work = self.config["general"]["thisrun_work_dir"] + "/" + file_target.split("/", -1)[-1]
             try:
                 shutil.copy2(file_target, file_in_work)
                 successful_files.append(file_target)
@@ -751,37 +674,6 @@ class SimulationComponent(object):
     def __init__(self, general, component_config):
         self.config = component_config
         self.general_config = general
-
-        self.all_filetypes = [
-            "analysis",
-            "bin",
-            "config",
-            "couple",
-            "forcing",
-            "input",
-            "log",
-            "mon",
-            "outdata",
-            "restart",
-            "viz",
-        ]
-
-        for filetype in self.all_filetypes:
-            setattr(
-                self,
-                "experiment_" + filetype + "_dir",
-                self.general_config["base_dir"]
-                + "/"
-                + self.general_config["expid"]
-                + "/"
-                + filetype
-                + "/"
-                + self.config["model"]
-                + "/",
-            )
-            if not os.path.exists(getattr(self, "experiment_" + filetype + "_dir")):
-                os.makedirs(getattr(self, "experiment_" + filetype + "_dir"))
-
 
     def find_correct_source(self, file_source, year):
         if isinstance(file_source, dict):
@@ -818,10 +710,10 @@ class SimulationComponent(object):
 
 
 
-    def filesystem_to_experiment(self):
+    def filesystem_to_experiment(self, filetypes):
         all_files_to_process = []
         filetype_files_for_list = {}
-        for filetype in self.all_filetypes:
+        for filetype in self.config["all_filetypes"]:
             filetype_files = []
             six.print_("- %s" % filetype)
             if filetype == "restart" and not self.config["lresume"]:
@@ -829,7 +721,7 @@ class SimulationComponent(object):
                 continue
             if filetype + "_sources" not in self.config:
                 continue
-            filedir_intermediate = getattr(self, "thisrun_" + filetype + "_dir")
+            filedir_intermediate = self.config["thisrun_" + filetype + "_dir"]
             for file_descriptor, file_source in six.iteritems(
                 self.config[filetype + "_sources"]
             ):
@@ -909,7 +801,7 @@ class SimulationComponent(object):
         for nml in nmls:
             logging.debug("Loading %s", nml)
             self.config["namelists"][nml] = f90nml.read(
-                os.path.join(self.thisrun_config_dir, nml)
+                os.path.join(self.config["thisrun_config_dir"], nml)
             )
 
     def nmls_remove(self):
@@ -939,7 +831,7 @@ class SimulationComponent(object):
 
     def nmls_finalize(self, all_nmls):
         for nml_name, nml_obj in six.iteritems(self.config.get("namelists", {})):
-            with open(os.path.join(self.thisrun_config_dir, nml_name), "w") as nml_file:
+            with open(os.path.join(self.config["thisrun_config_dir"], nml_name), "w") as nml_file:
                 nml_obj.write(nml_file)
             #if nml_name == "namelist.echam":
             #    pp.pprint(nml_obj)
@@ -948,27 +840,3 @@ class SimulationComponent(object):
             #    sys.exit(1)
             all_nmls[nml_name] = nml_obj  # PG or a string representation?
 
-    def finalize_attributes(self):
-        for filetype in self.all_filetypes:
-            setattr(
-                self,
-                "thisrun_" + filetype + "_dir",
-                self.general_config["base_dir"]
-                + "/"
-                + self.general_config["expid"]
-                + "/run_"
-                + self.general_config["current_date"].format(
-                    form=9, givenph=False, givenpm=False, givenps=False
-                )
-                + "-"
-                + self.general_config["end_date"].format(
-                    form=9, givenph=False, givenpm=False, givenps=False
-                )
-                + "/"
-                + filetype
-                + "/"
-                + self.config["model"]
-                + "/",
-            )
-            if not os.path.exists(getattr(self, "thisrun_" + filetype + "_dir")):
-                os.makedirs(getattr(self, "thisrun_" + filetype + "_dir"))

@@ -11,4 +11,11 @@ class esm_batch_system:
             print ("Unknown batch system: ", name)
             sys.exit(1)
 
+    def check_if_submitted(self):
+        return self.bs.check_if_submitted()
 
+    def get_jobid(self):
+        return self.bs.get_jobid()
+
+    def calc_requirements(self, config):
+        return self.bs.calc_requirements(config)

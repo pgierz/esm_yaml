@@ -48,6 +48,7 @@ class SimulationSetup(object):
         self.config.calendar()
         self.config.finalize()
         self._initialize_components()
+        self.add_submission_info()
 
     def __call__(self):
         if self.config["general"]["jobtype"] == "compute": 
@@ -80,6 +81,7 @@ class SimulationSetup(object):
         all_files_to_copy=self.assemble_file_lists(filetypes)
         self.copy_files_from_work_to_thisrun()
         self._write_date_file()
+        command_line_config["jobtype"] = "compute"
         new_sim = SimulationSetup(command_line_config)
         sys.exit()
 
@@ -104,6 +106,20 @@ class SimulationSetup(object):
 
 
     ##########################    ASSEMBLE ALL THE INFORMATION  ##############################
+
+    def add_submission_info(self):
+        import esm_batch_system       
+        bs = esm_batch_system.esm_batch_system(self.config, self.config["computer"]["batch_system"])
+
+        submitted = bs.check_if_submitted()
+        if submitted:
+            jobid = bs.get_jobid()
+        else:
+            jobid = os.getpid()
+
+        self.config["general"]["submitted"] = submitted
+        self.config["general"]["jobid"] = jobid
+
 
     def _add_all_folders(self):
         self.all_filetypes = ["analysis", "config", "log", "mon", "scripts"]
@@ -187,6 +203,7 @@ class SimulationSetup(object):
         header = self.get_batch_header()
         environment = self.get_environment()
         commands = self.get_run_commands()
+        tidy_call = "./esm_runscripts " + self.config["general"]["scriptname"] + " -e " + self.config["general"]["expid"] + " -t tidy_and_resubmit"
 
         with open(sadfilename, "w") as sadfile:
             for line in header:
@@ -198,6 +215,8 @@ class SimulationSetup(object):
             sadfile.write("cd "+ self.config["general"]["thisrun_work_dir"] + "\n")
             for line in commands: 
                 sadfile.write(line + "\n")
+            sadfile.write("cd "+ self.config["general"]["thisrun_scripts_dir"] + "\n")
+            sadfile.write(tidy_call + "\n")
 
         self.submit_command = self.get_submit_command(sadfilename)
 
@@ -626,6 +645,8 @@ class SimulationSetup(object):
     def add_batch_hostfile(self, all_files_to_copy):
         import esm_batch_system
         self.batch = esm_batch_system.esm_batch_system(self.config, self.config["computer"]["batch_system"])
+        self.batch.calc_requirements(self.config)
+
         all_files_to_copy.append(
             (
                 "",

@@ -6,9 +6,23 @@ class slurm:
         self.filename = "hostfile_srun"
         self.path = folder + "/" + self.filename
 
+    def check_if_submitted(self):
+        jobid = os.environ.get('SLURM_JOB_ID', None)
+        if jobid:
+            return True
+        else:
+            return False
+
+    def get_jobid(self):
+        jobid = os.environ.get('SLURM_JOB_ID', None)
+        if jobid:
+            return jobid
+        else:
+            return None
+
+    def calc_requirements(self, config):
         start_proc = 0
         end_proc = 0
-
         with open(self.path, "w") as hostfile:
             for model in config["general"]["models"]:
                 if "nproc" in config[model]:

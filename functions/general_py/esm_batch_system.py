@@ -19,3 +19,9 @@ class esm_batch_system:
 
     def calc_requirements(self, config):
         return self.bs.calc_requirements(config)
+
+    def get_job_state(self, jobid):
+        return self.bs.get_job_state(jobid)
+
+    def job_is_still_running(self, jobid):
+        return self.bs.job_is_still_running(jobid)

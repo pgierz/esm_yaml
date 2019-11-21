@@ -33,22 +33,34 @@ yaml.add_representer(Date, date_representer)
 class SimulationSetup(object):
     def __init__(self, command_line_config):
 
+        print ("init1")
         user_config = esm_parser.shell_file_to_dict(command_line_config["scriptname"])
         user_config["general"].update(command_line_config)
 
+        print ("init2")
         self.config = esm_parser.ConfigSetup(user_config["general"]["setup_name"].replace("_standalone",""), user_config)
         
         del user_config
 
+        print ("init3")
         self.config["computer"]["jobtype"] = self.config["general"]["jobtype"]
 
+        print ("init4")
         self._read_date_file(self.config)
+        print ("init5")
         self._initialize_calendar(self.config)
+        print ("init6")
         self._add_all_folders()
+        print ("init7")
         self.config.calendar()
+        print ("init8")
         self.config.finalize()
+        print ("init9")
         self._initialize_components()
+        print ("init10")
         self.add_submission_info()
+
+        print ("init11")
 
     def __call__(self):
         if self.config["general"]["jobtype"] == "compute": 
@@ -63,6 +75,7 @@ class SimulationSetup(object):
         self._create_component_folders()
         # write config
         self._write_finalized_config()
+        self.copy_tools_to_thisrun()
         # copy date_file etc. into experiment
         self._copy_preliminary_files_from_experiment_to_thisrun()
         # little bit of output
@@ -77,8 +90,16 @@ class SimulationSetup(object):
         sys.exit()
 
     def tidy(self):
+        print("tidy1")
         filetypes=["bin", "config", "forcing", "input", "restart"]
+        print("tidy2")
         all_files_to_copy=self.assemble_file_lists(filetypes)
+        print("tidy3")
+        if self.config["general"]["submitted"]:
+            print("tidy4")
+            self.wait_and_observe()
+        print("tidy5")
+        sys.exit()
         self.copy_files_from_work_to_thisrun()
         self._write_date_file()
         command_line_config["jobtype"] = "compute"
@@ -106,6 +127,30 @@ class SimulationSetup(object):
 
 
     ##########################    ASSEMBLE ALL THE INFORMATION  ##############################
+
+
+    def copy_tools_to_thisrun(self):
+        tools_dir = self.config["general"]["thisrun_scripts_dir"] + "/esm_tools/functions"
+
+        if os.path.isdir(tools_dir) or self.config["general"]["update"]:
+            shutil.rmtree(tools_dir, ignore_errors=True)
+
+        if not os.path.isdir(tools_dir):
+            shutil.copytree(self.config["general"]["esm_master_dir"] + "/functions", tools_dir) 
+
+    def wait_and_observe(self):
+        import time
+        with open(self.config["general"]["thisrun_scripts_dir"] + "/monitoring_file.out", "w", buffering = 1) as monitor_file:
+            while self.job_is_still_running():
+                monitor_file.write("still running \n")
+                time.sleep(10)
+                # possibly monitor shit here
+
+    def job_is_still_running(self):
+        import psutil
+        if psutil.pid_exists(self.config["general"]["launcher_pid"]):
+            return True
+        return False
 
     def add_submission_info(self):
         import esm_batch_system       
@@ -203,7 +248,7 @@ class SimulationSetup(object):
         header = self.get_batch_header()
         environment = self.get_environment()
         commands = self.get_run_commands()
-        tidy_call = "./esm_runscripts " + self.config["general"]["scriptname"] + " -e " + self.config["general"]["expid"] + " -t tidy_and_resubmit"
+        tidy_call = "esm_tools/functions/general_py/esm_runscripts " + self.config["general"]["scriptname"] + " -e " + self.config["general"]["expid"] + " -t tidy_and_resubmit -p ${process}"
 
         with open(sadfilename, "w") as sadfile:
             for line in header:
@@ -215,6 +260,7 @@ class SimulationSetup(object):
             sadfile.write("cd "+ self.config["general"]["thisrun_work_dir"] + "\n")
             for line in commands: 
                 sadfile.write(line + "\n")
+            sadfile.write("process=$! \n")
             sadfile.write("cd "+ self.config["general"]["thisrun_scripts_dir"] + "\n")
             sadfile.write(tidy_call + "\n")
 
@@ -316,7 +362,7 @@ class SimulationSetup(object):
         commands = []
         batch_system = self.config["computer"]
         if "execution_command" in batch_system:
-            commands.append(batch_system["execution_command"])
+            commands.append(batch_system["execution_command"] + " &")
         return commands
 
     def get_submit_command(self, sadfilename):
@@ -420,6 +466,13 @@ class SimulationSetup(object):
                 method = os.symlink
             if os.path.isfile(source + "/" + filename):
                 method(source + "/" + filename, dest + "/" + filename)
+        this_script = self.config["general"]["scriptname"]
+        shutil.copy2("./" + this_script, self.config["general"]["thisrun_scripts_dir"])
+
+        for additional_file in self.config["general"]["additional_files"]:
+            shutil.copy2(additional_file, self.config["general"]["thisrun_scripts_dir"])
+
+
 
     def _initialize_calendar(self, config):
         nyear, nmonth, nday, nhour, nminute, nsecond = 0, 0, 0, 0, 0, 0

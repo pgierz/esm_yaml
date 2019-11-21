@@ -6,7 +6,7 @@ setup_name="awicm"
 #check=1
 
 account=ab0995
-compute_time="00:31:00"
+compute_time="00:01:00"
 ###############################################################################
 
 INITIAL_DATE_awicm=2000-01-01       # Initial exp. date

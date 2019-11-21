@@ -50,7 +50,7 @@ hyper_flag: "" # No hyperthreading on ollie
 useMPI: intelmpi
 
 module_actions: 
-        - "purge" 
+        - "purge"
         - "load pism_externals" 
         - "load cmake" 
         - "load udunits"
@@ -60,6 +60,7 @@ module_actions:
         - "unload netcdf" 
         - "load hdf5" 
         - "load centoslibs cdo nco netcdf/4.6.2_intel"
+        - "load python3" 
         - "list"
 
 export_vars:

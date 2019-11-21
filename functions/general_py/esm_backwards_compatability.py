@@ -72,6 +72,7 @@ class ShellscriptToUserConfig(dict):
     """
 
     def __init__(self, runscript_path):
+        print("UC1")
         with open(runscript_path) as runscript_file:
             all_lines = runscript_file.readlines()
         hashbang = all_lines[0]
@@ -79,11 +80,13 @@ class ShellscriptToUserConfig(dict):
         good_lines = [
             line.strip() for line in all_lines if not line.startswith(bad_lines)
         ]
+        print("UC2")
         good_lines.insert(0, hashbang)
         good_lines.insert(1, "set -a")
         # Module commands:
         module_commands = [line for line in good_lines if "module" in line]
         # Find index of a command "module purge"
+        print("UC3")
         if "module purge" in module_commands:
             # Anything before module purge is probably irrelevant, so flip the
             # list around first before figuring out which index it is:
@@ -91,37 +94,44 @@ class ShellscriptToUserConfig(dict):
             remaining_module_commands = module_commands[::-1][:index][::-1]
         else:
             remaining_module_commands = module_commands
+        print("UC4")
         module_commands = [l for l in remaining_module_commands if "list" not in l]
         for module_command in module_commands:
             os.system(module_command)
         env_before = dict(os.environ)
         # the next lines remove functions
         all_keys = list(env_before.keys())
+        print("UC5")
         for key in all_keys:
             if "()" in key:
                 del env_before[key]
                 good_lines.append("unset -f " + key.replace("()","").replace("BASH_FUNC_", ""))
 
+        print("UC6")
         logging.debug("Got environment from the system %s", env_before)
         with open("cleaned_runscript", "w") as cleaned_runscript:
             for line in good_lines:
                 cleaned_runscript.write(line + "\n")
             logging.debug("Finished writing cleaned_runscript")
+        print("UC7")
         command_to_run = "source %s/cleaned_runscript; env" % os.getcwd()
         logging.debug(
             "Using the following command to determine environment in runscript: %s",
             command_to_run,
         )
+        print("UC8")
         pipe1 = subprocess.Popen(command_to_run, stdout=subprocess.PIPE, shell=True)
         output = pipe1.communicate()[0].decode("utf-8")
         logging.debug(output)
         env_after = {}
+        print("UC9")
         for line in output.split("\n"):
             if line and "=" in line:
                 key, value = line.split("=", 1)
                 if "()" not in key:
                       if value:
                             env_after[key] = value
+        print("UC10")
         os.remove("cleaned_runscript")
         diffs = list(set(env_after) - set(env_before))
 
@@ -129,6 +139,7 @@ class ShellscriptToUserConfig(dict):
         user_config = {}
         logging.debug(diffs)
         solved_diffs = []
+        print("UC11")
         for thisdiff in diffs:
             logging.debug("thisdiff=%s", thisdiff)
             for sim_thing in known_setups_and_models:
@@ -145,12 +156,14 @@ class ShellscriptToUserConfig(dict):
                     user_config[sim_thing][diff_name] = env_after[thisdiff]
                     solved_diffs.append(thisdiff)
                     break
+        print("UC12")
         for k, v in six.iteritems(user_config):
             if v:
                 user_config[k] = v
         for solved_diff in solved_diffs:
             diffs.remove(solved_diff)
 
+        print("UC13")
         solved_diffs = []
         deprecated_diffs = [
             "FUNCTION_PATH",
@@ -159,6 +172,7 @@ class ShellscriptToUserConfig(dict):
             "ESM_USE_C_CALENDAR",
         ]
         user_config["general"] = {}
+        print("UC14")
         for diff in diffs:
             if diff in deprecated_diffs:
                 logging.warning(
@@ -169,6 +183,7 @@ class ShellscriptToUserConfig(dict):
                 user_config["general"][diff] = env_after[diff]
                 solved_diffs.append(diff)
 
+        print("UC15")
         for solved_diff in solved_diffs:
             diffs.remove(solved_diff)
         logging.debug("Diffs after removing: %s", diffs)
@@ -179,14 +194,39 @@ class ShellscriptToUserConfig(dict):
             if not value:
                 del user_config[key]
 
+        user_config["general"]["additional_files"] = []
+        for model in list(user_config):
+            print (model)
+            if "further_reading" in user_config[model]:
+                print( type(user_config[model]["further_reading"]))
+                if type(user_config[model]["further_reading"]) == list:
+                    print ("beep")
+                    for additional_file in user_config[model]["further_reading"]:
+                        user_config["general"]["additional_files"].append(additional_file)
+                        esm_parser.pprint_config(user_config)
+                elif type(user_config[model]["further_reading"]) == str:
+                    print ("boop")
+                    additional_file = user_config[model]["further_reading"]
+                    print (additional_file)
+                    user_config["general"]["additional_files"].append(additional_file)
+                    esm_parser.pprint_config(user_config)
+            else:
+                print ("not found")
+            esm_parser.pprint_config(user_config)
+
+        print("UC16")
+        esm_parser.pprint_config(user_config)
         for attachment in esm_parser.CONFIGS_TO_ALWAYS_ATTACH_AND_REMOVE:
+            print (attachment)
             esm_parser.attach_to_config_and_remove(user_config, attachment)
             for model in list(user_config):
+                print (model)
                 esm_parser.attach_to_config_and_remove(user_config[model], attachment)
 
         # mini_recursive_run_func(user_config, remap_old_new_keys)
         mini_recursive_run_func(user_config, purify_cases)
 
+        print("UC17")
         for key, value in six.iteritems(user_config):
             self.__setitem__(key, value)
 

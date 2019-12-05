@@ -82,6 +82,7 @@ import six
 import esm_backwards_compatability
 import esm_sim_objects
 import esm_runscripts
+from esm_profile import *
 
 # Date class
 from esm_calendar import Date
@@ -1142,7 +1143,7 @@ def recursive_run_function(tree, right, level, func, *args, **kwargs):
     if level == "mappings":
         do_func_for = [dict, list]
     elif level == "atomic":
-        do_func_for = [str, int, float]
+        do_func_for = [str, int, float, Date]
         if six.PY2:
             do_func_for.append(unicode)
     elif level == "always":
@@ -1281,39 +1282,64 @@ def determine_regex_list_match(test_str, regex_list):
 
 def find_variable(tree, rhs, full_config, white_or_black_list, isblacklist):
     raw_str = rhs
+    if not tree[-1]:
+        tree = tree[:-1]
     if isinstance(raw_str, str) and "${" in raw_str:
         ok_part, rest = raw_str.split("${", 1)
         var, new_raw = rest.split("}", 1)
         if ((determine_regex_list_match(var, white_or_black_list)) != isblacklist) and (
             not determine_regex_list_match(var, constant_blacklist)
         ):
-            var_result = actually_find_variable(tree, var, full_config)
+            var_result, var_attrs = actually_find_variable(tree, var, full_config)
+
+            if type(var_result) == str:
+                if "${" in var_result:
+                    var_result = find_variable(
+                        tree,
+                        var_result,
+                        full_config,
+                        white_or_black_list,
+                        isblacklist,
+                    )
+
+                if "$((" in var_result:
+                    var_result= do_math_in_entry(tree, var_result, full_config)
+
+            if var_attrs:
+                rentry = []
+                if not isinstance(var_result, Date):
+                    var_result = var_result.replace(DATE_MARKER, "")
+                    entry = Date(var_result)
+                else:
+                    entry = var_result
+                for attr in var_attrs.split("!"):
+                    rentry.append(str(getattr(entry, attr)))
+                var_result = "".join(rentry)
+
+
             # if var_result:
             # BUG/FIXME: Note that this means that we **always** will get
             # back a string if a variable is replaced!
-            ok_part, var_result, more_rest = (
-                str(ok_part),
-                str(var_result),
-                str(new_raw),
-            )
-            logger.debug("Will replace again: %s", ok_part + var_result + more_rest)
-            return find_variable(
-                tree,
-                ok_part + var_result + more_rest,
-                full_config,
-                white_or_black_list,
-                isblacklist,
-            )
+            if type(var_result) not in [list]:
+                ok_part, var_result, more_rest = (
+                    str(ok_part),
+                    str(var_result),
+                    str(new_raw),
+                )
 
-            # if new_raw:
-            #    more_rest = find_variable(
-            #        tree, new_raw, full_config, white_or_black_list, isblacklist
-            #    )
-            # else:
-            #    more_rest = ""
-            ## Make sure everything is a string:
-            # return ok_part + var_result + more_rest
-            raw_str = convert(raw_str)
+                if "${" in ok_part + var_result + more_rest:
+                    raw_str = find_variable(
+                        tree,
+                        ok_part + var_result + more_rest,
+                        full_config,
+                        white_or_black_list,
+                        isblacklist,
+                    )
+                else:
+                    raw_str = ok_part + var_result + more_rest
+
+            else:
+                return var_result
     return raw_str
 
 
@@ -1346,18 +1372,7 @@ def actually_find_variable(tree, rhs, full_config):
         except:
             raise ValueError("Sorry: %s not found" % (rhs))
 
-    if var_attr:
-        rentry = []
-        if var_name.endswith("date"):
-            if not isinstance(var_result, Date):
-                var_result = var_result.replace(DATE_MARKER, "")
-                entry = Date(var_result)
-            else:
-                entry = var_result
-            for attr in var_attr.split("!"):
-                rentry.append(str(getattr(entry, attr)))
-            return "".join(rentry)
-    return var_result
+    return var_result, var_attr
 
 
 def list_to_multikey(tree, rhs, config_to_search, ignore_list, isblacklist):
@@ -1393,7 +1408,7 @@ def list_to_multikey(tree, rhs, config_to_search, ignore_list, isblacklist):
                 #):
                 #    return {lhs: rhs}
                 key_elements = key_in_list.split(".")
-                entries_of_key = actually_find_variable(
+                entries_of_key, _ = actually_find_variable(
                     tree, key_in_list, config_to_search
                 )
 
@@ -1446,7 +1461,7 @@ def list_to_multikey(tree, rhs, config_to_search, ignore_list, isblacklist):
             actual_list, new_raw = rest.split(list_end, 1)
             key_in_list, value_in_list = actual_list.split("-->", 1)
             key_elements = key_in_list.split(".")
-            entries_of_key = actually_find_variable(tree, key_in_list, config_to_search)
+            entries_of_key, _ = actually_find_variable(tree, key_in_list, config_to_search)
             if isinstance(entries_of_key, str):
                 entries_of_key = [entries_of_key]
             for entry in entries_of_key:
@@ -1516,6 +1531,8 @@ def do_math_in_entry(tree, rhs, config):
     if not tree[-1]:
         tree = tree[:-1]
     entry = rhs
+    if isinstance(entry, Date):
+        return entry
     if "${" in str(entry):
         return entry
     entry = " " + str(entry) + " "
@@ -1533,6 +1550,24 @@ def do_math_in_entry(tree, rhs, config):
             for step in steps:
                 if step in ["+", "-"]:
                     math = math + step
+                elif "seconds" in step:
+                    tupel = "(0, 0, 0, 0, 0," + step.replace('seconds','').replace('\"', '').replace('\'', '').strip() +")"
+                    math = math + tupel
+                elif "minutes" in step:
+                    tupel = (0, 0, 0, 0, step.replace('minutes','').replace('\"', '').replace('\'', '').strip(), 0)
+                    math = math + str(tupel)
+                elif "hours" in step:
+                    tupel = (0, 0, 0, step.replace('hours','').replace('\"', '').replace('\'', '').strip(), 0, 0)
+                    math = math + str(tupel)
+                elif "days" in step:
+                    tupel = (0, 0, step.replace('days','').replace('\"', '').replace('\'', '').strip(), 0, 0, 0)
+                    math = math + tupel
+                elif "months" in step:
+                    tupel = (0, step.replace('months','').replace('\"', '').replace('\'', '').strip(), 0, 0, 0, 0)
+                    math = math + tupel
+                elif "years" in step:
+                    tupel = (step.replace('years','').replace('\"', '').replace('\'', '').strip(), 0, 0, 0, 0, 0)
+                    math = math + tupel
                 else:
                     all_dates.append(Date(step.replace(DATE_MARKER, "")))
                     math = math + "all_dates[" + str(index) + "]"
@@ -1581,7 +1616,8 @@ def marked_date_to_date_object(tree, rhs, config):
                     rentry.append(str(getattr(entry, attr)))
                 return "".join(rentry)
             else:
-                return entry.output()
+                #return entry.output()
+                return entry
     return entry
 
 
@@ -1600,7 +1636,10 @@ def purify_booleans(tree, rhs, config):
     if not tree[-1]:
         tree = tree[:-1]
     lhs = tree[-1]
+
     entry = rhs
+    if isinstance(entry, Date):
+        return entry
     if entry in ["True", "true", "False", "false"]:
         entry = eval(entry.capitalize())
     return entry
@@ -1649,6 +1688,7 @@ def could_be_complex(value):
     except:
         return(False)
 
+
 def convert(value):
     if could_be_bool(value):
         return to_boolean(value)
@@ -1691,6 +1731,7 @@ def finish_priority_merge(config):
 class GeneralConfig(dict):  # pragma: no cover
     """ All configs do this! """
 
+    @timing
     def __init__(self, path, user_config):
         super(dict, self).__init__()
         if os.path.isfile(path):
@@ -1912,6 +1953,8 @@ class ConfigSetup(GeneralConfig):  # pragma: no cover
     def run_recursive_functions(self, config, isblacklist=True):
         logging.debug("Top of run recursive functions")
         recursive_run_function([], config, "atomic", mark_dates, config)
+        #pprint_config(config)
+        #sys.exit(1)
         recursive_run_function(
             [],
             config,

@@ -13,12 +13,14 @@ import f90nml
 import six
 import tqdm
 import yaml
+import time
 
 
 from esm_calendar import Date
 import esm_parser
 import esm_coupler
 import esm_methods
+from esm_profile import *
 
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
@@ -31,36 +33,26 @@ yaml.add_representer(Date, date_representer)
 
 
 class SimulationSetup(object):
+    @timing
     def __init__(self, command_line_config):
 
-        print ("init1")
         user_config = esm_parser.shell_file_to_dict(command_line_config["scriptname"])
         user_config["general"].update(command_line_config)
 
-        print ("init2")
         self.config = esm_parser.ConfigSetup(user_config["general"]["setup_name"].replace("_standalone",""), user_config)
         
         del user_config
 
-        print ("init3")
         self.config["computer"]["jobtype"] = self.config["general"]["jobtype"]
-
-        print ("init4")
+        
         self._read_date_file(self.config)
-        print ("init5")
         self._initialize_calendar(self.config)
-        print ("init6")
         self._add_all_folders()
-        print ("init7")
         self.config.calendar()
-        print ("init8")
         self.config.finalize()
-        print ("init9")
         self._initialize_components()
-        print ("init10")
         self.add_submission_info()
-
-        print ("init11")
+        self.init_coupler()
 
     def __call__(self):
         if self.config["general"]["jobtype"] == "compute": 
@@ -85,31 +77,46 @@ class SimulationSetup(object):
         # write sad file
         self.write_simple_runscript()
         if self.config["general"]["check"]:
-            sys.exit()
+            self.end_it_all()
         self.submit()
+        self.end_it_all()
+
+
+    def end_it_all(self):
+        if self.config["general"]["profile"]:
+            for line in timing_info:
+                print(line)       
         sys.exit()
 
+
     def tidy(self):
-        print("tidy1")
-        filetypes=["bin", "config", "forcing", "input", "restart"]
-        print("tidy2")
-        all_files_to_copy=self.assemble_file_lists(filetypes)
-        print("tidy3")
-        if self.config["general"]["submitted"]:
-            print("tidy4")
-            self.wait_and_observe()
-        print("tidy5")
-        sys.exit()
-        self.copy_files_from_work_to_thisrun()
-        self._write_date_file()
-        command_line_config["jobtype"] = "compute"
-        new_sim = SimulationSetup(command_line_config)
-        sys.exit()
+        with open(self.config["general"]["thisrun_scripts_dir"] + "/monitoring_file.out", "w", buffering = 1) as monitor_file:
+            monitor_file.write("tidy job initialized \n")
+            monitor_file.write("attaching to process " + str(self.config["general"]["launcher_pid"]) + " \n")
+            #monitoring_events=self.assemble_monitoring_events()
+
+            filetypes=["log", "mon", "outdata", "restart_out"]
+            all_files_to_copy=self.assemble_file_lists(filetypes)
+            if self.config["general"]["submitted"]:
+                self.wait_and_observe(monitor_file)
+            monitor_file.write("job ended, starting to tidy up now \n")
+            self.copy_files_from_work_to_thisrun(all_files_to_copy)
+            all_listed_filetypes=["log", "mon", "outdata", "restart_out","bin", "config", "forcing", "input", "restart_in"]
+            all_files_to_check = self.assemble_file_lists(all_listed_filetypes)
+            self.check_for_unknown_files(all_files_to_check)
+
+            monitor_file.write("writing date file \n")
+            monitor_file.write("resubmitting \n")
+            self.end_it_all()
+            self._write_date_file()
+            command_line_config["jobtype"] = "compute"
+            new_sim = SimulationSetup(command_line_config)
+            self.end_it_all()
 
             
 
     def prepare(self):
-        filetypes=["log", "mon", "outdata", "restart"]
+        filetypes=["bin", "config", "forcing", "input", "restart_in"]
         all_files_to_copy = self.assemble_file_lists(filetypes)
         self.copy_files_to_thisrun(all_files_to_copy)
         self.modify_namelists()
@@ -129,21 +136,92 @@ class SimulationSetup(object):
     ##########################    ASSEMBLE ALL THE INFORMATION  ##############################
 
 
-    def copy_tools_to_thisrun(self):
-        tools_dir = self.config["general"]["thisrun_scripts_dir"] + "/esm_tools/functions"
+    #def assemble_monitoring_events(self):
+    #    events={}
+    #    events[][
 
-        if os.path.isdir(tools_dir) or self.config["general"]["update"]:
+
+
+    def check_for_unknown_files(self, listed_files):
+        files = os.listdir(self.config["general"]["thisrun_work_dir"])
+        unknown_files = []
+        for thisfile in files:
+            found = False
+            file_in_list = False
+            file_in_work = False
+            if os.path.isfile(self.config["general"]["thisrun_work_dir"] + "/" + thisfile):
+                for (file_source, file_intermediate, file_target) in listed_files:
+                    #print (file_target.split("/", -1)[-1] + "    " + thisfile)
+                    if file_target.split("/", -1)[-1] == thisfile:
+                        file_in_list = True
+                        if os.path.isfile(file_intermediate):
+                            found = True
+                            file_in_work = True
+                        break
+                if not found:
+                    unknown_files.append(thisfile)
+                if not file_in_list:
+                    print ("File is not in list: " + thisfile )
+                elif not file_in_work:
+                    print ("File is not where it should be: ", thisfile)
+
+#        for thisfile in unknown_files:
+
+
+    @timing
+    def copy_tools_to_thisrun(self):
+        gconfig = self.config["general"]
+
+        fromdir = os.path.normpath(gconfig["started_from"])
+        scriptsdir = os.path.normpath(gconfig["experiment_scripts_dir"])
+        tools_dir = scriptsdir + "/esm_tools/functions"
+
+        print ("Started from :", fromdir)
+        print ("Scripts Dir : ", scriptsdir)
+
+        print (fromdir == scriptsdir)
+        print (gconfig["update"])
+
+        if os.path.isdir(tools_dir) and gconfig["update"]:
             shutil.rmtree(tools_dir, ignore_errors=True)
 
         if not os.path.isdir(tools_dir):
-            shutil.copytree(self.config["general"]["esm_master_dir"] + "/functions", tools_dir) 
+            shutil.copytree(gconfig["esm_master_dir"] + "/functions", tools_dir) 
 
-    def wait_and_observe(self):
+        if (fromdir == scriptsdir) and not gconfig["update"]:
+            print ("Started from the experiment folder, continuing...")
+        else:
+            if not fromdir == scriptsdir:
+                print ("Not started from experiment folder, restarting...")
+            else:
+                print ("Tools were updated, restarting...")
+
+            if not os.path.isfile(scriptsdir + "/" + gconfig["scriptname"]):
+                oldscript = fromdir + "/" + gconfig["scriptname"]
+                print (oldscript)
+                shutil.copy2 (oldscript, scriptsdir)
+
+            for tfile in gconfig["additional_files"]:
+                if not os.path.isfile(scriptsdir + "/" + tfile):
+                     shutil.copy2 (fromdir + "/" + tfile, scriptsdir)
+
+            restart_command = ("cd " + scriptsdir + "; " + \
+                               "esm_tools/functions/general_py/esm_runscripts " + \
+                               gconfig["original_command"] )
+            print (restart_command)
+            os.system( restart_command )
+
+            gconfig["profile"] = False
+            self.end_it_all()
+
+
+
+
+    def wait_and_observe(self, monitor_file):
         import time
-        with open(self.config["general"]["thisrun_scripts_dir"] + "/monitoring_file.out", "w", buffering = 1) as monitor_file:
-            while self.job_is_still_running():
-                monitor_file.write("still running \n")
-                time.sleep(10)
+        while self.job_is_still_running():
+            monitor_file.write("still running \n")
+            time.sleep(10)
                 # possibly monitor shit here
 
     def job_is_still_running(self):
@@ -208,6 +286,7 @@ class SimulationSetup(object):
                 ] = self.config["general"]["base_dir"] + "/" + self.config["general"]["expid"] + "/run_" + self.run_datestamp + "/" + filedir  + "/" + model + "/" 
                 self.config[model]["all_filetypes"] = self.all_model_filetypes
 
+    @timing
     def _read_date_file(self, config, date_file=None):
         if not date_file:
             date_file = (
@@ -473,7 +552,6 @@ class SimulationSetup(object):
             shutil.copy2(additional_file, self.config["general"]["thisrun_scripts_dir"])
 
 
-
     def _initialize_calendar(self, config):
         nyear, nmonth, nday, nhour, nminute, nsecond = 0, 0, 0, 0, 0, 0
         nyear = int(config["general"].get("nyear", nyear))
@@ -502,12 +580,13 @@ class SimulationSetup(object):
         config["general"]["start_date"] = self.current_date
         config["general"]["initial_date"] = Date(config["general"]["initial_date"])
         config["general"]["final_date"] = Date(config["general"]["final_date"])
-        config["general"]["prev_date"] = self.current_date.sub((0, 0, 1, 0, 0, 0))
+        #config["general"]["prev_date"] = self.current_date.sub((0, 0, 1, 0, 0, 0))
+        config["general"]["prev_date"] = self.current_date - (0, 0, 1, 0, 0, 0)
 
         config["general"]["next_date"] = self.current_date.add(self.delta_date)
-        config["general"]["end_date"] = config["general"]["next_date"].sub(
-            (0, 0, 1, 0, 0, 0)
-        )
+        #config["general"]["end_date"] = config["general"]["next_date"].sub(
+        config["general"]["end_date"] = config["general"]["next_date"] - (0, 0, 1, 0, 0, 0)
+    
         config["general"]["runtime"] = (
             config["general"]["next_date"] - config["general"]["current_date"]
         )
@@ -618,6 +697,34 @@ class SimulationSetup(object):
                 six.print_("- %s" % missing_file)
 
 
+    def copy_files_from_work_to_thisrun(self, all_files_to_copy):
+        six.print_("=" * 80, "\n")
+        six.print_("COPYING STUFF FROM WORK TO THISRUN FOLDERS")
+        # Copy files:
+        successful_files = []
+        missing_files = []
+        # TODO: Check if we are on login node or elsewhere for the progress
+        # bar, it doesn't make sense on the compute nodes:
+        flist = all_files_to_copy
+        for ftuple in tqdm.tqdm(
+            flist,
+            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]",
+        ):
+            logging.debug(ftuple)
+            (file_source, file_intermediate, file_target) = ftuple
+            file_source = self.config["general"]["thisrun_work_dir"] + "/" + file_target.split("/", -1)[-1]
+            try:
+                shutil.copy2(file_source, file_intermediate)
+                if not os.path.isfile(file_target):
+                    os.symlink(file_intermediate, file_target)
+                successful_files.append(file_target)
+            except IOError:
+                missing_files.append(file_target)
+        if missing_files:
+            six.print_("--- WARNING: These files were missing:")
+            for missing_file in missing_files:
+                six.print_("- %s" % missing_file)
+
     def modify_namelists(self):
         # Load and modify namelists:
         six.print_("\n" "- Setting up namelists for this run...")
@@ -668,10 +775,10 @@ class SimulationSetup(object):
                         )
 
 
-    def prepare_coupler_files(self, all_files_to_copy):
+    def init_coupler(self):
         for model in list(self.config):
             if model in esm_coupler.known_couplers:
-                coupler_config_dir = (
+                self.coupler_config_dir = (
                     self.config["general"]["base_dir"]
                     + "/"
                     + self.config["general"]["expid"]
@@ -682,16 +789,20 @@ class SimulationSetup(object):
                     + "/"
                 )
                 self.coupler = esm_coupler.esm_coupler(self.config, model)
-                self.coupler.prepare(self.config, coupler_config_dir)
-                coupler_filename="namcouple"  # needs to be set by function above
-                all_files_to_copy.append(
-                    (
-                        "",
-                        "",
-                        coupler_config_dir + "/" + coupler_filename,
-                    )
-                )
-                #print (coupler_config_dir + "/" + coupler_filename)
+                break
+        self.coupler.add_output_files(self.config)   
+
+    def prepare_coupler_files(self, all_files_to_copy):
+        self.coupler.prepare(self.config, self.coupler_config_dir)
+        coupler_filename="namcouple"  # needs to be set by function above
+        all_files_to_copy.append(
+            (
+                "",
+                "",
+                self.coupler_config_dir + "/" + coupler_filename,
+            )
+        )
+        #print (coupler_config_dir + "/" + coupler_filename)
 
 
 
@@ -787,10 +898,11 @@ class SimulationComponent(object):
     def filesystem_to_experiment(self, filetypes):
         all_files_to_process = []
         filetype_files_for_list = {}
-        for filetype in self.config["all_filetypes"]:
+        for filetype in filetypes:
+        #for filetype in self.config["all_filetypes"]:
             filetype_files = []
             six.print_("- %s" % filetype)
-            if filetype == "restart" and not self.config["lresume"]:
+            if filetype == "restart_in" and not self.config["lresume"]:
                 six.print_("- restart files do not make sense for a cold start, skipping...")
                 continue
             if filetype + "_sources" not in self.config:

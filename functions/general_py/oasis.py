@@ -22,6 +22,9 @@ class oasis:
 
         left = sep = ""
         for lefty in lefts:
+
+            restart_out_file = lefty + "_"
+
             left += sep + lefty
             self.next_coupling += 1
             sep = ":"
@@ -45,7 +48,7 @@ class oasis:
             self.namcouple += [str(rgrid["nx"]) + " " + str(rgrid["ny"]) + " " + str(lgrid["nx"]) + " " + str(lgrid["ny"]) + " " + rgrid["name"] + " " + lgrid["name"] + " LAG=" + str(lag)]
         
         self.namcouple += ["P  0  P  0"]
-    
+
         if transformation["name"] == "distwgt":
             bins = transformation.get("bins", 15)
             other_number = transformation.get("other_number", 6)
@@ -64,6 +67,40 @@ class oasis:
         self.namcouple += ["#"]
         self.namcouple += ["#"]
         self.namcouple += ["###############################################################################"]
+
+        
+
+    def add_output_file(self, lefts, rights, leftmodel, rightmodel, config):
+        out_file = []
+
+        coupling = self.next_coupling
+
+        if self.next_coupling < 10:
+            this_coupling = "0" + str(coupling)
+        else:
+            this_coupling = str(coupling)
+
+        for lefty in lefts:
+            out_file.append(lefty + "_" + leftmodel + "_" + this_coupling + ".nc")
+        for righty in rights:
+            out_file.append(righty + "_" + rightmodel + "_" + this_coupling + ".nc") 
+    
+        self.next_coupling += 1
+
+        for thisfile in out_file:
+            if not "outdata_files" in config:
+                config["outdata_files"] = {}
+            if not "outdata_in_workdir" in config:
+                config["outdata_in_workdir"] = {}
+            if not "outdata_sources" in config:
+                config["outdata_sources"] = {}
+
+            config["outdata_files"][thisfile] = thisfile
+            config["outdata_in_workdir"][thisfile] = thisfile
+            config["outdata_sources"][thisfile] = config["thisrun_outdata_dir"] + "/" + thisfile
+
+
+
 
     def finalize(self, destination_dir):
         self.namcouple += [" $END"]

@@ -388,52 +388,20 @@ class Date(object):
         date : ~`pyesm.core.time_control.esm_calendar.Date`
             A new date of year month day, hour minute, second
         """
-        negative_year = (
-            negative_month
-        ) = negative_day = negative_hour = negative_minute = negative_second = False
 
-        if _list[0] < 0:
-            negative_year = True
-            _list[0] *= -1
-        if _list[1] < 0:
-            negative_month = True
-            _list[1] *= -1
-        if _list[2] < 0:
-            negative_day = True
-            _list[2] *= -1
-        if _list[3] < 0:
-            negative_hour = True
-            _list[3] *= -1
-        if _list[4] < 0:
-            negative_minute = True
-            _list[4] *= -1
-        if _list[5] < 0:
-            negative_second = True
-            _list[5] *= -1
+        negative = ["-" if _list[i] < 0  else "" for i in range(6)]
+        _list = [str(abs(element)) for element in _list ]
 
-        year = str(_list[0]).zfill(4)
-        month = str(_list[1]).zfill(2)
-        day = str(_list[2]).zfill(2)
-        hour = str(_list[3]).zfill(2)
-        minute = str(_list[4]).zfill(2)
-        second = str(_list[5]).zfill(2)
+        if len(_list[0]) < 4:
+            _list[0] = _list[0].zfill(4)   
+        _list[1:6] = [element.zfill(2) if len(element) < 2 else element for element in _list[1:6] ]
 
-        if negative_year:
-            year = "-" + year
-        if negative_month:
-            month = "-" + month
-        if negative_day:
-            day = "-" + day
-        if negative_hour:
-            hour = "-" + hour
-        if negative_minute:
-            minute = "-" + minute
-        if negative_second:
-            second = "-" + second
+        _list = [negative[i] + _list[i] for i in range(6) ]
 
         indate = (
-            year + "-" + month + "-" + day + "_" + hour + ":" + minute + ":" + second
+            _list[0] + "-" + _list[1] + "-" + _list[2] + "_" + _list[3] + ":" + _list[4] + ":" + _list[5]
         )
+
         return cls(indate)
 
     fromlist = from_list
@@ -585,6 +553,15 @@ class Date(object):
         return self_tup > other_tup
 
     def __sub__(self, other):
+        if isinstance(other, Date):
+            return self.sub_date(other)
+        elif type(other) == tuple:
+            return self.sub_tuple(other)
+        else:
+            print("No known combination for subtraction")
+            sys.exit(1)
+
+    def sub_date(self, other):
         # FIXME / BUG -- d1 and d2 are actually modified in this function. That's bad.
         d2 = copy.deepcopy(
             [self.year, self.month, self.day, self.hour, self.minute, self.second]
@@ -789,7 +766,7 @@ class Date(object):
 
         return ndate[0] + ndate[1] + ndate[2] + ndate[3] + ndate[4] + ndate[5]
 
-    def makesense(self):
+    def makesense(self, ndate):
         """
         Puts overflowed time back into the correct unit.
 
@@ -797,21 +774,21 @@ class Date(object):
         something similar. Here, we put the overflowed time into the
         appropriate unit.
         """
-        ndate = copy.deepcopy(self)
-        ndate[4] = ndate[4] + ndate[5] / 60
+        #ndate = copy.deepcopy(self)
+        ndate[4] = ndate[4] + ndate[5] // 60
         ndate[5] = ndate[5] % 60
 
-        ndate[3] = ndate[3] + ndate[4] / 60
+        ndate[3] = ndate[3] + ndate[4] // 60
         ndate[4] = ndate[4] % 60
 
-        ndate[2] = ndate[2] + ndate[3] / 24
+        ndate[2] = ndate[2] + ndate[3] // 24
         ndate[3] = ndate[3] % 24
 
         while ndate[2] > self._calendar.day_in_month(ndate[0], ndate[1]):
             ndate[2] = ndate[2] - self._calendar.day_in_month(ndate[0], ndate[1])
             ndate[1] = ndate[1] + 1
 
-        ndate[0] = ndate[0] + (ndate[1] - 1) / 12
+        ndate[0] = ndate[0] + (ndate[1] - 1) // 12
         ndate[1] = (ndate[1] - 1) % 12 + 1
 
         while ndate[2] <= 0:
@@ -825,13 +802,14 @@ class Date(object):
             ndate[1] = 12
             ndate[0] = ndate[0] - 1
 
+        return ndate
 
-        self.year, self.month, self.day, self.hour, self.minute, self.second = map(
-            int, ndate
-        )
-        self.syear, self.smonth, self.sday, self.shour, self.sminute, self.ssecond = map(
-            str, ndate
-        )
+        #self.year, self.month, self.day, self.hour, self.minute, self.second = map(
+        #    int, ndate
+        #)
+        #self.syear, self.smonth, self.sday, self.shour, self.sminute, self.ssecond = map(
+        #    str, ndate
+        #)
 
     def add(self, to_add):
         """
@@ -847,21 +825,17 @@ class Date(object):
         new_date : ~`pyesm.core.time_control.Date`
             A new date object with the added dates
         """
-        new_year = self.year + to_add[0]
-        new_month = self.month + to_add[1]
-        new_day = self.day + to_add[2]
-        new_hour = self.hour + to_add[3]
-        new_minute = self.minute + to_add[4]
-        new_second = self.second + to_add[5]
-        new_date = self.from_list(
-            [new_year, new_month, new_day, new_hour, new_minute, new_second]
-        )
-        new_date.makesense()
+
+        me = [self.year, self.month, self.day, self.hour, self.minute, self.second]
+        result = [me[i] + to_add[i] for i in range(6)]
+        result = self.makesense(result)
+
+        new_date = self.from_list(result)
         return new_date
 
     __add__ = add
 
-    def sub(self, to_sub):
+    def sub_tuple(self, to_sub):
         """
         Adds another date to from one.
 
@@ -875,40 +849,10 @@ class Date(object):
         new_date : ~`pyesm.core.time_control.Date`
             A new date object with the subtracted dates
         """
-        logging.debug("Subtracting %s %s", self, to_sub)
-        # Probably, this also does something with modifing the actual values.
-        # Better to just make a copy of everything:
-        original = copy.deepcopy(self)
-        logging.debug("SUB: %s, %s", original.year, to_sub[0])
-        new_year = original.year - to_sub[0]
-        logging.debug(new_year)
 
-        logging.debug("SUB: %s, %s", original.month, to_sub[1])
-        new_month = original.month - to_sub[1]
-        logging.debug(new_month)
+        me = [self.year, self.month, self.day, self.hour, self.minute, self.second]
+        result = [me[i] - to_sub[i] for i in range(6)]
+        result = self.makesense(result)
 
-        logging.debug("SUB: %s, %s", original.day, to_sub[2])
-        new_day = original.day - to_sub[2]
-        logging.debug(new_day)
-
-        logging.debug("SUB: %s, %s", original.hour, to_sub[3])
-        new_hour = original.hour - to_sub[3]
-        logging.debug(new_hour)
-
-        logging.debug("SUB: %s, %s", original.minute, to_sub[4])
-        new_minute = original.minute - to_sub[4]
-        logging.debug(new_minute)
-
-        logging.debug("SUB: %s, %s", original.second, to_sub[5])
-        new_second = original.second - to_sub[5]
-        logging.debug(new_second)
-
-        logging.debug([new_year, new_month, new_day, new_hour, new_minute, new_second])
-        new_date = original.from_list(
-            [new_year, new_month, new_day, new_hour, new_minute, new_second]
-        )
-        logging.debug("new_date after sub: %s", new_date)
-        logging.debug("makesense start...")
-        new_date.makesense()
-        logging.debug("After makesense: %s", new_date)
+        new_date = self.from_list(result)
         return new_date

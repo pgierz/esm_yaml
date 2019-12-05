@@ -331,41 +331,31 @@ streams:
         - echam
         - accw
         - co2
+        - g3bid
+        - g3bday
+        - g3b1hi
+        - glday
+        - aclcim
 
           #prev_date: 18500101
 # BUG: PG Why do we need lists here?
-restart_sources:
-        "[[streams-->STREAM]]":
-                 "${parent_restart_dir}/restart_${parent_expid}_STREAM_${parent_date}.nc"
-#                - "restart_${expid}_${prev_date}_STREAM.nc"
 
-restart_in_work:
-        "[[streams-->STREAM]]": "restart_${expid}_STREAM.nc"
 
-        #restart_out_files:
-        #"[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]": "STREAM_WHEN"
 
-        #restart_targets:
-        #        "[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]": "restart_${general.expid}_STREAM_WHEN.nc"
-        #
-        #        #restart_out_in_workdir:
-        #        #"[[streams-->STREAM]]_[[write_restart_dates-->WHEN]]": "restart_${expid}_STREAM_WHEN.nc"
-        #
-        #output_targets:
-        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": ${general.expid}_echam6_STREAM_WHEN.grb
-        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": ${general.expid}_echam6_STREAM.codes
-        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": ${general.expid}_echam6_STREAM_WHEN.nc
-        #
-        #output_in_workdir:
-        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": "${general.expid}_WHEN.01_STREAM"
-        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": "${general.expid}_WHEN.01_STREAM.codes"
-        #        "[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": "${general.expid}_WHEN.01_STREAM.nc"
-        #
-        #        #output_files:
-        #        #"[[streams-->STREAM]]_[[ym_dates-->WHEN]]_grb": "STREAM_WHEN_grb"
-        #        #"[[streams-->STREAM]]_[[ym_dates-->WHEN]]_codes": "STREAM_WHEN_codes"
-        #        #"[[streams-->STREAM]]_[[ym_dates-->WHEN]]_nc": "STREAM_WHEN_nc"
-        #
+other_date: $(( ${next_date} - 450seconds ))
+
+
+
+restart_out_files:
+        "[[streams-->STREAM]]": STREAM
+
+restart_out_sources:
+        "[[streams-->STREAM]]": restart_${general.expid}_STREAM_${other_date!syear!smonth!sday!shour!sminute!ssecond}.nc
+
+restart_out_in_workdir:
+        "[[streams-->STREAM]]": restart_${general.expid}_STREAM_${other_date!syear!smonth!sday!shour!sminute!ssecond}.nc
+
+
 log_files:
         atmout: ${general.expid}_echam6_atmout_${start_date!syear!smonth!sday}_${end_date!syear!smonth!sday}
 

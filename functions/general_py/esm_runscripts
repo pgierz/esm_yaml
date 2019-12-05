@@ -67,6 +67,14 @@ def parse_shargs():
     )
 
     parser.add_argument(
+        "-P",
+        "--profile",
+        help="Write profiling information (esm-tools)",
+        default=False,
+        action="store_true",
+    )
+
+    parser.add_argument(
         "-t",
         "--task",
         help="The task to run. Choose from: compute, post, couple, tidy_and_resubmit",
@@ -77,7 +85,7 @@ def parse_shargs():
         "-p",
         "--pid",
         help="The PID of the task to observe.",
-        default=666,
+        default=-666,
     )
 
     parser.add_argument("-x", "--exclude", help="e[x]clude this step", default=None)
@@ -110,14 +118,22 @@ if __name__ == "__main__":
     )
 
     check = False
+    profile = False
     update = False
     expid = "test"
-    pid = 666
+    pid = -666
     jobtype = "compute"
 
     parsed_args = vars(ARGS)
+
+    original_command = ""
+    for argument in sys.argv[1:]:
+        original_command = original_command + argument + " "
+
     if "check" in parsed_args:
         check = parsed_args["check"]
+    if "profile" in parsed_args:
+        profile = parsed_args["profile"]
     if "pid" in parsed_args:
         pid = parsed_args["pid"]
     if "update" in parsed_args:
@@ -129,13 +145,18 @@ if __name__ == "__main__":
 
     command_line_config={}
     command_line_config["check"] = check
+    command_line_config["profile"] = profile
     command_line_config["update"] = update
     command_line_config["expid"] = expid
     command_line_config["launcher_pid"] = pid
     command_line_config["jobtype"] = jobtype
     command_line_config["scriptname"] = ARGS.runscript
 
+    command_line_config["original_command"] = original_command.strip()
+    command_line_config["started_from"] = os.getcwd()
 
+
+    print ("Started from: ", command_line_config["started_from"])
     print ("starting : ", jobtype)
 
     Setup = esm_sim_objects.SimulationSetup(command_line_config)

@@ -16,6 +16,9 @@
 !esm_master
 !tox.ini
 !VERSION
+!README.md
+!install.sh
+!LICENSE
 !tidy_up
 !tidy_up/**
 
